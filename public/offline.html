@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Makenna Learning Lab - Offline</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 500px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 48px 32px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .emoji {
+      font-size: 80px;
+      display: block;
+      margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    h1 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 32px;
+      color: #1E293B;
+      margin-bottom: 12px;
+    }
+    
+    p {
+      color: #475569;
+      font-size: 18px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    
+    .btn {
+      display: inline-block;
+      background: #2563EB;
+      color: white;
+      font-weight: bold;
+      padding: 16px 32px;
+      border-radius: 16px;
+      text-decoration: none;
+      font-size: 18px;
+      transition: all 0.3s;
+    }
+    
+    .btn:hover {
+      background: #1D4ED8;
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(37, 99, 235, 0.3);
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        padding: 32px 20px;
+      }
+      
+      .emoji {
+        font-size: 60px;
+      }
+      
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <span class="emoji">🌐</span>
+    <h1>You're Offline!</h1>
+    <p>
+      Don't worry! 🌈 You can still explore what you've already learned.
+      <br>
+      When you're back online, new adventures await!
+    </p>
+    <a href="/" class="btn">Go to Home</a>
+  </div>
+</body>
+</html>

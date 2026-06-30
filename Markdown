@@ -1,0 +1,6 @@
+RULES:
+- Never duplicate imports
+- Never duplicate JSX blocks
+- Never create routes without registering them in routes/index.js
+- Never rename services without updating all imports
+- Always run npm run build before finalizing changes

@@ -1,0 +1,98 @@
+export const GHANA_REGIONS_DATA = {
+  'ashanti': {
+    name: 'Ashanti Region',
+    capital: 'Kumasi',
+    fact: 'The Ashanti Region is famous for the powerful Ashanti Kingdom and its beautiful Kente cloth.',
+    icon: '👑',
+  },
+  'greater-accra': {
+    name: 'Greater Accra Region',
+    capital: 'Accra',
+    fact: "Accra is the capital city of Ghana! It's a busy city with lots of markets and beautiful beaches.",
+    icon: '🏙️',
+  },
+  'eastern': {
+    name: 'Eastern Region',
+    capital: 'Koforidua',
+    fact: 'This region has the big Akosombo Dam, which makes electricity for the whole country.',
+    icon: '💡',
+  },
+  'western': {
+    name: 'Western Region',
+    capital: 'Sekondi-Takoradi',
+    fact: "The Western Region has many castles from olden times and is where much of Ghana's cocoa comes from.",
+    icon: '🍫',
+  },
+  'volta': {
+    name: 'Volta Region',
+    capital: 'Ho',
+    fact: 'The Volta Region is home to Mount Afadja, the highest mountain in Ghana, and many beautiful waterfalls.',
+    icon: '⛰️',
+  },
+  'central': {
+    name: 'Central Region',
+    capital: 'Cape Coast',
+    fact: "This region has famous castles like Cape Coast Castle and Elmina Castle where you can learn about Ghana's history.",
+    icon: '🏰',
+  },
+  'northern': {
+    name: 'Northern Region',
+    capital: 'Tamale',
+    fact: 'The Northern Region is home to Mole National Park, where you can see elephants!',
+    icon: '🐘',
+  },
+  'upper-west': {
+    name: 'Upper West Region',
+    capital: 'Wa',
+    fact: 'People in the Upper West Region are known for their special music and dance, like the Bawa dance.',
+    icon: '💃',
+  },
+  'upper-east': {
+    name: 'Upper East Region',
+    capital: 'Bolgatanga',
+    fact: 'This region is famous for its colorful, hand-woven baskets.',
+    icon: '🧺',
+  },
+   'bono': {
+    name: 'Bono Region',
+    capital: 'Sunyani',
+    fact: 'The Bono Region is known for its beautiful forests and the a monkey sanctuary where monkeys are sacred.',
+    icon: '🐒',
+  },
+    'bono-east': {
+    name: 'Bono East Region',
+    capital: 'Techiman',
+    fact: 'This region is a major market center, and has the beautiful Fuller Falls.',
+    icon: '🌊',
+  },
+    'ahafo': {
+    name: 'Ahafo Region',
+    capital: 'Goaso',
+    fact: 'The Ahafo Region is a new region and is known for farming and having a lot of gold.',
+    icon: '💰',
+  },
+   'western-north': {
+    name: 'Western North Region',
+    capital: 'Sefwi Wiawso',
+    fact: 'This region is covered in green rainforests and has many cocoa farms.',
+    icon: '🌳',
+  },
+  'oti': {
+    name: 'Oti Region',
+    capital: 'Dambai',
+    fact: 'The Oti Region has part of the huge Volta Lake, the largest man-made lake in the world.',
+    icon: '🛶',
+  },
+  'savannah': {
+    name: 'Savannah Region',
+    capital: 'Damongo',
+    fact: 'The Savannah Region is home to the mysterious Larabanga Mosque, one of the oldest mosques in Ghana.',
+    icon: '🕌',
+  },
+  'north-east': {
+    name: 'North East Region',
+    capital: 'Nalerigu',
+    fact: 'This region has a long history of powerful kingdoms and is known for its unique culture.',
+    icon: '🛡️',
+  },
+};

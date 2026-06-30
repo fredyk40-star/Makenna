@@ -1,0 +1,234 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+  
+  body {
+    @apply font-nunito antialiased min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  
+  html {
+    @apply scroll-smooth;
+  }
+  
+  /* Dark mode */
+  .dark body {
+    @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900;
+  }
+  
+  .dark .glassmorphism {
+    @apply bg-gray-800/70 backdrop-blur-xl border-gray-700/30;
+  }
+  
+  .dark .card-soft {
+    @apply bg-gray-800/50 border border-gray-700/30;
+  }
+  
+  .dark .text-primary {
+    @apply text-blue-400;
+  }
+  
+  /* Custom Cursor for Desktop */
+  @media (min-width: 1024px) {
+    body {
+      cursor: url('/cursor-default.svg') 16 16, auto;
+    }
+    
+    button, a, [role="button"], .clickable {
+      cursor: url('/cursor-pointer.svg') 16 16, pointer;
+    }
+  }
+  
+  /* Accessibility: Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* Touch-friendly improvements */
+  @media (hover: none) {
+    .hover\:scale-105:hover {
+      transform: none !important;
+    }
+  }
+  
+  /* High Contrast Mode */
+  .high-contrast {
+    --tw-shadow: 0 0 0 2px currentColor !important;
+  }
+  
+  .high-contrast .card-soft {
+    @apply border-2 border-current;
+  }
+  
+  .high-contrast .glassmorphism {
+    @apply border-2 border-current bg-transparent backdrop-blur-none;
+  }
+  
+  /* Large Text Mode */
+  .large-text {
+    font-size: calc(1rem * 1.2);
+  }
+  
+  .large-text .text-sm {
+    font-size: calc(0.875rem * 1.2);
+  }
+  
+  .large-text .text-base {
+    font-size: calc(1rem * 1.2);
+  }
+  
+  .large-text .text-lg {
+    font-size: calc(1.125rem * 1.2);
+  }
+  
+  .large-text .text-xl {
+    font-size: calc(1.25rem * 1.2);
+  }
+  
+  .large-text .text-2xl {
+    font-size: calc(1.5rem * 1.2);
+  }
+  
+  .large-text .text-3xl {
+    font-size: calc(1.875rem * 1.2);
+  }
+  
+  .large-text .text-4xl {
+    font-size: calc(2.25rem * 1.2);
+  }
+  
+  /* Reduced Motion Class */
+  .reduced-motion *,
+  .reduced-motion *::before,
+  .reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .glassmorphism {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-soft;
+  }
+  
+  .card-soft {
+    @apply bg-white rounded-xl shadow-soft hover:shadow-hover transition-all duration-300;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-primary-dark hover:shadow-glow transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+  
+  .text-shadow-soft {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  }
+  
+  .kids-text {
+    @apply font-baloo text-2xl md:text-3xl lg:text-4xl;
+  }
+  
+  /* Screen Reader Only */
+  .sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-blue-50 dark:bg-gray-800 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary-light dark:bg-blue-600 rounded-full hover:bg-primary dark:hover:bg-blue-500 transition-colors;
+}
+
+/* Add to existing index.css */
+
+/* Glassmorphism enhancement */
+.glassmorphism {
+  @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-soft;
+}
+
+/* Dark mode glassmorphism */
+.dark .glassmorphism {
+  @apply bg-gray-800/70 border-gray-700/30;
+}
+
+/* Safe area handling for iPad */
+@supports (padding: max(0px)) {
+  .safe-area-padding {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Apple Pencil optimization */
+@media (hover: none) and (pointer: fine) {
+  /* Apple Pencil specific styles */
+  .pencil-optimized {
+    touch-action: none;
+  }
+}
+
+/* Loading shimmer effect */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
