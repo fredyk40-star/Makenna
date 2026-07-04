@@ -14,6 +14,8 @@ export const ROUTES = {
   PROFILE: '/profile',
   SETTINGS: '/settings',
   PARENT_ZONE: '/parent-zone',
+  LOGIN: '/login',
+  REGISTER: '/register',
   // Alphabet Routes
   ALPHABET: '/alphabet',
   ALPHABET_LESSON: '/alphabet/lesson/:letterId',
