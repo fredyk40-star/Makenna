@@ -151,11 +151,20 @@ export class ChildAccountService {
   }
 
   /**
-   * Login a child with ID and PIN
+   * Normalize child ID to lowercase format (e.g., KID-30 -> kid-30)
+   */
+  static normalizeChildId(childId) {
+    if (!childId) return null;
+    return childId.trim().toLowerCase();
+  }
+
+  /**
+   * Login a child with ID and PIN (case-insensitive)
    */
   static async loginChild(childId, pin) {
+    const normalizedId = this.normalizeChildId(childId);
     const accounts = this.getAllAccounts();
-    const account = accounts.find(a => a.childId === childId);
+    const account = accounts.find(a => a.childId?.toLowerCase() === normalizedId);
     
     if (!account) {
       throw new Error('Invalid Child ID or PIN. Please try again.');
@@ -175,7 +184,7 @@ export class ChildAccountService {
     this.saveAllAccounts(accounts);
 
     // Set as active
-    this.setActiveChild(childId);
+    this.setActiveChild(account.childId);
     return { childId: account.childId, fullName: account.fullName };
   }
 
@@ -201,29 +210,31 @@ export class ChildAccountService {
   }
 
   /**
-   * Get active child account
+   * Get active child account (case-insensitive)
    */
   static getActiveChild() {
     const childId = this.getActiveChildId();
     if (!childId) return null;
     const accounts = this.getAllAccounts();
-    return accounts.find(a => a.childId === childId) || null;
+    return accounts.find(a => a.childId?.toLowerCase() === childId?.toLowerCase()) || null;
   }
 
   /**
-   * Get child by ID
+   * Get child by ID (case-insensitive)
    */
   static getChild(childId) {
     const accounts = this.getAllAccounts();
-    return accounts.find(a => a.childId === childId) || null;
+    const normalizedId = this.normalizeChildId(childId);
+    return accounts.find(a => a.childId?.toLowerCase() === normalizedId) || null;
   }
 
   /**
-   * Update child account
+   * Update child account (case-insensitive)
    */
   static updateChild(childId, updates) {
     const accounts = this.getAllAccounts();
-    const index = accounts.findIndex(a => a.childId === childId);
+    const normalizedId = this.normalizeChildId(childId);
+    const index = accounts.findIndex(a => a.childId?.toLowerCase() === normalizedId);
     if (index !== -1) {
       accounts[index] = { ...accounts[index], ...updates };
       this.saveAllAccounts(accounts);
@@ -233,19 +244,20 @@ export class ChildAccountService {
   }
 
   /**
-   * Delete child account
+   * Delete child account (case-insensitive)
    */
   static deleteChild(childId) {
+    const normalizedId = this.normalizeChildId(childId);
     let accounts = this.getAllAccounts();
-    accounts = accounts.filter(a => a.childId !== childId);
+    accounts = accounts.filter(a => a.childId?.toLowerCase() !== normalizedId);
     this.saveAllAccounts(accounts);
-    if (this.getActiveChildId() === childId) {
+    if (this.getActiveChildId()?.toLowerCase() === normalizedId) {
       this.logoutChild();
     }
   }
 
   /**
-   * Verify PIN for parent zone access
+   * Verify PIN for parent zone access (case-insensitive)
    */
   static async verifyPin(childId, pin) {
     const account = this.getChild(childId);
@@ -255,7 +267,7 @@ export class ChildAccountService {
   }
 
   /**
-   * Get child progress data
+   * Get child progress data (case-insensitive)
    */
   static getChildProgress(childId, key, defaultValue = null) {
     const account = this.getChild(childId);
@@ -263,11 +275,12 @@ export class ChildAccountService {
   }
 
   /**
-   * Set child progress data
+   * Set child progress data (case-insensitive)
    */
   static setChildProgress(childId, key, value) {
     const accounts = this.getAllAccounts();
-    const index = accounts.findIndex(a => a.childId === childId);
+    const normalizedId = this.normalizeChildId(childId);
+    const index = accounts.findIndex(a => a.childId?.toLowerCase() === normalizedId);
     if (index !== -1) {
       if (!accounts[index].progress) {
         accounts[index].progress = {};
