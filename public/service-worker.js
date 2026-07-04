@@ -1,5 +1,5 @@
 // Service Worker for Makenna Learning Lab
-const CACHE_NAME = 'makenna-lab-v2';
+const CACHE_NAME = 'makenna-lab-v3';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install
@@ -53,13 +53,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle navigation requests
+  // Handle navigation requests for SPA routes such as /settings, /login, /register.
+  // Always try network first; if unavailable, fall back to cached index/offline page.
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
-        .catch(() => {
-          return caches.match(OFFLINE_URL);
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone));
+          }
+          return networkResponse;
         })
+        .catch(() => caches.match('/index.html').then((cached) => cached || caches.match(OFFLINE_URL)))
     );
     return;
   }
