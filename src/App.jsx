@@ -5,7 +5,6 @@ import { AnimatePresence } from 'framer-motion';
 // Context Providers
 import { ThemeProvider } from './context/ThemeContext';
 import { AppProvider } from './context/AppContext';
-import { ProfileProvider, useProfiles } from './context/ProfileContext';
 import { VoiceGuideProvider } from './context/VoiceGuideContext';
 import { ChildAccountProvider, useChildAccount } from './context/ChildAccountContext';
 
@@ -15,7 +14,6 @@ import OfflineDetector from './components/common/OfflineDetector';
 import InstallPrompt from './components/common/InstallPrompt';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import ProfileSelection from './components/profiles/ProfileSelection';
 
 // Lazy load pages with error handling
 const lazyWithErrorHandler = (importFn) => {
@@ -94,7 +92,7 @@ const LoginPage = lazyWithErrorHandler(() => import('./pages/Auth/LoginPage'));
 const RegisterPage = lazyWithErrorHandler(() => import('./pages/Auth/RegisterPage'));
 
 const AppContent = () => {
-  const { activeProfile, loading } = useProfiles();
+  const { isAuthenticated, loading } = useChildAccount();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -108,7 +106,7 @@ const AppContent = () => {
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('/sw.js')
           .then(registration => {
             console.log('Service Worker registered successfully:', registration);
           })
@@ -123,8 +121,8 @@ const AppContent = () => {
     return <LoadingSpinner />;
   }
 
-  if (!activeProfile) {
-    return <ProfileSelection />;
+  if (!isAuthenticated) {
+    return <RegisterPage />;
   }
 
   return (
@@ -203,11 +201,9 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AppProvider>
-          <ProfileProvider>
-            <ChildAccountProvider>
-              <AppContent />
-            </ChildAccountProvider>
-          </ProfileProvider>
+          <ChildAccountProvider>
+            <AppContent />
+          </ChildAccountProvider>
         </AppProvider>
       </ThemeProvider>
     </ErrorBoundary>
