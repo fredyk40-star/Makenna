@@ -122,7 +122,7 @@ const AppContent = () => {
   }
 
   if (!isAuthenticated) {
-    return <RegisterPage />;
+    return <LoginPage />;
   }
 
   return (
