@@ -1,20 +1,30 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaUser, FaShieldAlt, FaStar, FaBook, FaSortNumericDown } from 'react-icons/fa';
+import { FaUser, FaShieldAlt, FaStar, FaBook, FaSortNumericDown, FaSignOutAlt } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import { ALPHABET_DATA } from '../../data/alphabetData';
 import { NUMBERS_DATA } from '../../data/numbersData';
+import { ChildAccountService } from '../../services/ChildAccountService';
+import { useChildAccount } from '../../context/ChildAccountContext';
 
 const Profile = () => {
   const { getCompletionPercentage: getAlphabetCompletion, getFavoriteLetters } = useAlphabetProgress();
   const { getCompletionPercentage: getNumbersCompletion, progress: numbersProgress } = useNumbersProgress();
+  const { logout } = useChildAccount();
 
   const alphabetCompletion = getAlphabetCompletion();
   const numbersCompletion = getNumbersCompletion();
   const favoriteLetters = getFavoriteLetters();
   const favoriteNumbers = numbersProgress.favorites;
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to log out?')) {
+      ChildAccountService.logoutChild();
+      logout();
+    }
+  };
 
   const getLetterById = (id) => ALPHABET_DATA.find(letter => letter.id === id);
   const getNumberById = (id) => NUMBERS_DATA.find(number => number.id === id);
@@ -117,6 +127,18 @@ const Profile = () => {
           <p className="text-center text-sm opacity-90 mt-1">View progress details and settings</p>
         </div>
       </Link>
+
+      {/* Logout Button */}
+      <button
+        onClick={handleLogout}
+        className="w-full p-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl shadow-soft hover:shadow-hover transform hover:-translate-y-1 transition-all duration-300"
+      >
+        <div className="flex items-center justify-center gap-3">
+          <FaSignOutAlt className="text-2xl" />
+          <span className="font-baloo text-lg font-bold">Logout</span>
+        </div>
+        <p className="text-center text-sm opacity-90 mt-1">Sign out of your account</p>
+      </button>
     </motion.div>
   );
 };
