@@ -16,17 +16,6 @@ const ShapesGames = () => {
       locked: false
     },
     {
-      id: 'shape-sorting',
-      title: 'Shape Sorting',
-      description: 'Sort the objects by shape!',
-      icon: '📥',
-      difficulty: 'easy',
-      category: 'shapes',
-      estimatedTime: 5,
-      path: '/games/shapes/shape-sorting',
-      locked: false
-    },
-    {
       id: 'find-the-shape',
       title: 'Find the Shape',
       description: 'Find all the hidden shapes!',
@@ -38,15 +27,37 @@ const ShapesGames = () => {
       locked: false
     },
     {
+      id: 'colour-picker',
+      title: 'Colour Picker',
+      description: 'Pick the right colour!',
+      icon: '🎨',
+      difficulty: 'easy',
+      category: 'colours',
+      estimatedTime: 5,
+      path: '/games/shapes/colour-picker',
+      locked: false
+    },
+    {
+      id: 'shape-sorting',
+      title: 'Shape Sorting',
+      description: 'Sort objects by shape! Coming soon.',
+      icon: '📥',
+      difficulty: 'easy',
+      category: 'shapes',
+      estimatedTime: 5,
+      path: '/games/shapes/shape-sorting',
+      locked: true
+    },
+    {
       id: 'shape-memory',
       title: 'Shape Memory',
-      description: 'Flip cards and find matching shapes!',
+      description: 'Flip cards and find matching shapes! Coming soon.',
       icon: '🃏',
       difficulty: 'medium',
       category: 'memory',
       estimatedTime: 8,
       path: '/games/shapes/shape-memory',
-      locked: false
+      locked: true
     }
   ];
 

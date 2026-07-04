@@ -39,26 +39,35 @@ export const ROUTES = {
   // Science Lab Routes
   SCIENCE_LAB: '/science-lab',
   WATER_CYCLE: '/science-lab/water-cycle',
+  PARTS_OF_A_PLANT: '/science-lab/parts-of-a-plant',
+  SOLAR_SYSTEM: '/science-lab/solar-system',
 
   // Ghana Explorer Routes
   GHANA_EXPLORER: '/ghana-explorer',
 
-
-
-  // Numbers Routes - Phase 3
+  // Numbers Routes
   NUMBERS: '/numbers',
   NUMBERS_LESSON: '/numbers/lesson/:numberId',
   NUMBERS_TRACE: '/numbers/trace/:numberId',
   NUMBERS_GAMES: '/numbers/games',
-NUMBERS_GAME: '/numbers/game/:gameId',
-NUMBERS_STORIES: '/numbers/stories',
-NUMBERS_STORY_READER: '/numbers/story/:storyId',
-NUMBERS_MASTERY: '/numbers/mastery',
-SHAPES: '/shapes',
+  NUMBERS_GAME: '/numbers/game/:gameId',
+  NUMBERS_STORIES: '/numbers/stories',
+  NUMBERS_STORY_READER: '/numbers/story/:storyId',
+  NUMBERS_MASTERY: '/numbers/mastery',
+
+  // Shapes & Colours Routes
+  SHAPES: '/shapes',
   SHAPE_LESSON: '/shapes/lesson/:shapeId',
+  SHAPES_GAMES: '/games/shapes',
+  SHAPE_MATCH: '/games/shapes/shape-match',
+  FIND_THE_SHAPE: '/games/shapes/find-the-shape',
+  COLOUR_PICKER: '/games/shapes/colour-picker',
+  SHAPE_SORTING: '/games/shapes/shape-sorting',
+  SHAPE_MEMORY: '/games/shapes/shape-memory',
   COLOURS: '/colours',
   COLOUR_LESSON: '/colours/lesson/:colorId',
-  SHAPES_GAMES: '/shapes/games',
+
+  // Maths Routes
   MATHS: '/maths',
   MATHS_ADDITION: '/maths/addition',
   MATHS_SUBTRACTION: '/maths/subtraction',

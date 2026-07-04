@@ -38,7 +38,7 @@ const ShapesHome = () => {
             transition={{ delay: index * 0.1 }}
           >
             <Link
-              to={`/shapes/${shape.id}`}
+              to={`/shapes/lesson/${shape.id}`}
               className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-soft hover:shadow-glow transition-shadow"
             >
               <div className="text-6xl mb-2">{shape.emoji}</div>
@@ -54,7 +54,7 @@ const ShapesHome = () => {
         transition={{ delay: SHAPES_DATA.length * 0.1 }}
       >
         <Link
-          to="/shapes/games"
+          to="/games/shapes"
           className="w-full flex items-center justify-center gap-3 p-4 bg-primary text-white rounded-2xl hover:bg-primary-dark transition-colors"
         >
           <FaGamepad className="text-2xl" />

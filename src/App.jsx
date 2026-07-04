@@ -49,8 +49,6 @@ const SolarSystem = lazyWithErrorHandler(() => import('./pages/ScienceLab/SolarS
 // Ghana Explorer Page
 const GhanaExplorer = lazyWithErrorHandler(() => import('./pages/GhanaExplorer/GhanaExplorer'));
 
-
-
 const ShapeLesson = lazyWithErrorHandler(() => import('./pages/Shapes/ShapeLesson'));
 const ColoursHome = lazyWithErrorHandler(() => import('./pages/Colours/ColoursHome'));
 const ColourLesson = lazyWithErrorHandler(() => import('./pages/Colours/ColourLesson'));
@@ -59,13 +57,13 @@ const Profile = lazyWithErrorHandler(() => import('./pages/Profile/Profile'));
 const Settings = lazyWithErrorHandler(() => import('./pages/Settings/Settings'));
 const ParentZone = lazyWithErrorHandler(() => import('./pages/ParentZone/ParentZone'));
 
-// Reading Pages
-const WordBuilder = lazyWithErrorHandler(() => import('./pages/Reading/WordBuilder'));
-const SightWords = lazyWithErrorHandler(() => import('./pages/Reading/SightWords'));
+// Reading Pages — use the full functional pages (not stub placeholders)
+const WordBuilder = lazyWithErrorHandler(() => import('./pages/Reading/WordBuilderPage'));
+const SightWords = lazyWithErrorHandler(() => import('./pages/Reading/SightWordsPage'));
 
-// Stories Pages
+// Stories Pages — use the full functional pages
 const StoriesHome = lazyWithErrorHandler(() => import('./pages/Stories/StoriesHome'));
-const StoryReader = lazyWithErrorHandler(() => import('./pages/Stories/StoryReader'));
+const StoryReader = lazyWithErrorHandler(() => import('./pages/Stories/StoryReaderPage'));
 
 // Alphabet Pages
 const AlphabetHome = lazyWithErrorHandler(() => import('./pages/Alphabet/AlphabetHome'));
@@ -75,6 +73,11 @@ const TracingPage = lazyWithErrorHandler(() => import('./pages/Alphabet/TracingP
 // Game Pages
 const AlphabetGames = lazyWithErrorHandler(() => import('./pages/Games/AlphabetGames'));
 const ShapesGames = lazyWithErrorHandler(() => import('./pages/Shapes/ShapesGames'));
+
+// Shapes Game Pages
+const ShapeMatch = lazyWithErrorHandler(() => import('./pages/Shapes/games/ShapeMatch'));
+const FindObject = lazyWithErrorHandler(() => import('./pages/Shapes/games/FindObject'));
+const ColourPicker = lazyWithErrorHandler(() => import('./pages/Shapes/games/ColourPicker'));
 
 // Numbers Pages
 const NumbersHome = lazyWithErrorHandler(() => import('./pages/Numbers/NumbersHome'));
@@ -155,8 +158,14 @@ const AppContent = () => {
                 {/* Game Routes */}
                 <Route path="games/alphabet" element={<AlphabetGames />} />
                 <Route path="games/shapes" element={<ShapesGames />} />
+                <Route path="games/shapes/shape-match" element={<ShapeMatch />} />
+                <Route path="games/shapes/find-the-shape" element={<FindObject />} />
+                <Route path="games/shapes/colour-picker" element={<ColourPicker />} />
+                <Route path="games/shapes/shape-sorting" element={<ComingSoon />} />
+                <Route path="games/shapes/shape-memory" element={<ComingSoon />} />
                 <Route path="animal-safari" element={<AnimalSafari />} />
                 <Route path="music" element={<Music />} />
+                <Route path="drawing" element={<Drawing />} />
 
                 {/* Reading Routes */}
                 <Route path="reading/word-builder" element={<WordBuilder />} />
@@ -181,9 +190,6 @@ const AppContent = () => {
 
                 {/* Ghana Explorer Route */}
                 <Route path="ghana-explorer" element={<GhanaExplorer />} />
-                
-                
-                
                 
                 {/* Numbers Routes */}
                 <Route path="numbers" element={<NumbersHome />} />

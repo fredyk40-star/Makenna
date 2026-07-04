@@ -1,19 +1,44 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FaBell, FaUserCircle, FaStar } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaBell, FaStar, FaMoon, FaSun, FaUserCircle } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useProfiles } from '../../context/ProfileContext';
+import Notifications from './Notifications';
 
 const TopBar = () => {
   const { dailyStars } = useApp();
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+  const { activeProfile } = useProfiles();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+
+  const toggleNotifications = () => setShowNotifications(prev => !prev);
+  const closeNotifications = () => setShowNotifications(false);
+
+  // Close notifications when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifications]);
+
+  const profileInitial = activeProfile?.name
+    ? activeProfile.name.charAt(0).toUpperCase()
+    : 'M';
 
   return (
     <header className="glassmorphism sticky top-0 z-50 px-4 py-3 md:px-6 md:py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
+        <Link to="/" className="flex items-center gap-2 group" aria-label="Go to home">
           <motion.div
             whileHover={{ rotate: 10, scale: 1.1 }}
             transition={{ type: 'spring', stiffness: 300 }}
@@ -29,37 +54,66 @@ const TopBar = () => {
         </Link>
 
         {/* Right Section */}
-        <div className="flex items-center gap-3 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* Stars */}
           <motion.div
             whileHover={{ scale: 1.1 }}
             className="flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/30 px-3 py-1.5 rounded-full"
+            title="Daily stars earned"
           >
             <FaStar className="text-yellow-500 text-sm md:text-base" />
             <span className="font-bold text-sm md:text-base text-gray-700 dark:text-gray-200">
-              {dailyStars}
+              {dailyStars ?? 0}
             </span>
           </motion.div>
 
-          {/* Notification */}
+          {/* Dark Mode Toggle */}
           <motion.button
             whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
-            aria-label="Notifications"
+            whileTap={{ scale: 0.9 }}
+            onClick={toggleTheme}
+            className="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            <FaBell className="text-xl md:text-2xl" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={theme}
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {theme === 'dark' ? <FaSun className="text-lg" /> : <FaMoon className="text-lg" />}
+              </motion.div>
+            </AnimatePresence>
           </motion.button>
 
+          {/* Notification */}
+          <div className="relative" ref={notificationRef}>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleNotifications}
+              className="relative text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors p-2"
+              aria-label="Toggle notifications"
+            >
+              <FaBell className="text-xl md:text-2xl" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+            </motion.button>
+            <AnimatePresence>
+              {showNotifications && <Notifications onClose={closeNotifications} />}
+            </AnimatePresence>
+          </div>
+
           {/* Profile */}
-          <Link to="/profile">
+          <Link to="/profile" aria-label="Go to profile">
             <motion.div
               whileHover={{ scale: 1.1, rotate: -5 }}
               whileTap={{ scale: 0.95 }}
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-lg md:text-xl font-bold shadow-soft"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-base md:text-lg font-bold shadow-soft"
+              title={activeProfile?.name ?? 'Profile'}
             >
-              M
+              {profileInitial}
             </motion.div>
           </Link>
         </div>

@@ -115,7 +115,7 @@ const ColourLesson = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
-            to="/shapes"
+            to="/colours"
             className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             <FaArrowLeft className="text-xl" />
@@ -241,7 +241,7 @@ const ColourLesson = () => {
               <button
                 onClick={() => {
                   setShowCelebration(false);
-                  navigate('/shapes');
+                navigate('/colours');
                 }}
                 className="mt-6 btn-primary"
               >
