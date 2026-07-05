@@ -7,22 +7,44 @@ import { voiceGuide } from '../../services/VoiceGuideService';
  */
 const CelebrationPopup = ({ isOpen, onClose, childName, childId, onReplay }) => {
   const [hasSpoken, setHasSpoken] = useState(false);
+  const [speechError, setSpeechError] = useState(false);
 
   useEffect(() => {
-    if (isOpen && !hasSpoken) {
-      // Speak the announcement three times
-      const message = `Congratulations ${childName}! Your child ID is ${childId}. Please remember your ID and PIN to log in next time.`;
-      voiceGuide.speakRepeated(message, 3, {
-        rate: 0.9,
-        pitch: 1.1,
-        onEnd: () => setHasSpoken(true),
-      });
+    // Initialize voice guide when component mounts
+    try {
+      voiceGuide.init();
+    } catch (err) {
+      console.warn('VoiceGuide initialization failed:', err);
     }
-  }, [isOpen, childName, childId, hasSpoken]);
+
+    if (isOpen && !hasSpoken && !speechError && childName && childId) {
+      // Speak the announcement three times with error handling
+      const message = `Congratulations ${childName}! Your child ID is ${childId}. Please remember your ID and PIN to log in next time.`;
+      try {
+        voiceGuide.speakRepeated(message, 3, {
+          rate: 0.9,
+          pitch: 1.1,
+          onEnd: () => setHasSpoken(true),
+          onError: () => setSpeechError(true),
+        });
+      } catch (err) {
+        console.warn('Speech synthesis failed:', err);
+        setSpeechError(true);
+      }
+    } else if (isOpen && (!childName || !childId)) {
+      // If no child data, still allow the popup to show but don't try to speak
+      console.warn('Missing child data for celebration - showing popup without voice');
+    }
+  }, [isOpen, childName, childId, hasSpoken, speechError]);
 
   const handleReplay = () => {
+    if (speechError) return;
     const message = `Congratulations ${childName}! Your child ID is ${childId}. Please remember your ID and PIN to log in next time.`;
-    voiceGuide.speakRepeated(message, 3, { rate: 0.9, pitch: 1.1 });
+    try {
+      voiceGuide.speakRepeated(message, 3, { rate: 0.9, pitch: 1.1 });
+    } catch (err) {
+      console.warn('Speech synthesis failed:', err);
+    }
     if (onReplay) onReplay();
   };
 

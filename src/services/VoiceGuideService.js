@@ -4,7 +4,7 @@
  */
 export class VoiceGuideService {
   constructor() {
-    this.synth = window.speechSynthesis;
+    this.synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
     this.utterance = null;
     this._muted = false;
     this._rate = 0.9;
@@ -17,6 +17,7 @@ export class VoiceGuideService {
     this._voicesLoaded = false;
     this._queued = [];
     this._speaking = false;
+    this._initialized = false;
   }
 
   /**
@@ -109,6 +110,9 @@ export class VoiceGuideService {
             } else {
               if (options.onEnd) options.onEnd();
             }
+          },
+          onError: (e) => {
+            if (options.onError) options.onError(e);
           },
         });
       }
