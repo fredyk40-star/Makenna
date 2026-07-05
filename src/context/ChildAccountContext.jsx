@@ -19,14 +19,27 @@ export const ChildAccountProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Initialize services
-    ChildAccountService.initialize();
-    AnalyticsService.initialize();
+    // Initialize services with error handling
+    try {
+      ChildAccountService.initialize();
+    } catch (err) {
+      console.error('ChildAccountService initialization error:', err);
+    }
+    
+    try {
+      AnalyticsService.initialize();
+    } catch (err) {
+      console.error('AnalyticsService initialization error:', err);
+    }
 
     // Check for existing session
-    const child = ChildAccountService.getActiveChild();
-    if (child) {
-      setActiveChild(child);
+    try {
+      const child = ChildAccountService.getActiveChild();
+      if (child) {
+        setActiveChild(child);
+      }
+    } catch (err) {
+      console.error('getActiveChild error:', err);
     }
     setLoading(false);
   }, []);

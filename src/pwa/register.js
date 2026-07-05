@@ -4,24 +4,9 @@ export const registerServiceWorker = () => {
       navigator.serviceWorker.register('/sw.js')
         .then(registration => {
           console.log('ServiceWorker registered successfully');
-          
-          // Check for updates every hour
-          setInterval(() => {
-            registration.update();
-          }, 60 * 60 * 1000);
-          
-          // Handle update found
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                showUpdateNotification();
-              }
-            });
-          });
         })
         .catch(err => {
-          console.warn('ServiceWorker registration failed:', err);
+          console.warn('ServiceWorker registration failed (app will still work):', err);
         });
     });
   }
