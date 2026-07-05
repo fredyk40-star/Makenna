@@ -103,26 +103,10 @@ const AppContent = () => {
     } else {
       document.documentElement.classList.remove('dark');
     }
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
-            console.log('Service Worker registered successfully:', registration);
-          })
-          .catch(err => {
-            console.warn('Service Worker registration failed:', err);
-          });
-      });
-    }
   }, []);
 
   if (loading) {
     return <LoadingSpinner />;
-  }
-
-  if (!isAuthenticated) {
-    return <LoginPage />;
   }
 
   return (
@@ -136,58 +120,62 @@ const AppContent = () => {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Home />} />
-                <Route path="welcome" element={<Welcome />} />
-                <Route path="learn" element={<Learn />} />
-                <Route path="games" element={<Games />} />
-                <Route path="profile" element={<Profile />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="parent-zone" element={<ParentZone />} />
-                <Route path="alphabet" element={<AlphabetHome />} />
-                <Route path="alphabet/lesson/:letterId" element={<LessonPage />} />
-                <Route path="alphabet/trace/:letterId" element={<TracingPage />} />
-                <Route path="games/alphabet" element={<AlphabetGames />} />
-                <Route path="games/shapes" element={<ShapesGames />} />
-                <Route path="games/shapes/shape-match" element={<ShapeMatch />} />
-                <Route path="games/shapes/find-the-shape" element={<FindObject />} />
-                <Route path="games/shapes/colour-picker" element={<ColourPicker />} />
-                <Route path="games/shapes/shape-sorting" element={<ComingSoon />} />
-                <Route path="games/shapes/shape-memory" element={<ComingSoon />} />
-                <Route path="animal-safari" element={<AnimalSafari />} />
-                <Route path="music" element={<Music />} />
-                <Route path="drawing" element={<Drawing />} />
-                <Route path="reading/word-builder" element={<WordBuilder />} />
-                <Route path="reading/sight-words" element={<SightWords />} />
-                <Route path="stories" element={<StoriesHome />} />
-                <Route path="story/:storyId" element={<StoryReader />} />
-                <Route path="graduation" element={<GraduationPage />} />
-                <Route path="bible-time" element={<BibleTime />} />
-                <Route path="bible-time/:storyId" element={<BibleStoryReader />} />
-                <Route path="science-lab" element={<ScienceLab />} />
-                <Route path="science-lab/water-cycle" element={<WaterCycle />} />
-                <Route path="science-lab/parts-of-a-plant" element={<PartsOfAPlant />} />
-                <Route path="science-lab/solar-system" element={<SolarSystem />} />
-                <Route path="ghana-explorer" element={<GhanaExplorer />} />
-                <Route path="numbers" element={<NumbersHome />} />
-                <Route path="numbers/lesson/:numberId" element={<NumberLesson />} />
-                <Route path="numbers/trace/:numberId" element={<NumberTracing />} />
-                <Route path="numbers/games" element={<NumbersGames />} />
-                <Route path="numbers/game/:gameId" element={<GameTemplate />} />
-                <Route path="numbers/stories" element={<NumberStories />} />
-                <Route path="numbers/story/:storyId" element={<NumberStoryReader />} />
-                <Route path="numbers/mastery" element={<NumbersMastery />} />
-                <Route path="shapes" element={<Navigate to="/games/shapes" replace />} />
-                <Route path="shapes/lesson/:shapeId" element={<ShapeLesson />} />
-                <Route path="colours" element={<ColoursHome />} />
-                <Route path="colours/lesson/:colorId" element={<ColourLesson />} />
-                <Route path="maths" element={<MathsHome />} />
-                <Route path="maths/addition" element={<Addition />} />
-                <Route path="maths/subtraction" element={<Subtraction />} />
-                <Route path="maths/counting" element={<Counting />} />
-                <Route path="maths/compare" element={<CompareNumbers />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
+              {isAuthenticated ? (
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Home />} />
+                  <Route path="welcome" element={<Welcome />} />
+                  <Route path="learn" element={<Learn />} />
+                  <Route path="games" element={<Games />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="parent-zone" element={<ParentZone />} />
+                  <Route path="alphabet" element={<AlphabetHome />} />
+                  <Route path="alphabet/lesson/:letterId" element={<LessonPage />} />
+                  <Route path="alphabet/trace/:letterId" element={<TracingPage />} />
+                  <Route path="games/alphabet" element={<AlphabetGames />} />
+                  <Route path="games/shapes" element={<ShapesGames />} />
+                  <Route path="games/shapes/shape-match" element={<ShapeMatch />} />
+                  <Route path="games/shapes/find-the-shape" element={<FindObject />} />
+                  <Route path="games/shapes/colour-picker" element={<ColourPicker />} />
+                  <Route path="games/shapes/shape-sorting" element={<ComingSoon />} />
+                  <Route path="games/shapes/shape-memory" element={<ComingSoon />} />
+                  <Route path="animal-safari" element={<AnimalSafari />} />
+                  <Route path="music" element={<Music />} />
+                  <Route path="drawing" element={<Drawing />} />
+                  <Route path="reading/word-builder" element={<WordBuilder />} />
+                  <Route path="reading/sight-words" element={<SightWords />} />
+                  <Route path="stories" element={<StoriesHome />} />
+                  <Route path="story/:storyId" element={<StoryReader />} />
+                  <Route path="graduation" element={<GraduationPage />} />
+                  <Route path="bible-time" element={<BibleTime />} />
+                  <Route path="bible-time/:storyId" element={<BibleStoryReader />} />
+                  <Route path="science-lab" element={<ScienceLab />} />
+                  <Route path="science-lab/water-cycle" element={<WaterCycle />} />
+                  <Route path="science-lab/parts-of-a-plant" element={<PartsOfAPlant />} />
+                  <Route path="science-lab/solar-system" element={<SolarSystem />} />
+                  <Route path="ghana-explorer" element={<GhanaExplorer />} />
+                  <Route path="numbers" element={<NumbersHome />} />
+                  <Route path="numbers/lesson/:numberId" element={<NumberLesson />} />
+                  <Route path="numbers/trace/:numberId" element={<NumberTracing />} />
+                  <Route path="numbers/games" element={<NumbersGames />} />
+                  <Route path="numbers/game/:gameId" element={<GameTemplate />} />
+                  <Route path="numbers/stories" element={<NumberStories />} />
+                  <Route path="numbers/story/:storyId" element={<NumberStoryReader />} />
+                  <Route path="numbers/mastery" element={<NumbersMastery />} />
+                  <Route path="shapes" element={<Navigate to="/games/shapes" replace />} />
+                  <Route path="shapes/lesson/:shapeId" element={<ShapeLesson />} />
+                  <Route path="colours" element={<ColoursHome />} />
+                  <Route path="colours/lesson/:colorId" element={<ColourLesson />} />
+                  <Route path="maths" element={<MathsHome />} />
+                  <Route path="maths/addition" element={<Addition />} />
+                  <Route path="maths/subtraction" element={<Subtraction />} />
+                  <Route path="maths/counting" element={<Counting />} />
+                  <Route path="maths/compare" element={<CompareNumbers />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
+              ) : (
+                <Route path="*" element={<LoginPage />} />
+              )}
             </Routes>
           </Suspense>
         </AnimatePresence>
