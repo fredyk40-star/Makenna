@@ -123,7 +123,7 @@ const CertificateGenerator = ({
             </div>
 
             <div className="mt-6 text-sm text-gray-400 dark:text-gray-500">
-              🌈 Makenna Learning Lab • Watch • Play • Learn • Grow
+              Makenna Learning Lab • Watch • Play • Learn • Grow
             </div>
           </div>
         </div>

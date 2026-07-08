@@ -16,6 +16,11 @@ export const ROUTES = {
   PARENT_ZONE: '/parent-zone',
   LOGIN: '/login',
   REGISTER: '/register',
+  // Developer Portal (Hidden - not in navigation)
+  DEVELOPER_LOGIN: '/developer-login',
+  DEVELOPER: '/developer',
+  // Teacher Portal
+  TEACHER: '/teacher',
   // Alphabet Routes
   ALPHABET: '/alphabet',
   ALPHABET_LESSON: '/alphabet/lesson/:letterId',
@@ -23,7 +28,6 @@ export const ROUTES = {
   // Game Routes
   ALPHABET_GAMES: '/games/alphabet',
   ANIMAL_SAFARI: '/animal-safari',
-  MUSIC: '/music',
   DRAWING: '/drawing',
   // Reading Routes
   WORD_BUILDER: '/reading/word-builder',
@@ -75,8 +79,13 @@ export const ROUTES = {
   MATHS_SUBTRACTION: '/maths/subtraction',
   MATHS_COUNTING: '/maths/counting',
   MATHS_COMPARE: '/maths/compare',
+  // Music Routes
+  MUSIC_LIBRARY: '/music',
+  MUSIC_SONG: '/music/:songId',
+  MUSIC_KARAOKE: '/music/karaoke/:songId',
+  MUSIC_RECORD: '/music/record/:songId',
+  MUSIC_GAMES: '/music/games',
 };
-
 
 export const NAV_ITEMS = [
   { path: ROUTES.HOME, label: 'Home', icon: FaHome, ariaLabel: 'Home' },

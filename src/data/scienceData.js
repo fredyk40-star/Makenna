@@ -6,14 +6,16 @@ export const SCIENCE_DATA = [
     icon: '💧',
     color: 'from-blue-500 to-teal-400',
     path: '/science-lab/water-cycle',
+    status: 'available'
   },
-    {
+  {
     id: 'parts-of-a-plant',
     title: 'Parts of a Plant',
     summary: 'Discover the different parts of a plant and what they do.',
     icon: '🌱',
     color: 'from-green-500 to-lime-500',
     path: '/science-lab/parts-of-a-plant',
+    status: 'available'
   },
   {
     id: 'solar-system',
@@ -22,5 +24,6 @@ export const SCIENCE_DATA = [
     icon: '🪐',
     color: 'from-indigo-500 to-purple-600',
     path: '/science-lab/solar-system',
+    status: 'available'
   }
 ];

@@ -1,0 +1,8 @@
+import React, { useState, useEffect } from 'react';  
+  
+import { motion, AnimatePresence } from 'framer-motion';  
+import { Link } from 'react-router-dom';  
+import { FaSearch, FaFilter, FaStar, FaRegStar, FaPlay, FaClock, FaBookOpen, FaHeart, FaRegHeart, FaChartLine, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';  
+import StoryEngine from '../../services/StoryEngine';  
+import RecommendationService from '../../services/RecommendationService';  
+import { STORIES, searchStories } from '../../data/stories';  

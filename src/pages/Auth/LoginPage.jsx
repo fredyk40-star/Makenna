@@ -3,12 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
+import LoginGuidance from '../../components/LoginGuidance/LoginGuidance';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, error, clearError } = useChildAccount();
   const { playError, playSuccess } = useVoiceGuide();
-
   const [childId, setChildId] = useState('');
   const [pin, setPin] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,6 +60,9 @@ const LoginPage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
+        {/* AI Guided Login Help - Stylish AI Note */}
+        <LoginGuidance pageType="login" autoPlay={true} />
+        
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
@@ -103,12 +106,13 @@ const LoginPage = () => {
                 type="text"
                 value={childId}
                 onChange={(e) => {
-                  setChildId(e.target.value.toUpperCase());
+                  setChildId(e.target.value.toLowerCase());
                   setLocalError('');
                 }}
-                placeholder="e.g., kid-1"
+                placeholder="e.g., kid-20"
                 className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
                 autoComplete="username"
+                autoCapitalize="none"
                 disabled={isSubmitting}
                 aria-label="Child ID"
               />
@@ -190,6 +194,17 @@ const LoginPage = () => {
               className="inline-block px-6 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-xl font-semibold hover:bg-green-200 dark:hover:bg-green-800 transition-colors focus:outline-none focus:ring-4 focus:ring-green-200"
             >
               Create Account 🎉
+            </Link>
+          </div>
+
+          {/* Developer Portal Link - Small and discreet */}
+          <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Link
+              to="/developer-login"
+              className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+              aria-label="Developer Portal"
+            >
+              Developer Portal 🔧
             </Link>
           </div>
         </div>

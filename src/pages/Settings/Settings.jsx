@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaCog, FaMoon, FaSun, FaTrash, FaExclamationTriangle } from 'react-icons/fa';
+import { FaCog, FaMoon, FaSun, FaTrash, FaExclamationTriangle, FaMobileAlt } from 'react-icons/fa';
 import { useTheme } from '../../context/ThemeContext';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import AudioSettings from '../../components/audio/AudioSettings';
+import PWAGuidance from '../../components/PWAGuidance/PWAGuidance';
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
   const { resetProgress: resetAlphabetProgress } = useAlphabetProgress();
   const { resetProgress: resetNumbersProgress } = useNumbersProgress();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showPWAGuidance, setShowPWAGuidance] = useState(false);
 
   const handleResetProgress = () => {
     resetAlphabetProgress();
     resetNumbersProgress();
     setIsModalOpen(false);
-    // Optionally, add a toast notification to inform the user
   };
 
   const containerVariants = {
@@ -51,6 +52,57 @@ const Settings = () => {
           {theme === 'dark' ? <FaSun /> : <FaMoon />}
         </motion.button>
       </motion.div>
+
+      {/* PWA Installation Section */}
+      <motion.div
+        variants={itemVariants}
+        className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <FaMobileAlt className="text-2xl text-blue-500" />
+          <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white">
+            Install App
+          </h3>
+        </div>
+        <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+          Add Makenna Learning Lab to your home screen for quick access and offline use!
+        </p>
+        <motion.button
+          onClick={() => setShowPWAGuidance(true)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold"
+        >
+          Show Installation Guide
+        </motion.button>
+      </motion.div>
+
+      {/* PWA Guidance Modal */}
+      {showPWAGuidance && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto"
+          >
+            <PWAGuidance autoPlay={true} context="settings" />
+            <div className="mt-4 flex justify-center">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowPWAGuidance(false)}
+                className="px-6 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 font-semibold"
+              >
+                Close Guide
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* Audio Settings */}
       <motion.div

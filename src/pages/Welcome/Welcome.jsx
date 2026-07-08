@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaArrowRight } from 'react-icons/fa';
+import PWAGuidance from '../../components/PWAGuidance/PWAGuidance';
 
 const Welcome = () => {
   return (
@@ -23,6 +24,10 @@ const Welcome = () => {
       <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8">
         Watch • Play • Learn • Grow
       </p>
+      
+      {/* PWA Installation Guidance for Parents */}
+      <PWAGuidance autoPlay={true} context="welcome" />
+      
       <Link to="/">
         <motion.button
           whileHover={{ scale: 1.05 }}

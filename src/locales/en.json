@@ -1,0 +1,35 @@
+{
+  "app": {
+    "title": "Makenna Learning Lab",
+    "subtitle": "Watch • Play • Learn • Grow",
+    "loading": "Loading..."
+  },
+  "navigation": {
+    "home": "Home",
+    "learn": "Learn",
+    "games": "Games",
+    "stories": "Stories",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "subjects": {
+    "alphabet": "Alphabet",
+    "numbers": "Numbers",
+    "reading": "Reading",
+    "maths": "Maths",
+    "science": "Science",
+    "shapes": "Shapes",
+    "colours": "Colours",
+    "bible": "Bible Stories"
+  },
+  "welcome": {
+    "greeting": "Hello, {name}!",
+    "welcomeBack": "Welcome back, {name}!"
+  },
+  "ai": {
+    "greeting": "Hello {name}! Let's have fun learning today!",
+    "encouragement": "Great job, {name}!",
+    "suggestion": "Let's continue with {subject}!",
+    "revision": "Let's practice {subject} again to get even better!"
+  }
+}

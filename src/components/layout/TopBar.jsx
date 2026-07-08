@@ -4,13 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaBell, FaStar, FaMoon, FaSun, FaUserCircle } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useProfiles } from '../../context/ProfileContext';
-import Notifications from './Notifications';
+import { useChildAccount } from '../../context/ChildAccountContext';
+import NotificationBell from './NotificationBell';
 
 const TopBar = () => {
   const { dailyStars } = useApp();
   const { theme, toggleTheme } = useTheme();
-  const { activeProfile } = useProfiles();
+  const { childName } = useChildAccount();
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
@@ -30,8 +30,8 @@ const TopBar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifications]);
 
-  const profileInitial = activeProfile?.name
-    ? activeProfile.name.charAt(0).toUpperCase()
+  const profileInitial = childName
+    ? childName.charAt(0).toUpperCase()
     : 'M';
 
   return (
@@ -88,22 +88,8 @@ const TopBar = () => {
             </AnimatePresence>
           </motion.button>
 
-          {/* Notification */}
-          <div className="relative" ref={notificationRef}>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleNotifications}
-              className="relative text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors p-2"
-              aria-label="Toggle notifications"
-            >
-              <FaBell className="text-xl md:text-2xl" />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
-            </motion.button>
-            <AnimatePresence>
-              {showNotifications && <Notifications onClose={closeNotifications} />}
-            </AnimatePresence>
-          </div>
+          {/* Notification Bell - Using enhanced NotificationBell component */}
+          <NotificationBell />
 
           {/* Profile */}
           <Link to="/profile" aria-label="Go to profile">
@@ -111,7 +97,7 @@ const TopBar = () => {
               whileHover={{ scale: 1.1, rotate: -5 }}
               whileTap={{ scale: 0.95 }}
               className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-base md:text-lg font-bold shadow-soft"
-              title={activeProfile?.name ?? 'Profile'}
+              title={childName ?? 'Profile'}
             >
               {profileInitial}
             </motion.div>

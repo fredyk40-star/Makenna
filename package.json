@@ -1,7 +1,7 @@
 {
   "name": "makenna-learning-lab",
   "version": "1.0.0",
-  "description": "🌈 Makenna Learning Lab - Educational PWA for ages 5-8",
+  "description": "Makenna Learning Lab - Educational PWA for ages 5-8",
   "private": true,
   "type": "module",
   "scripts": {

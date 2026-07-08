@@ -7,6 +7,7 @@ import DailyChallenge from './components/DailyChallenge';
 import ProgressSection from './components/ProgressSection';
 import ContinueLearning from './components/ContinueLearning';
 import ParentSection from './components/ParentSection';
+import AIAssistant from '../../components/AIAssistant/AIAssistant';
 
 const Home = () => {
   return (
@@ -18,6 +19,7 @@ const Home = () => {
       <NavigationCards />
       <ContinueLearning />
       <ParentSection />
+      <AIAssistant />
     </div>
   );
 };

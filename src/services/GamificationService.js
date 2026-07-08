@@ -41,6 +41,14 @@ export const BADGE_DEFINITIONS = [
   { id: 'science_fan', name: 'Science Fan', icon: '🔬', description: 'Complete all science experiments', xpReward: 300 },
   { id: 'quick_learner', name: 'Quick Learner', icon: '⚡', description: 'Complete a lesson in under 2 minutes', xpReward: 100 },
   { id: 'helpful_friend', name: 'Helpful Friend', icon: '🤝', description: 'Use voice guide to help someone', xpReward: 50 },
+  // Music Badges
+  { id: 'first_song', name: 'First Song', icon: '🎵', description: 'Listen to your first song', xpReward: 50 },
+  { id: 'singer_star', name: 'Singer Star', icon: '🎤', description: 'Sing 5 songs', xpReward: 100 },
+  { id: 'karaoke_king', name: 'Karaoke King', icon: '👑', description: 'Complete karaoke for 3 songs', xpReward: 150 },
+  { id: 'recording_artist', name: 'Recording Artist', icon: '🎙️', description: 'Record your voice singing', xpReward: 75 },
+  { id: 'music_collector', name: 'Music Collector', icon: '📚', description: 'Listen to 10 different songs', xpReward: 200 },
+  { id: 'daily_singer', name: 'Daily Singer', icon: '📅', description: 'Sing for 7 days in a row', xpReward: 300 },
+  { id: 'vocab_star', name: 'Vocabulary Star', icon: '📖', description: 'Learn 20 words from songs', xpReward: 150 },
 ];
 
 export const AVATAR_UNLOCKS = [

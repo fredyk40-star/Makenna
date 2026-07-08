@@ -31,6 +31,15 @@ const Games = () => {
       path: '/games/shapes',
       color: 'from-green-500 to-green-400',
       status: 'available'
+    },
+    {
+      id: 'music',
+      title: 'Music Learning',
+      description: 'Sing and learn with educational songs!',
+      icon: '🎵',
+      path: '/music',
+      color: 'from-pink-500 to-purple-500',
+      status: 'available'
     }
   ];
 

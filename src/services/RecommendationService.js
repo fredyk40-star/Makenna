@@ -1,232 +1,129 @@
 /**
- * Recommendation Service - Provides learning recommendations
+ * Recommendation Service - Personalized content suggestions
+ * Provides adaptive recommendations for lessons, games, stories based on child's progress
  */
+import { StorageService } from './StorageService';
+import { LearningAnalytics } from './LearningAnalytics';
+import { StoryEngine } from './StoryEngine'; // Assuming this exists for story data
+
+const RECOMMENDATION_KEY = 'makenna_recommendations';
+const FEEDBACK_KEY = 'makenna_recommendation_feedback';
 
 export class RecommendationService {
-  constructor() {
-    this.letterData = {};
-    this.progressData = {};
-    this.loadFromStorage();
-  }
-
   /**
-   * Load data from localStorage
+   * Get personalized lesson recommendations
    */
-  loadFromStorage() {
-    try {
-      const data = localStorage.getItem('recommendation_data');
-      if (data) {
-        const parsed = JSON.parse(data);
-        this.letterData = parsed.letterData || {};
-        this.progressData = parsed.progressData || {};
-      }
-    } catch (error) {
-      console.warn('Failed to load recommendation data:', error);
-    }
-  }
-
-  /**
-   * Save data to localStorage
-   */
-  saveToStorage() {
-    try {
-      const data = {
-        letterData: this.letterData,
-        progressData: this.progressData
-      };
-      localStorage.setItem('recommendation_data', JSON.stringify(data));
-    } catch (error) {
-      console.warn('Failed to save recommendation data:', error);
-    }
-  }
-
-  /**
-   * Update letter data
-   */
-  updateLetterData(letter, data) {
-    this.letterData[letter] = {
-      ...this.letterData[letter],
-      ...data,
-      lastUpdated: Date.now()
-    };
-    this.saveToStorage();
-  }
-
-  /**
-   * Update progress data
-   */
-  updateProgressData(data) {
-    this.progressData = { ...this.progressData, ...data };
-    this.saveToStorage();
-  }
-
-  /**
-   * Get recommendations for a child
-   */
-  getRecommendations() {
+  static getRecommendedLessons(childId) {
+    const analytics = LearningAnalytics.getStats(childId);
     const recommendations = [];
-    
-    // Analyze letter mastery
-    const letters = Object.keys(this.letterData);
-    const strugglingLetters = [];
-    const masteredLetters = [];
-    
-    for (const letter of letters) {
-      const data = this.letterData[letter];
-      const mastery = data.mastery || 0;
-      
-      if (mastery < 60) {
-        strugglingLetters.push({ letter, data });
-      } else if (mastery >= 80) {
-        masteredLetters.push({ letter, data });
+
+    // Example: Recommend based on low mastery or next in sequence
+    if (analytics.averageScore < 70) {
+      recommendations.push({ type: 'revisit', subject: 'Maths', reason: 'Low average score' });
+    }
+    if (analytics.lessonsCompleted < 5) {
+      recommendations.push({ type: 'new', subject: 'Alphabet', reason: 'Start new subject' });
+    }
+
+    // Prioritize lessons with negative feedback
+    const feedback = this.getRecommendationFeedback(childId);
+    for (const item of feedback) {
+      if (item.feedback === 'dislike' && item.type === 'lesson') {
+        recommendations.unshift({ type: 'revisit', subject: item.itemId, reason: 'Previous dislike' });
       }
     }
-    
-    // Sort struggling letters by mastery
-    strugglingLetters.sort((a, b) => a.data.mastery - b.data.mastery);
-    
-    // Generate recommendations
-    if (strugglingLetters.length > 0) {
-      const topStruggles = strugglingLetters.slice(0, 3);
-      recommendations.push({
-        type: 'review',
-        title: 'Letters to Review',
-        description: `Practice these letters more: ${topStruggles.map(s => s.letter).join(', ')}`,
-        letters: topStruggles.map(s => s.letter),
-        priority: 'high'
-      });
+
+    return recommendations.slice(0, 3);
+  }
+
+  /**
+   * Get personalized game recommendations
+   */
+  static getRecommendedGames(childId) {
+    const analytics = LearningAnalytics.getStats(childId);
+    const recommendations = [];
+
+    // Example: Recommend games related to current learning gaps
+    if (analytics.mastery?.numbers < 50) {
+      recommendations.push({ type: 'practice', game: 'CountingGame', reason: 'Numbers mastery low' });
     }
-    
-    if (masteredLetters.length > 0) {
-      recommendations.push({
-        type: 'advance',
-        title: 'Ready for More!',
-        description: `You've mastered ${masteredLetters.length} letters! Great job!`,
-        count: masteredLetters.length,
-        priority: 'medium'
-      });
+    if (analytics.gamesPlayed < 3) {
+      recommendations.push({ type: 'new', game: 'MemoryMatch', reason: 'Explore games' });
     }
-    
-    // Check overall progress
-    const totalLetters = 26;
-    const completed = masteredLetters.length;
-    const progress = Math.round((completed / totalLetters) * 100);
-    
-    if (progress < 100) {
-      const remaining = totalLetters - completed;
-      recommendations.push({
-        type: 'progress',
-        title: 'Keep Going!',
-        description: `You've completed ${completed} of ${totalLetters} letters. ${remaining} more to go!`,
-        progress,
-        remaining,
-        priority: 'medium'
-      });
+
+    return recommendations.slice(0, 3);
+  }
+
+  /**
+   * Get personalized story recommendations
+   */
+  static getRecommendedStories(childId) {
+    const analytics = LearningAnalytics.getStats(childId);
+    const recommendations = [];
+
+    // Example: Recommend stories based on reading level or interests
+    if (analytics.storiesRead < 2) {
+      recommendations.push({ type: 'introduce', storyId: 'the-little-red-hen', reason: 'First stories' });
+    }
+    // Assume StoryEngine has a method to get stories by level
+    // const advancedStories = StoryEngine.getStoriesByLevel(analytics.readingLevel + 1);
+    // if (advancedStories.length > 0) {
+    //   recommendations.push({ type: 'advance', storyId: advancedStories[0].id, reason: 'Next reading level' });
+    // }
+
+    return recommendations.slice(0, 3);
+  }
+
+  /**
+   * Get all recommendations (combines all types)
+   */
+  static getRecommendations(childId) {
+    return [
+      ...this.getRecommendedLessons(childId),
+      ...this.getRecommendedGames(childId),
+      ...this.getRecommendedStories(childId)
+    ];
+  }
+
+  /**
+   * Update user feedback for a recommendation
+   * Feedback can be 'like', 'dislike', 'completed', 'skipped'
+   */
+  static updateRecommendationFeedback(childId, itemId, feedbackType) {
+    const allFeedback = StorageService.get(FEEDBACK_KEY, {});
+    if (!allFeedback[childId]) {
+      allFeedback[childId] = [];
+    }
+
+    const existingFeedbackIndex = allFeedback[childId].findIndex(f => f.itemId === itemId);
+    if (existingFeedbackIndex >= 0) {
+      allFeedback[childId][existingFeedbackIndex].feedback = feedbackType;
+      allFeedback[childId][existingFeedbackIndex].timestamp = new Date().toISOString();
     } else {
-      recommendations.push({
-        type: 'complete',
-        title: '🎉 You Did It!',
-        description: 'You\'ve completed all 26 letters! Ready for the next adventure?',
-        priority: 'high'
+      allFeedback[childId].push({
+        itemId,
+        feedback: feedbackType,
+        timestamp: new Date().toISOString()
       });
     }
-    
-    return recommendations;
+    StorageService.set(FEEDBACK_KEY, allFeedback);
+    return allFeedback[childId];
   }
 
   /**
-   * Get specific letter recommendations
+   * Get all feedback for a child
    */
-  getLetterRecommendation(letter) {
-    const data = this.letterData[letter];
-    if (!data) return null;
-    
-    const mastery = data.mastery || 0;
-    
-    if (mastery < 40) {
-      return {
-        action: 'review',
-        suggestion: 'Start with letter recognition and tracing',
-        activities: ['Letter Hunt', 'Trace Letter', 'Watch Letter Animation'],
-        priority: 'high'
-      };
-    } else if (mastery < 60) {
-      return {
-        action: 'practice',
-        suggestion: 'Practice letter sounds and vocabulary',
-        activities: ['Phonics Practice', 'Vocabulary Cards', 'Sound Match'],
-        priority: 'medium'
-      };
-    } else if (mastery < 80) {
-      return {
-        action: 'reinforce',
-        suggestion: 'Reinforce with word building and reading',
-        activities: ['Word Builder', 'Reading Practice', 'Story Time'],
-        priority: 'low'
-      };
-    } else {
-      return {
-        action: 'celebrate',
-        suggestion: 'Excellent work on this letter!',
-        activities: ['Review', 'Games', 'Challenge'],
-        priority: 'low'
-      };
-    }
+  static getRecommendationFeedback(childId) {
+    const allFeedback = StorageService.get(FEEDBACK_KEY, {});
+    return allFeedback[childId] || [];
   }
 
   /**
-   * Get next suggested activity
+   * Clear all recommendation feedback for a child
    */
-  getNextActivity() {
-    const recommendations = this.getRecommendations();
-    const highPriority = recommendations.filter(r => r.priority === 'high');
-    
-    if (highPriority.length > 0) {
-      return highPriority[0];
-    }
-    
-    const mediumPriority = recommendations.filter(r => r.priority === 'medium');
-    if (mediumPriority.length > 0) {
-      return mediumPriority[0];
-    }
-    
-    return recommendations[0] || null;
-  }
-
-  /**
-   * Get progress summary
-   */
-  getProgressSummary() {
-    const letters = Object.keys(this.letterData);
-    const totalLetters = 26;
-    const mastered = letters.filter(l => (this.letterData[l]?.mastery || 0) >= 80).length;
-    const inProgress = letters.filter(l => {
-      const m = this.letterData[l]?.mastery || 0;
-      return m >= 40 && m < 80;
-    }).length;
-    const needsWork = letters.filter(l => (this.letterData[l]?.mastery || 0) < 40).length;
-    const notStarted = totalLetters - letters.length;
-    
-    return {
-      total: totalLetters,
-      mastered,
-      inProgress,
-      needsWork,
-      notStarted,
-      progress: Math.round((mastered / totalLetters) * 100)
-    };
-  }
-
-  /**
-   * Reset recommendation data
-   */
-  reset() {
-    this.letterData = {};
-    this.progressData = {};
-    this.saveToStorage();
+  static clearRecommendationFeedback(childId) {
+    const allFeedback = StorageService.get(FEEDBACK_KEY, {});
+    delete allFeedback[childId];
+    StorageService.set(FEEDBACK_KEY, allFeedback);
   }
 }
-
-// Singleton instance
-const recommendationService = new RecommendationService();
-export default recommendationService;

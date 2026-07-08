@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
   FaStar, FaCheck, FaArrowLeft, FaSearch, 
-  FaHeart, FaRegHeart, FaLock, FaPlay
+  FaHeart, FaRegHeart, FaLock, FaPlay, FaFire, FaMedal
 } from 'react-icons/fa';
 import { NUMBERS_DATA, searchNumbers } from '../../data/numbersData';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';

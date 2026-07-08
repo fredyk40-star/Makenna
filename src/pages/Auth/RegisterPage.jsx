@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 import CelebrationPopup from '../../components/common/CelebrationPopup';
+import LoginGuidance from '../../components/LoginGuidance/LoginGuidance';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -80,6 +81,9 @@ const RegisterPage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
+        {/* AI Guided Registration Help - Stylish AI Note */}
+        <LoginGuidance pageType="register" autoPlay={true} />
+        
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">

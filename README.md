@@ -1,4 +1,4 @@
-# 🌈 Makenna Learning Lab
+# Makenna Learning Lab
 
 ### Watch • Play • Learn • Grow
 

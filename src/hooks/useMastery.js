@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import recommendationService from '../services/RecommendationService';
+import { RecommendationService } from '../services/RecommendationService';
 import { ALPHABET_DATA } from '../data/alphabetData';
 import { useProfiles } from '../context/ProfileContext';
 
@@ -75,18 +75,24 @@ export const useMastery = () => {
     const data = loadLetterData();
     setLetterData(data);
     
-    // Update recommendation service
-    for (const [id, data] of Object.entries(data)) {
-      recommendationService.updateLetterData(id, data);
-    }
-    
+    // No direct update to RecommendationService from useMastery is needed now,
+    // as RecommendationService will pull data directly.
+
     // Get recommendations
-    const recs = recommendationService.getRecommendations();
-    setRecommendations(recs);
-    
-    // Get progress summary
-    const summary = recommendationService.getProgressSummary();
-    setProgressSummary(summary);
+    // The recommendation service needs the childId, not global profile data
+    if (activeProfile?.childId) {
+      const recs = RecommendationService.getRecommendations(activeProfile.childId);
+      setRecommendations(recs);
+    }
+
+    // Progress summary for letters (if needed, otherwise rely on LearningAnalytics)
+    const masteredCount = Object.values(data).filter(item => item.mastery >= 80).length;
+    const totalLetters = Object.values(data).length;
+    setProgressSummary({
+      mastered: masteredCount,
+      total: totalLetters,
+      progress: totalLetters > 0 ? Math.round((masteredCount / totalLetters) * 100) : 0,
+    });
   }, [activeProfile, getProfileData]);
 
   const getLetterMastery = useCallback((letterId) => {
@@ -103,12 +109,16 @@ export const useMastery = () => {
   }, [getLetterMastery]);
 
   const getRecommendations = useCallback(() => {
-    return recommendationService.getRecommendations();
-  }, []);
+    if (!activeProfile?.childId) return [];
+    return RecommendationService.getRecommendations(activeProfile.childId);
+  }, [activeProfile]);
 
   const getNextActivity = useCallback(() => {
-    return recommendationService.getNextActivity();
-  }, []);
+    if (!activeProfile?.childId) return null;
+    // Assuming RecommendationService will have a more specific getNextActivity
+    const recommendations = RecommendationService.getRecommendations(activeProfile.childId);
+    return recommendations.length > 0 ? recommendations[0] : null;
+  }, [activeProfile]);
 
   const getProgressSummary = useCallback(() => {
     return progressSummary;
@@ -121,7 +131,7 @@ export const useMastery = () => {
 
   const isAllLettersMastered = useCallback(() => {
     if (!progressSummary) return false;
-    return progressSummary.mastered === progressSummary.total;
+    return progressSummary.mastered === progressSummary.total && progressSummary.total > 0;
   }, [progressSummary]);
 
   const getLettersByMastery = useCallback((level) => {

@@ -1,0 +1,180 @@
+/**
+ * Smart Lesson Scheduler - AI-powered lesson planning
+ * Creates personalized daily/weekly learning schedules
+ */
+import { StorageService } from './StorageService';
+import { AdaptiveLearningService } from './AdaptiveLearningService';
+import { RevisionPlanner } from './RevisionPlanner';
+
+const SCHEDULE_KEY = 'makenna_lesson_schedules';
+
+const SUBJECT_PRIORITY = {
+  'Alphabet': 1,
+  'Numbers': 1,
+  'Reading': 2,
+  'Maths': 2,
+  'Science': 3,
+  'Shapes': 1,
+  'Colours': 1
+};
+
+export class LessonScheduler {
+  /**
+   * Generate a personalized schedule for a child
+   */
+  static generateSchedule(childId, days = 7) {
+    const schedule = {
+      childId,
+      days: [],
+      generatedAt: new Date().toISOString()
+    };
+
+    for (let i = 0; i < days; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      schedule.days.push({
+        date: dateStr,
+        day: date.toLocaleDateString('en', { weekday: 'long' }),
+        lessons: this.generateDailyLessons(childId, dateStr, i)
+      });
+    }
+
+    StorageService.set(`${SCHEDULE_KEY}_${childId}`, schedule);
+    return schedule;
+  }
+
+  /**
+   * Generate lessons for a specific day
+   */
+  static generateDailyLessons(childId, date, dayIndex) {
+    const lessons = [];
+
+    // Check for revision items first
+    const revisionItems = RevisionPlanner.getDueForRepetition(childId);
+    if (revisionItems.length > 0 && dayIndex % 2 === 0) {
+      // Add revision lesson on alternating days
+      lessons.push({
+        subject: 'Revision',
+        type: 'spaced-repetition',
+        items: revisionItems.slice(0, 3),
+        duration: '15 min',
+        priority: 1
+      });
+    }
+
+    // Detect weak areas
+    const weakAreas = RevisionPlanner.detectForgottenLessons(childId);
+    const weakSubjects = weakAreas.map(a => a.subject);
+
+    // Add lessons based on priority
+    const subjects = ['Alphabet', 'Numbers', 'Reading', 'Maths', 'Science'];
+    const addedSubjects = new Set();
+
+    // First add weak subjects
+    weakSubjects.forEach(subject => {
+      if (!addedSubjects.has(subject)) {
+        lessons.push({
+          subject,
+          type: 'focus-review',
+          items: [],
+          duration: '20 min',
+          priority: 1
+        });
+        addedSubjects.add(subject);
+      }
+    });
+
+    // Then add balanced learning
+    const remainingSlots = Math.max(3 - lessons.length, 0);
+    for (const subject of subjects) {
+      if (lessons.length >= 4) break;
+      if (!addedSubjects.has(subject)) {
+        lessons.push({
+          subject,
+          type: 'new-content',
+          items: this.getSuggestedContent(subject, childId),
+          duration: '25 min',
+          priority: SUBJECT_PRIORITY[subject] || 2
+        });
+        addedSubjects.add(subject);
+      }
+    }
+
+    return lessons.sort((a, b) => a.priority - b.priority);
+  }
+
+  /**
+   * Get suggested content for a subject
+   */
+  static getSuggestedContent(subject, childId) {
+    // Return placeholder content IDs based on subject
+    const suggestions = {
+      Alphabet: ['a', 'b', 'c'],
+      Numbers: ['1', '2', '3'],
+      Reading: ['sight-words-1', 'sight-words-2'],
+      Maths: ['addition-easy', 'subtraction-easy'],
+      Science: ['animals-1']
+    };
+    return suggestions[subject] || [];
+  }
+
+  /**
+   * Get schedule for a child
+   */
+  static getSchedule(childId) {
+    return StorageService.get(`${SCHEDULE_KEY}_${childId}`, null);
+  }
+
+  /**
+   * Mark lesson as completed
+   */
+  static markCompleted(childId, date, lessonIndex) {
+    const schedule = this.getSchedule(childId);
+    if (schedule) {
+      const day = schedule.days.find(d => d.date === date);
+      if (day && day.lessons[lessonIndex]) {
+        day.lessons[lessonIndex].completed = true;
+        StorageService.set(`${SCHEDULE_KEY}_${childId}`, schedule);
+      }
+    }
+  }
+
+  /**
+   * Get today's schedule
+   */
+  static getTodaysSchedule(childId) {
+    const schedule = this.getSchedule(childId);
+    if (!schedule) return this.generateSchedule(childId);
+    
+    const today = new Date().toISOString().split('T')[0];
+    const todaySchedule = schedule.days.find(d => d.date === today);
+    
+    if (!todaySchedule) {
+      return this.generateSchedule(childId);
+    }
+    
+    return todaySchedule;
+  }
+
+  /**
+   * Get schedule summary
+   */
+  static getSummary(childId) {
+    const schedule = this.getSchedule(childId);
+    if (!schedule) return null;
+
+    const totalLessons = schedule.days.reduce((sum, d) => sum + d.lessons.length, 0);
+    const completedLessons = schedule.days.reduce(
+      (sum, d) => sum + d.lessons.filter(l => l.completed).length, 0
+    );
+
+    return {
+      totalLessons,
+      completedLessons,
+      completionRate: Math.round((completedLessons / totalLessons) * 100),
+      daysGenerated: schedule.days.length
+    };
+  }
+}

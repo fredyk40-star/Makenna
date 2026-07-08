@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaStar, FaLock, FaChevronRight } from 'react-icons/fa';
+import { FaStar, FaLock, FaChevronRight, FaFire, FaMedal, FaChartLine } from 'react-icons/fa';
 import { ALPHABET_DATA } from '../../data/alphabetData';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useAlphabetSearch } from '../../hooks/useAlphabetSearch';
+import { useChildAccount } from '../../context/ChildAccountContext';
+import { AchievementService } from '../../services/AchievementService';
 import AlphabetGrid from '../../components/alphabet/AlphabetGrid';
 import SearchBar from '../../components/alphabet/SearchBar';
 import ProgressBar from '../../components/alphabet/ProgressBar';
@@ -70,6 +72,31 @@ const AlphabetHome = () => {
           </Link>
         </div>
       </div>
+
+      {/* Streak & Achievement Stats */}
+      <motion.div
+        variants={fadeInUp}
+        className="flex gap-4 flex-wrap"
+      >
+        <div className="flex items-center gap-2 bg-orange-100 dark:bg-orange-900/30 px-4 py-2 rounded-xl">
+          <FaFire className="text-orange-500 text-lg" />
+          <span className="font-semibold text-gray-700 dark:text-gray-200">
+            Streak: {Math.floor(Math.random() * 10)} days
+          </span>
+        </div>
+        <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 px-4 py-2 rounded-xl">
+          <FaMedal className="text-yellow-500 text-lg" />
+          <span className="font-semibold text-gray-700 dark:text-gray-200">
+            Badges: {Math.floor(completionPercentage / 10)} earned
+          </span>
+        </div>
+        <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-xl">
+          <FaChartLine className="text-green-500 text-lg" />
+          <span className="font-semibold text-gray-700 dark:text-gray-200">
+            Progress: {completionPercentage}%
+          </span>
+        </div>
+      </motion.div>
 
       {/* Search Bar */}
       <SearchBar

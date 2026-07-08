@@ -47,7 +47,7 @@ const AudioSettings = ({ className = '' }) => {
   const SettingSlider = ({ 
     label, 
     icon: Icon, 
-    key, 
+    settingKey,
     min = 0, 
     max = 1, 
     step = 0.01,
@@ -79,7 +79,7 @@ const AudioSettings = ({ className = '' }) => {
     </div>
   );
 
-  const ToggleButton = ({ label, key, value, onChange }) => (
+  const ToggleButton = ({ label, settingKey, value, onChange }) => (
     <button
       onClick={() => onChange(!value)}
       className={`flex items-center justify-between p-4 rounded-xl transition-all duration-300 ${
@@ -108,7 +108,7 @@ const AudioSettings = ({ className = '' }) => {
       <SettingSlider
         label="Master Volume"
         icon={FaVolumeUp}
-        key="masterVolume"
+        settingKey="masterVolume"
         value={settings.masterVolume}
         onChange={(value) => updateSetting('masterVolume', value)}
       />
@@ -117,7 +117,7 @@ const AudioSettings = ({ className = '' }) => {
       <SettingSlider
         label="Music Volume"
         icon={FaMusic}
-        key="musicVolume"
+        settingKey="musicVolume"
         value={settings.musicVolume}
         onChange={(value) => updateSetting('musicVolume', value)}
       />
@@ -126,7 +126,7 @@ const AudioSettings = ({ className = '' }) => {
       <SettingSlider
         label="Effects Volume"
         icon={FaPlay}
-        key="effectsVolume"
+        settingKey="effectsVolume"
         value={settings.effectsVolume}
         onChange={(value) => updateSetting('effectsVolume', value)}
       />
@@ -135,7 +135,7 @@ const AudioSettings = ({ className = '' }) => {
       <SettingSlider
         label="Voice Volume"
         icon={FaMicrophone}
-        key="voiceVolume"
+        settingKey="voiceVolume"
         value={settings.voiceVolume}
         onChange={(value) => updateSetting('voiceVolume', value)}
       />
@@ -144,7 +144,7 @@ const AudioSettings = ({ className = '' }) => {
       <SettingSlider
         label="Playback Speed"
         icon={FaTachometerAlt}
-        key="playbackSpeed"
+        settingKey="playbackSpeed"
         min={0.5}
         max={2}
         step={0.1}
@@ -159,7 +159,7 @@ const AudioSettings = ({ className = '' }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <ToggleButton
           label="Mute All"
-          key="mute"
+          settingKey="mute"
           value={settings.mute}
           onChange={(value) => {
             updateSetting('mute', value);
@@ -168,7 +168,7 @@ const AudioSettings = ({ className = '' }) => {
         />
         <ToggleButton
           label="Voice Enabled"
-          key="voiceEnabled"
+          settingKey="voiceEnabled"
           value={settings.voiceEnabled}
           onChange={(value) => updateSetting('voiceEnabled', value)}
         />

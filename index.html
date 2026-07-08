@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+  <!-- Mobile optimized viewport with safe area support for iPhone X+ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#2563EB" />
   <meta name="description" content="A fun and interactive learning platform for kids.">
   <meta name="msapplication-TileColor" content="#2563EB">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- iOS specific meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Makenna Lab" />
+  <!-- Android specific -->
+  <meta name="application-name" content="Makenna Learning Lab">
   
-  <title>🌈 Makenna Learning Lab</title>
+  <title>Makenna Learning Lab</title>
   
   <link rel="manifest" href="/manifest.json" />
   
@@ -24,14 +28,24 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
   
-  <!-- Splash Screen -->
+  <!-- Splash Screens for different iPhone sizes -->
   <link rel="apple-touch-startup-image" href="/splash-screen.png" />
   
-  <!-- Open Graph -->
-  <meta property="og:title" content="🌈 Makenna Learning Lab" />
+  <!-- Open Graph for social sharing -->
+  <meta property="og:title" content="Makenna Learning Lab" />
   <meta property="og:description" content="Watch • Play • Learn • Grow" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://makennalab.com" />
+  
+  <!-- Ensure touch targets are at least 44px -->
+  <style>
+    @media (hover: none) and (pointer: coarse) {
+      button, a {
+        min-height: 44px;
+        min-width: 44px;
+      }
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>

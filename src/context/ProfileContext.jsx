@@ -4,7 +4,13 @@ import { ProfileService } from '../services/ProfileService';
 
 export const ProfileContext = createContext();
 
-export const useProfiles = () => useContext(ProfileContext);
+export const useProfiles = () => {
+  const context = useContext(ProfileContext);
+  if (!context) {
+    throw new Error('useProfiles must be used within ProfileProvider');
+  }
+  return context;
+};
 
 export const ProfileProvider = ({ children }) => {
   const [profiles, setProfiles] = useState([]);

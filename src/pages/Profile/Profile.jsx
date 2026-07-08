@@ -8,6 +8,8 @@ import { ALPHABET_DATA } from '../../data/alphabetData';
 import { NUMBERS_DATA } from '../../data/numbersData';
 import { ChildAccountService } from '../../services/ChildAccountService';
 import { useChildAccount } from '../../context/ChildAccountContext';
+import AvatarSelector from '../../components/AvatarSelector/AvatarSelector';
+import BiometricLoginButton from '../../components/BiometricLogin/BiometricLoginButton';
 
 const Profile = () => {
   const { getCompletionPercentage: getAlphabetCompletion, getFavoriteLetters } = useAlphabetProgress();
@@ -18,6 +20,7 @@ const Profile = () => {
   const numbersCompletion = getNumbersCompletion();
   const favoriteLetters = getFavoriteLetters();
   const favoriteNumbers = numbersProgress.favorites;
+  const activeChildId = ChildAccountService.getActiveChildId();
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to log out?')) {
@@ -47,6 +50,17 @@ const Profile = () => {
           </h1>
           <p className="text-gray-500 dark:text-gray-400">Welcome to your dashboard!</p>
         </div>
+      </div>
+
+      {/* Avatar Selector */}
+      <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
+        <h2 className="font-baloo text-xl font-bold text-gray-800 dark:text-white mb-4">My Avatar</h2>
+        <AvatarSelector childId={activeChildId} />
+      </div>
+
+      {/* Biometric Login Section */}
+      <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
+        <BiometricLoginButton />
       </div>
 
       {/* Progress Section */}

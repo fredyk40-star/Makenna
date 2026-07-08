@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AppProvider } from './context/AppContext';
 import { VoiceGuideProvider } from './context/VoiceGuideContext';
 import { ChildAccountProvider, useChildAccount } from './context/ChildAccountContext';
+import { ProfileProvider } from './context/ProfileContext';
 
 // Components
 import Layout from './components/layout/Layout';
@@ -14,6 +15,9 @@ import OfflineDetector from './components/common/OfflineDetector';
 import InstallPrompt from './components/common/InstallPrompt';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import VoiceAssistant from './components/VoiceAssistant/VoiceAssistant';
+import AIAssistant from './components/AIAssistant/AIAssistant';
+import UpdatePreviewBanner from './components/UpdatePreview/UpdatePreviewBanner';
 
 // Lazy load pages with error handling
 const lazyWithErrorHandler = (importFn) => {
@@ -44,7 +48,9 @@ const PartsOfAPlant = lazyWithErrorHandler(() => import('./pages/ScienceLab/Part
 const SolarSystem = lazyWithErrorHandler(() => import('./pages/ScienceLab/SolarSystem'));
 
 const GhanaExplorer = lazyWithErrorHandler(() => import('./pages/GhanaExplorer/GhanaExplorer'));
+const GhanaLanguages = lazyWithErrorHandler(() => import('./pages/GhanaLanguages/GhanaLanguages'));
 
+const ShapesHome = lazyWithErrorHandler(() => import('./pages/Shapes/ShapesHome'));
 const ShapeLesson = lazyWithErrorHandler(() => import('./pages/Shapes/ShapeLesson'));
 const ColoursHome = lazyWithErrorHandler(() => import('./pages/Colours/ColoursHome'));
 const ColourLesson = lazyWithErrorHandler(() => import('./pages/Colours/ColourLesson'));
@@ -52,6 +58,7 @@ const ComingSoon = lazyWithErrorHandler(() => import('./pages/ComingSoon/ComingS
 const Profile = lazyWithErrorHandler(() => import('./pages/Profile/Profile'));
 const Settings = lazyWithErrorHandler(() => import('./pages/Settings/Settings'));
 const ParentZone = lazyWithErrorHandler(() => import('./pages/ParentZone/ParentZone'));
+const TeacherDashboard = lazyWithErrorHandler(() => import('./pages/Teacher/TeacherDashboard'));
 
 const WordBuilder = lazyWithErrorHandler(() => import('./pages/Reading/WordBuilderPage'));
 const SightWords = lazyWithErrorHandler(() => import('./pages/Reading/SightWordsPage'));
@@ -76,7 +83,11 @@ const NumberTracing = lazyWithErrorHandler(() => import('./pages/Numbers/NumberT
 const NumbersGames = lazyWithErrorHandler(() => import('./pages/Numbers/NumbersGames'));
 const GameTemplate = lazyWithErrorHandler(() => import('./pages/Numbers/GameTemplate'));
 const AnimalSafari = lazyWithErrorHandler(() => import('./pages/AnimalSafari/AnimalSafari'));
-const Music = lazyWithErrorHandler(() => import('./pages/Music/Music'));
+const MusicLibrary = lazyWithErrorHandler(() => import('./pages/Music/MusicLibrary'));
+const SongPlayer = lazyWithErrorHandler(() => import('./pages/Music/SongPlayer'));
+const KaraokePlayer = lazyWithErrorHandler(() => import('./pages/Music/KaraokePlayer'));
+const MusicGames = lazyWithErrorHandler(() => import('./pages/Music/MusicGames'));
+const RecordVoice = lazyWithErrorHandler(() => import('./pages/Music/RecordVoice'));
 const Drawing = lazyWithErrorHandler(() => import('./pages/Drawing/Drawing'));
 const NumberStories = lazyWithErrorHandler(() => import('./pages/Numbers/NumberStories'));
 const NumberStoryReader = lazyWithErrorHandler(() => import('./pages/Numbers/NumberStoryReader'));
@@ -90,6 +101,14 @@ const CompareNumbers = lazyWithErrorHandler(() => import('./pages/Maths/CompareN
 // Auth Pages
 const LoginPage = lazyWithErrorHandler(() => import('./pages/Auth/LoginPage'));
 const RegisterPage = lazyWithErrorHandler(() => import('./pages/Auth/RegisterPage'));
+const DeveloperLogin = lazyWithErrorHandler(() => import('./pages/Auth/DeveloperLogin'));
+const DeveloperDashboard = lazyWithErrorHandler(() => import('./pages/Developer/DeveloperDashboard'));
+
+// Developer protected route helper
+const DeveloperProtectedRoute = ({ children }) => {
+  const isDeveloperAuthenticated = localStorage.getItem('makenna_developer_authenticated') === 'true';
+  return isDeveloperAuthenticated ? children : <Navigate to="/developer-login" replace />;
+};
 
 const AppContent = () => {
   const { isAuthenticated, loading } = useChildAccount();
@@ -110,15 +129,33 @@ const AppContent = () => {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true
+    }}>
       <OfflineDetector />
       <InstallPrompt />
       <VoiceGuideProvider>
+        <VoiceAssistant />
+        <AIAssistant />
+        <UpdatePreviewBanner />
         <AnimatePresence mode="wait">
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
+              {/* Public Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              
+              {/* Hidden Developer Routes (not in navigation) */}
+              <Route path="/developer-login" element={<DeveloperLogin />} />
+              <Route 
+                path="/developer" 
+                element={
+                  <DeveloperProtectedRoute>
+                    <DeveloperDashboard />
+                  </DeveloperProtectedRoute>
+                } 
+              />
               
               {isAuthenticated ? (
                 <Route path="/" element={<Layout />}>
@@ -129,18 +166,25 @@ const AppContent = () => {
                   <Route path="profile" element={<Profile />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="parent-zone" element={<ParentZone />} />
+                  <Route path="teacher" element={<TeacherDashboard />} />
                   <Route path="alphabet" element={<AlphabetHome />} />
                   <Route path="alphabet/lesson/:letterId" element={<LessonPage />} />
                   <Route path="alphabet/trace/:letterId" element={<TracingPage />} />
                   <Route path="games/alphabet" element={<AlphabetGames />} />
+                  <Route path="shapes" element={<ShapesHome />} />
                   <Route path="games/shapes" element={<ShapesGames />} />
                   <Route path="games/shapes/shape-match" element={<ShapeMatch />} />
                   <Route path="games/shapes/find-the-shape" element={<FindObject />} />
                   <Route path="games/shapes/colour-picker" element={<ColourPicker />} />
                   <Route path="games/shapes/shape-sorting" element={<ComingSoon />} />
                   <Route path="games/shapes/shape-memory" element={<ComingSoon />} />
-                  <Route path="animal-safari" element={<AnimalSafari />} />
-                  <Route path="music" element={<Music />} />
+                  <Route path="shapes/lesson/:shapeId" element={<ShapeLesson />} />
+<Route path="animal-safari" element={<AnimalSafari />} />
+                  <Route path="music" element={<MusicLibrary />} />
+                  <Route path="music/:songId" element={<SongPlayer />} />
+                  <Route path="music/karaoke/:songId" element={<KaraokePlayer />} />
+                  <Route path="music/record/:songId" element={<RecordVoice />} />
+                  <Route path="music/games" element={<MusicGames />} />
                   <Route path="drawing" element={<Drawing />} />
                   <Route path="reading/word-builder" element={<WordBuilder />} />
                   <Route path="reading/sight-words" element={<SightWords />} />
@@ -154,6 +198,7 @@ const AppContent = () => {
                   <Route path="science-lab/parts-of-a-plant" element={<PartsOfAPlant />} />
                   <Route path="science-lab/solar-system" element={<SolarSystem />} />
                   <Route path="ghana-explorer" element={<GhanaExplorer />} />
+                  <Route path="ghana-languages" element={<GhanaLanguages />} />
                   <Route path="numbers" element={<NumbersHome />} />
                   <Route path="numbers/lesson/:numberId" element={<NumberLesson />} />
                   <Route path="numbers/trace/:numberId" element={<NumberTracing />} />
@@ -162,8 +207,6 @@ const AppContent = () => {
                   <Route path="numbers/stories" element={<NumberStories />} />
                   <Route path="numbers/story/:storyId" element={<NumberStoryReader />} />
                   <Route path="numbers/mastery" element={<NumbersMastery />} />
-                  <Route path="shapes" element={<Navigate to="/games/shapes" replace />} />
-                  <Route path="shapes/lesson/:shapeId" element={<ShapeLesson />} />
                   <Route path="colours" element={<ColoursHome />} />
                   <Route path="colours/lesson/:colorId" element={<ColourLesson />} />
                   <Route path="maths" element={<MathsHome />} />
@@ -190,7 +233,9 @@ function App() {
       <ThemeProvider>
         <AppProvider>
           <ChildAccountProvider>
-            <AppContent />
+            <ProfileProvider>
+              <AppContent />
+            </ProfileProvider>
           </ChildAccountProvider>
         </AppProvider>
       </ThemeProvider>

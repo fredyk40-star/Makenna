@@ -1,5 +1,5 @@
 {
-  "name": "🌈 Makenna Learning Lab",
+  "name": "Makenna Learning Lab",
   "short_name": "Makenna Lab",
   "description": "Watch • Play • Learn • Grow - Educational platform for ages 5-8",
   "start_url": "/",
@@ -7,6 +7,7 @@
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#2563EB",
+  "viewport": "width=device-width, initial-scale=1, viewport-fit=cover",
   "categories": ["education", "kids", "games", "learning"],
   "icons": [
     {
