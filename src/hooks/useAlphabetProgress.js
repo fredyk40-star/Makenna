@@ -5,18 +5,7 @@ const STORAGE_KEY = 'alphabet_progress';
 
 export const useAlphabetProgress = () => {
   const { getProfileData, setProfileData, activeProfile } = useProfiles();
-  const [progress, setProgress] = useState({
-    opened: [],
-    completed: [],
-    favorites: {
-      letters: [],
-      words: []
-    },
-    timeSpent: {},
-    lastVisited: null,
-    totalTime: 0,
-    recentLessons: []
-  });
+  const [progress, setProgress] = useState(null);
 
   useEffect(() => {
     if (activeProfile) {
@@ -38,6 +27,20 @@ export const useAlphabetProgress = () => {
           recentLessons: []
         });
       }
+    } else {
+      // No profile - use default empty state
+      setProgress({
+        opened: [],
+        completed: [],
+        favorites: {
+          letters: [],
+          words: []
+        },
+        timeSpent: {},
+        lastVisited: null,
+        totalTime: 0,
+        recentLessons: []
+      });
     }
   }, [activeProfile, getProfileData]);
 

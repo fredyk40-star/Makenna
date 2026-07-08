@@ -6,16 +6,7 @@ const STORAGE_KEY = 'numbers_progress';
 
 export const useNumbersProgress = () => {
   const { getProfileData, setProfileData, activeProfile } = useProfiles();
-  const [progress, setProgress] = useState({
-    opened: [],
-    completed: [],
-    favorites: [],
-    mastered: [],
-    timeSpent: {},
-    lastVisited: null,
-    totalTime: 0,
-    recentLessons: []
-  });
+  const [progress, setProgress] = useState(null);
 
   useEffect(() => {
     if (activeProfile) {
@@ -35,6 +26,18 @@ export const useNumbersProgress = () => {
           recentLessons: []
         });
       }
+    } else {
+      // No profile - use default empty state
+      setProgress({
+        opened: [],
+        completed: [],
+        favorites: [],
+        mastered: [],
+        timeSpent: {},
+        lastVisited: null,
+        totalTime: 0,
+        recentLessons: []
+      });
     }
   }, [activeProfile, getProfileData]);
 

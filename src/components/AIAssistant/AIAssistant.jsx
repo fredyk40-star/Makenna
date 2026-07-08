@@ -6,7 +6,8 @@ import { ChildAccountService } from '../../services/ChildAccountService';
 import { useChildAccount } from '../../context/ChildAccountContext';
 
 const AIAssistant = () => {
-  const { child } = useChildAccount();
+  const { activeChild } = useChildAccount();
+  const child = activeChild;
   const [isOpen, setIsOpen] = useState(false);
   const [showBubble, setShowBubble] = useState(false);
   const [isActive, setIsActive] = useState(false);

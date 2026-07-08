@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { ChildAccountService } from '../services/ChildAccountService';
 import { AnalyticsService } from '../services/AnalyticsService';
 import { GamificationService } from '../services/GamificationService';
+import { CloudSyncService } from '../services/CloudSyncService';
+import { isSupabaseConfigured } from '../services/SupabaseService';
 
 const ChildAccountContext = createContext();
 
@@ -97,6 +99,34 @@ export const ChildAccountProvider = ({ children }) => {
 
   const clearError = useCallback(() => setError(null), []);
 
+  // Cloud sync functions
+  const syncToCloud = useCallback(async () => {
+    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase not configured' };
+    return await CloudSyncService.syncToCloud();
+  }, []);
+
+  const syncFromCloud = useCallback(async () => {
+    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase not configured' };
+    
+    const result = await CloudSyncService.syncFromCloud();
+    if (result.success && activeChild) {
+      // Refresh active child after sync
+      const updatedChild = ChildAccountService.getActiveChild();
+      setActiveChild(updatedChild);
+    }
+    return result;
+  }, [activeChild]);
+
+  const fullSync = useCallback(async () => {
+    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase not configured' };
+    const result = await CloudSyncService.fullSync();
+    if (result.success && activeChild) {
+      const updatedChild = ChildAccountService.getActiveChild();
+      setActiveChild(updatedChild);
+    }
+    return result;
+  }, [activeChild]);
+
   const value = {
     activeChild,
     loading,
@@ -109,6 +139,12 @@ export const ChildAccountProvider = ({ children }) => {
     isAuthenticated: !!activeChild,
     childName: activeChild?.fullName || '',
     childId: activeChild?.childId || '',
+    // Cloud sync methods
+    syncToCloud,
+    syncFromCloud,
+    fullSync,
+    isCloudSyncEnabled: CloudSyncService.isEnabled(),
+    cloudSyncStatus: CloudSyncService.getSyncStatus(),
   };
 
   return (
