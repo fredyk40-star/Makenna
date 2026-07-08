@@ -30,9 +30,9 @@ export class NotificationBellService {
   }
 
   /**
-   * Mark notification as read
+   * Mark notification as read (with userId - for internal use)
    */
-  static markAsRead(userId, notificationId) {
+  static markAsReadInternal(userId, notificationId) {
     const notifications = this.getNotifications(userId);
     const index = notifications.findIndex(n => n.id === notificationId);
     if (index >= 0) {
@@ -50,16 +50,16 @@ export class NotificationBellService {
   }
 
   /**
-   * Clear all notifications
+   * Clear all notifications for a user (with userId - for internal use)
    */
-  static clearAll(userId) {
+  static clearAllInternal(userId) {
     StorageService.set(`${NOTIFICATION_KEY}_${userId}`, []);
   }
 
   /**
-   * Remove specific notification
+   * Remove specific notification (with userId - for internal use)
    */
-  static removeNotification(userId, notificationId) {
+  static removeNotificationInternal(userId, notificationId) {
     const notifications = this.getNotifications(userId);
     const filtered = notifications.filter(n => n.id !== notificationId);
     StorageService.set(`${NOTIFICATION_KEY}_${userId}`, filtered);
@@ -106,5 +106,56 @@ export class NotificationBellService {
       message: reminder.message,
       icon: '⏰'
     });
+  }
+
+  /**
+   * Get all notifications for current user (without userId filter)
+   * Used by NotificationBell component
+   */
+  static getAllNotifications() {
+    const userId = StorageService.get('makenna_current_user_id', 'default');
+    return this.getNotifications(userId);
+  }
+
+  /**
+   * Mark notification as read (single param version for component)
+   * @param {string} notificationId - The notification ID to mark as read
+   */
+  static markAsRead(notificationId) {
+    const userId = StorageService.get('makenna_current_user_id', 'default');
+    const notifications = this.getNotifications(userId);
+    const index = notifications.findIndex(n => n.id === notificationId);
+    if (index >= 0) {
+      notifications[index].read = true;
+      StorageService.set(`${NOTIFICATION_KEY}_${userId}`, notifications);
+    }
+  }
+
+  /**
+   * Mark all notifications as read
+   */
+  static markAllAsRead() {
+    const userId = StorageService.get('makenna_current_user_id', 'default');
+    const notifications = this.getNotifications(userId);
+    notifications.forEach(n => n.read = true);
+    StorageService.set(`${NOTIFICATION_KEY}_${userId}`, notifications);
+  }
+
+  /**
+   * Clear a specific notification (single param version for component)
+   */
+  static clearNotification(notificationId) {
+    const userId = StorageService.get('makenna_current_user_id', 'default');
+    const notifications = this.getNotifications(userId);
+    const filtered = notifications.filter(n => n.id !== notificationId);
+    StorageService.set(`${NOTIFICATION_KEY}_${userId}`, filtered);
+  }
+
+  /**
+   * Clear all notifications (single param version for component)
+   */
+  static clearAllNotifications() {
+    const userId = StorageService.get('makenna_current_user_id', 'default');
+    StorageService.set(`${NOTIFICATION_KEY}_${userId}`, []);
   }
 }
