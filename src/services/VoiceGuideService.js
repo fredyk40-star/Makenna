@@ -63,6 +63,7 @@ export class VoiceGuideService {
     // Cancel any current speech
     this.synth.cancel();
 
+    const SpeechSynthesisUtterance = window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance;
     this.utterance = new SpeechSynthesisUtterance(text);
     this.utterance.rate = rate;
     this.utterance.pitch = pitch;

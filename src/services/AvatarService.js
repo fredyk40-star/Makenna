@@ -27,6 +27,25 @@ export const AVATAR_DEFINITIONS = [
 
 export class AvatarService {
   /**
+   * Get all available avatar definitions
+   */
+  static getAllAvatars() {
+    return AVATAR_DEFINITIONS;
+  }
+
+  /**
+   * Get unlocked avatars for a child (based on stars)
+   */
+  static getUnlockedAvatars(childId) {
+    const state = GamificationService.getState(childId);
+    const stars = state?.stars || 0;
+    
+    return AVATAR_DEFINITIONS
+      .filter(avatar => avatar.starsRequired <= stars || avatar.unlocked)
+      .map(avatar => avatar.id);
+  }
+
+  /**
    * Get selected avatar for a child
    */
   static getSelectedAvatar(childId) {

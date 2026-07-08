@@ -179,7 +179,7 @@ const AppContent = () => {
                   <Route path="games/shapes/shape-sorting" element={<ComingSoon />} />
                   <Route path="games/shapes/shape-memory" element={<ComingSoon />} />
                   <Route path="shapes/lesson/:shapeId" element={<ShapeLesson />} />
-<Route path="animal-safari" element={<AnimalSafari />} />
+                  <Route path="animal-safari" element={<AnimalSafari />} />
                   <Route path="music" element={<MusicLibrary />} />
                   <Route path="music/:songId" element={<SongPlayer />} />
                   <Route path="music/karaoke/:songId" element={<KaraokePlayer />} />

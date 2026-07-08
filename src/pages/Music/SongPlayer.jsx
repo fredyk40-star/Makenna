@@ -5,7 +5,7 @@ import {
   FaArrowLeft, FaPlay, FaPause, FaRedo, FaStop, 
   FaVolumeUp, FaVolumeMute, FaStar, FaRegStar,
   FaMicrophone, FaSave, FaShare, FaExpand, FaCompress,
-  FaTachometerAlt, FaHeart
+  FaTachometerAlt, FaHeart, FaMusic
 } from 'react-icons/fa';
 import { getSongById } from '../../data/musicData';
 import { useMusicProgress } from '../../hooks/useMusicProgress';

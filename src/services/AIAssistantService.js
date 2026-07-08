@@ -354,7 +354,9 @@ export class AIAssistantService {
    * Process voice command or text query and return appropriate response
    */
   static processQuery(childId, query) {
-    const name = this.getFirstName();
+    // Get child's name from profile or state
+    const profile = ProfileService.getActiveProfile();
+    const name = this.getFirstName(profile?.name);
     const queryLower = query.toLowerCase().trim();
 
     // Navigation commands

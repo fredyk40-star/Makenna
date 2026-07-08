@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AvatarService } from '../../services/AvatarService';
+import { AvatarService, AVATAR_DEFINITIONS } from '../../services/AvatarService';
 import { FaUser, FaStar, FaLock } from 'react-icons/fa';
 
 const AvatarSelector = ({ childId, onSelect, showSelector = true }) => {
@@ -14,11 +14,16 @@ const AvatarSelector = ({ childId, onSelect, showSelector = true }) => {
   }, [childId]);
 
   const loadAvatars = () => {
-    const allAvatars = AvatarService.getAllAvatars();
-    setAvailableAvatars(allAvatars);
+    // Use getAvailableAvatars if childId is available, otherwise use AVATAR_DEFINITIONS
+    const avatars = childId 
+      ? AvatarService.getAvailableAvatars(childId)
+      : AVATAR_DEFINITIONS.filter(a => a.unlocked || a.starsRequired === 0);
+    setAvailableAvatars(avatars);
     
     if (childId) {
-      const unlocked = AvatarService.getUnlockedAvatars(childId);
+      const unlocked = AvatarService.getAvailableAvatars(childId)
+        .filter(a => a.unlocked)
+        .map(a => a.id);
       setUnlockedAvatars(unlocked);
       
       const current = AvatarService.getSelectedAvatar(childId);
@@ -28,7 +33,7 @@ const AvatarSelector = ({ childId, onSelect, showSelector = true }) => {
 
   const handleSelect = (avatarId) => {
     if (childId) {
-      AvatarService.selectAvatar(childId, avatarId);
+      AvatarService.setSelectedAvatar(childId, avatarId);
       setSelectedAvatar(avatarId);
     }
     if (onSelect) {
@@ -107,10 +112,10 @@ const AvatarSelector = ({ childId, onSelect, showSelector = true }) => {
                   >
                     <IconComponent className="text-2xl text-white" />
                     <span className="text-xs text-center">{avatar.name}</span>
-                    {avatar.unlockAt && (
+                    {avatar.starsRequired > 0 && (
                       <div className="flex items-center gap-1 text-yellow-400">
                         <FaStar className="text-xs" />
-                        <span className="text-xs">{avatar.unlockAt}</span>
+                        <span className="text-xs">{avatar.starsRequired}</span>
                       </div>
                     )}
                     {!unlocked && (
