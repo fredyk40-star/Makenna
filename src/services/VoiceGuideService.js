@@ -3,6 +3,14 @@
  * Provides a reusable voice guidance system for the learning app
  */
 export class VoiceGuideService {
+  /**
+   * Check if speech synthesis is supported in this browser
+   */
+  static isSupported() {
+    return typeof window !== 'undefined' && 
+           ('speechSynthesis' in window || 'webkitSpeechSynthesis' in window);
+  }
+
   constructor() {
     this.synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
     this.utterance = null;
@@ -84,13 +92,18 @@ export class VoiceGuideService {
       if (this._onStart) this._onStart();
     };
 
-    this.utterance.onerror = (e) => {
-      this._speaking = false;
-      console.warn('Speech error:', e);
-      if (onError) onError(e);
-      if (this._onError) this._onError(e);
-      this._processQueue();
-    };
+     this.utterance.onerror = (e) => {
+       this._speaking = false;
+       // Handle autoplay policy blocked error gracefully
+       if (e.error === 'not-allowed') {
+         console.warn('Speech synthesis blocked by browser - requires user interaction');
+       } else {
+         console.warn('Speech error:', e);
+       }
+       if (onError) onError(e);
+       if (this._onError) this._onError(e);
+       this._processQueue();
+     };
 
     this.synth.speak(this.utterance);
   }

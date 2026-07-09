@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TeacherService } from '../../services/TeacherService';
 import { ChildAccountService } from '../../services/ChildAccountService';
-import { FaChalkboard, FaUsers, FaClipboardList, FaPlus, FaEdit, FaTrash, FaGraduationCap, FaChartBar, FaCalendar, FaClock } from 'react-icons/fa';
+import { FaChalkboard, FaUsers, FaClipboardList, FaPlus, FaEdit, FaTrash, FaGraduationCap, FaChartBar, FaCalendar, FaClock, FaCog } from 'react-icons/fa';
+import TeacherMode from '../../components/TeacherMode/TeacherMode';
+import ContentEditor from '../../components/ContentEditor/ContentEditor';
 
 const TeacherDashboard = () => {
   const [classes, setClasses] = useState([]);
@@ -56,6 +58,8 @@ const TeacherDashboard = () => {
     { id: 'classes', label: 'Classes', icon: FaChalkboard },
     { id: 'assignments', label: 'Assignments', icon: FaClipboardList },
     { id: 'students', label: 'Students', icon: FaUsers },
+    { id: 'teacherMode', label: 'Teacher Mode', icon: FaCog },
+    { id: 'content', label: 'Content Editor', icon: FaEdit },
   ];
 
   return (
@@ -163,6 +167,16 @@ const TeacherDashboard = () => {
               })}
             </div>
           </div>
+        )}
+
+        {/* Teacher Mode Tab */}
+        {activeTab === 'teacherMode' && (
+          <TeacherMode />
+        )}
+
+        {/* Content Editor Tab */}
+        {activeTab === 'content' && (
+          <ContentEditor />
         )}
 
         {/* Students Tab */}

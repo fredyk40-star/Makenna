@@ -78,10 +78,12 @@ const LessonSchedulerComponent = () => {
   };
 
   const getDayName = (date) => {
+    if (!date) return '--';
     return date.toLocaleDateString('en-US', { weekday: 'short' });
   };
 
   const getFormattedDate = (date) => {
+    if (!date) return '--';
     return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
   };
 

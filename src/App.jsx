@@ -8,6 +8,7 @@ import { AppProvider } from './context/AppContext';
 import { VoiceGuideProvider } from './context/VoiceGuideContext';
 import { ChildAccountProvider, useChildAccount } from './context/ChildAccountContext';
 import { ProfileProvider } from './context/ProfileContext';
+import { I18nProvider } from './context/I18nContext';
 
 // Components
 import Layout from './components/layout/Layout';
@@ -103,10 +104,13 @@ const LoginPage = lazyWithErrorHandler(() => import('./pages/Auth/LoginPage'));
 const RegisterPage = lazyWithErrorHandler(() => import('./pages/Auth/RegisterPage'));
 const DeveloperLogin = lazyWithErrorHandler(() => import('./pages/Auth/DeveloperLogin'));
 const DeveloperDashboard = lazyWithErrorHandler(() => import('./pages/Developer/DeveloperDashboard'));
+const DataDebug = lazyWithErrorHandler(() => import('./components/DataDebug/DataDebug'));
+const TestSupabase = lazyWithErrorHandler(() => import('./pages/Developer/TestSupabase'));
 
 // Developer protected route helper
+import { DeveloperService } from './services/DeveloperService';
 const DeveloperProtectedRoute = ({ children }) => {
-  const isDeveloperAuthenticated = localStorage.getItem('makenna_developer_authenticated') === 'true';
+  const isDeveloperAuthenticated = DeveloperService.validateSession();
   return isDeveloperAuthenticated ? children : <Navigate to="/developer-login" replace />;
 };
 
@@ -214,6 +218,8 @@ const AppContent = () => {
                   <Route path="maths/subtraction" element={<Subtraction />} />
                   <Route path="maths/counting" element={<Counting />} />
                   <Route path="maths/compare" element={<CompareNumbers />} />
+<Route path="debug" element={<DataDebug />} />
+                  <Route path="developer/test-supabase" element={<TestSupabase />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
               ) : (
@@ -232,11 +238,13 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AppProvider>
-          <ChildAccountProvider>
-            <ProfileProvider>
-              <AppContent />
-            </ProfileProvider>
-          </ChildAccountProvider>
+          <I18nProvider>
+            <ChildAccountProvider>
+              <ProfileProvider>
+                <AppContent />
+              </ProfileProvider>
+            </ChildAccountProvider>
+          </I18nProvider>
         </AppProvider>
       </ThemeProvider>
     </ErrorBoundary>

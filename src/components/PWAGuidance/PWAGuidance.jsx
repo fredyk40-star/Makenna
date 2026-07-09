@@ -7,7 +7,7 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { StorageService } from '../../services/StorageService';
 import { FaDownload, FaCheck, FaTimes } from 'react-icons/fa';
 
-const PWAGuidance = ({ autoPlay = true, context = 'welcome' }) => {
+const PWAGuidance = ({ autoPlay = false, context = 'welcome' }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showGuidance, setShowGuidance] = useState(true);

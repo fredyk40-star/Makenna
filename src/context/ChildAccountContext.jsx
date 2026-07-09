@@ -21,29 +21,44 @@ export const ChildAccountProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Initialize services with error handling
-    try {
-      ChildAccountService.initialize();
-    } catch (err) {
-      console.error('ChildAccountService initialization error:', err);
-    }
-    
-    try {
-      AnalyticsService.initialize();
-    } catch (err) {
-      console.error('AnalyticsService initialization error:', err);
-    }
-
-    // Check for existing session
-    try {
-      const child = ChildAccountService.getActiveChild();
-      if (child) {
-        setActiveChild(child);
+    const init = async () => {
+      // Initialize services with error handling
+      try {
+        ChildAccountService.initialize();
+      } catch (err) {
+        console.error('ChildAccountService initialization error:', err);
       }
-    } catch (err) {
-      console.error('getActiveChild error:', err);
-    }
-    setLoading(false);
+
+      try {
+        AnalyticsService.initialize();
+      } catch (err) {
+        console.error('AnalyticsService initialization error:', err);
+      }
+
+      // Auto-sync from Supabase cloud on app load (cross-device accounts)
+      if (isSupabaseConfigured()) {
+        try {
+          await CloudSyncService.syncFromCloud();
+          console.log('Cloud sync completed on app init');
+        } catch (syncErr) {
+          console.warn('Cloud sync skipped (offline or unavailable):', syncErr.message);
+        }
+      }
+
+      // Check for existing session
+      try {
+        const child = ChildAccountService.getActiveChild();
+        if (child) {
+          setActiveChild(child);
+        }
+      } catch (err) {
+        console.error('getActiveChild error:', err);
+      }
+
+      setLoading(false);
+    };
+
+    init();
   }, []);
 
   const register = useCallback(async (fullName, pin) => {
@@ -55,6 +70,18 @@ export const ChildAccountProvider = ({ children }) => {
       const child = ChildAccountService.getActiveChild();
       setActiveChild(child);
       AnalyticsService.trackLogin();
+      
+      // Auto-sync to Supabase after successful registration
+      if (isSupabaseConfigured()) {
+        try {
+          await CloudSyncService.syncToCloud();
+          console.log('Account synced to Supabase successfully');
+        } catch (syncErr) {
+          console.warn('Supabase sync failed (account saved locally):', syncErr.message);
+          // Don't throw - account is saved locally even if sync fails
+        }
+      }
+      
       return result;
     } catch (err) {
       setError(err.message);

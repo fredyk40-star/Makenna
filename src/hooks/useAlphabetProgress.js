@@ -1,19 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useProfiles } from '../context/ProfileContext';
+import { useChildAccount } from '../context/ChildAccountContext';
 
 const STORAGE_KEY = 'alphabet_progress';
 
 export const useAlphabetProgress = () => {
-  const { getProfileData, setProfileData, activeProfile } = useProfiles();
+  const { activeChild, childId } = useChildAccount();
   const [progress, setProgress] = useState(null);
 
+  // Load progress from child account or localStorage
   useEffect(() => {
-    if (activeProfile) {
-      const saved = getProfileData(STORAGE_KEY);
+    if (activeChild) {
+      // Get progress from child's progress data
+      const saved = activeChild.progress?.[STORAGE_KEY];
       if (saved) {
         setProgress(saved);
       } else {
-        // Reset to default if no data is found for the new profile
+        // Initialize default progress
         setProgress({
           opened: [],
           completed: [],
@@ -28,7 +30,7 @@ export const useAlphabetProgress = () => {
         });
       }
     } else {
-      // No profile - use default empty state
+      // No child - use default empty state
       setProgress({
         opened: [],
         completed: [],
@@ -42,13 +44,22 @@ export const useAlphabetProgress = () => {
         recentLessons: []
       });
     }
-  }, [activeProfile, getProfileData]);
+  }, [activeChild]);
 
+  // Save progress to child account
   useEffect(() => {
-    if (progress) {
-      setProfileData(STORAGE_KEY, progress);
+    if (progress && childId) {
+      const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
+      const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
+      if (accountIndex !== -1) {
+        if (!accounts[accountIndex].progress) {
+          accounts[accountIndex].progress = {};
+        }
+        accounts[accountIndex].progress[STORAGE_KEY] = progress;
+        localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
+      }
     }
-  }, [progress, setProfileData]);
+  }, [progress, childId]);
 
   const markOpened = useCallback((letterId) => {
     setProgress(prev => {

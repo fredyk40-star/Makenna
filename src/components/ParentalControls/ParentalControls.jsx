@@ -14,19 +14,14 @@ const ParentalControlsComponent = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const parentId = ChildAccountService.getActiveParentId();
+  const parentId = ChildAccountService.getActiveChildId() || 'default';
 
   useEffect(() => {
-    if (parentId) {
-      loadSettings();
-    }
+    loadSettings();
     setLoading(false);
-  }, [parentId]);
+  }, []);
 
   const loadSettings = () => {
-    // Placeholder: Load settings using ParentZoneService
-    // In reality: ParentZoneService.getSettings(parentId).then(setSettings);
-    // For now, we use the default state
     const saved = localStorage.getItem(`makenna_parental_settings_${parentId}`);
     if (saved) {
       setSettings(JSON.parse(saved));

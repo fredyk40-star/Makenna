@@ -18,6 +18,15 @@ const DeveloperLogin = () => {
     e.preventDefault();
     setError('');
 
+    // Check if developer is locked out
+    if (DeveloperService.isLockedOut()) {
+      const remaining = DeveloperService.getLockoutRemainingSeconds();
+      const minutes = Math.ceil(remaining / 60);
+      setError(`Too many failed attempts. Please wait ${minutes} minute(s).`);
+      playError();
+      return;
+    }
+
     // Check if PIN needs to be set first
     if (!DeveloperService.isDeveloperPinSet()) {
       setIsSettingPin(true);
@@ -33,12 +42,15 @@ const DeveloperLogin = () => {
 
     setIsSubmitting(true);
     try {
-      const isValid = await DeveloperService.verifyDeveloperPin(pin);
+      // Try local first, fall back to Supabase cloud for new devices
+      const isValid = await DeveloperService.verifyWithCloudFallback(pin);
       if (isValid) {
+        DeveloperService.createSession();
         playSuccess();
-        localStorage.setItem('makenna_developer_authenticated', 'true');
         navigate('/developer', { replace: true });
       } else {
+        DeveloperService.recordFailedAttempt();
+        const attempts = 5; // max before lockout
         setError('Invalid PIN. Please try again.');
         playError();
       }
@@ -66,8 +78,8 @@ const DeveloperLogin = () => {
     setIsSubmitting(true);
     try {
       await DeveloperService.setDeveloperPin(pin);
+      DeveloperService.createSession();
       playSuccess();
-      localStorage.setItem('makenna_developer_authenticated', 'true');
       navigate('/developer', { replace: true });
     } catch (err) {
       setError(err.message);

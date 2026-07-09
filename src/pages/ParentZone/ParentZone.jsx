@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaShieldAlt, FaBookOpen, FaPercentage, FaHourglassHalf, FaStar, FaUserGraduate, FaDownload, FaBell, FaCalendar, FaClock, FaChartBar, FaRegCalendarAlt, FaFileExport, FaLock, FaUnlock } from 'react-icons/fa';
+import { FaShieldAlt, FaBookOpen, FaPercentage, FaHourglassHalf, FaStar, FaUserGraduate, FaDownload, FaBell, FaCalendar, FaClock, FaChartBar, FaChartLine, FaRegCalendarAlt, FaFileExport, FaLock, FaUnlock } from 'react-icons/fa';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import { useMastery } from '../../hooks/useMastery';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { ALPHABET_DATA } from '../../data/alphabetData';
 import { ChildAccountService } from '../../services/ChildAccountService';
+import { ParentZoneService } from '../../services/ParentZoneService';
+import AnalyticsDashboard from '../../components/AnalyticsDashboard/AnalyticsDashboard';
+import ProgressAnalytics from '../../components/ProgressAnalytics/ProgressAnalytics';
 
 const ParentZone = () => {
-  const { child: currentChild } = useChildAccount();
+  const { activeChild: currentChild } = useChildAccount();
   const { progress: alphabetProgress, getCompletionPercentage: getAlphabetCompletion } = useAlphabetProgress();
   const { progress: numbersProgress, getCompletionPercentage: getNumbersCompletion } = useNumbersProgress();
   const { progressSummary, getLetterMasteryLevel } = useMastery();

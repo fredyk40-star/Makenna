@@ -2,8 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaBookOpen } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
-import { STORIES } from '../../data/stories';
-import StoryCard from '../../components/stories/StoryCard';
+import StoryLibrary from '../../components/stories/StoryLibrary';
 
 const StoriesHome = () => {
   return (
@@ -30,18 +29,7 @@ const StoriesHome = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {STORIES.map((story, index) => (
-          <motion.div
-            key={story.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <StoryCard story={story} />
-          </motion.div>
-        ))}
-      </div>
+      <StoryLibrary />
     </motion.div>
   );
 };

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 import LoginGuidance from '../../components/LoginGuidance/LoginGuidance';
+import BiometricLoginButton from '../../components/BiometricLogin/BiometricLoginButton';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ const LoginPage = () => {
         className="w-full max-w-md"
       >
         {/* AI Guided Login Help - Stylish AI Note */}
-        <LoginGuidance pageType="login" autoPlay={true} />
+        <LoginGuidance pageType="login" autoPlay={false} />
         
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
           {/* Header */}
@@ -195,6 +196,13 @@ const LoginPage = () => {
             >
               Create Account 🎉
             </Link>
+          </div>
+
+          {/* Biometric Login */}
+          <div className="mt-4">
+            <BiometricLoginButton 
+              onSuccess={() => navigate('/', { replace: true })} 
+            />
           </div>
 
           {/* Developer Portal Link - Small and discreet */}

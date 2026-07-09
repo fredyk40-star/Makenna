@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import SearchBar from '../../components/SearchBar/SearchBar';
 
 const modules = [
   {
@@ -92,6 +93,9 @@ const Learn = () => {
           Choose a learning adventure!
         </p>
       </div>
+
+      {/* Search Bar */}
+      <SearchBar />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {modules.map((module) => (

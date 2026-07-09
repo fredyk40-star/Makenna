@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fa';
 import { getColourById, COLOURS_DATA } from '../../data/coloursData';
 import { useAudio } from '../../hooks/useAudio';
-import { useProfiles } from '../../context/ProfileContext';
+import { useChildAccount } from '../../context/ChildAccountContext';
 import { announceToScreenReader } from '../../utils/accessibility';
 
 const ColourLesson = () => {
@@ -21,20 +21,30 @@ const ColourLesson = () => {
   const [showCelebration, setShowCelebration] = useState(false);
 
   const { speak } = useAudio();
-  const { getProfileData, setProfileData } = useProfiles();
+  const { activeChild, childId } = useChildAccount();
 
   useEffect(() => {
     const found = getColourById(colourId);
     if (found) {
       setColour(found);
       
-      // Load progress
-      const progress = getProfileData('colour_progress', {});
-      setIsCompleted(progress[colourId]?.completed || false);
-      
-      // Load favorites
-      const favorites = getProfileData('colour_favorites', []);
-      setIsFavorite(favorites.includes(colourId));
+      // Load progress from child account or localStorage
+      if (childId) {
+        const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
+        const account = accounts.find(a => a.childId?.toLowerCase() === childId?.toLowerCase());
+        const progress = account?.progress?.colour_progress || {};
+        setIsCompleted(progress[colourId]?.completed || false);
+        
+        // Load favorites
+        const favorites = account?.progress?.colour_favorites || [];
+        setIsFavorite(favorites.includes(colourId));
+      } else {
+        // Fallback to localStorage for backward compatibility
+        const progress = JSON.parse(localStorage.getItem('colour_progress') || '{}');
+        setIsCompleted(progress[colourId]?.completed || false);
+        const favorites = JSON.parse(localStorage.getItem('colour_favorites') || '[]');
+        setIsFavorite(favorites.includes(colourId));
+      }
       
       // Speak colour name
       setTimeout(() => {
@@ -43,16 +53,35 @@ const ColourLesson = () => {
     } else {
       navigate('/colours');
     }
-  }, [colourId, navigate, speak, getProfileData]);
+  }, [colourId, navigate, speak, childId]);
 
   const toggleFavorite = useCallback(() => {
-    const favorites = getProfileData('colour_favorites', []);
-    const newFavorites = isFavorite
-      ? favorites.filter(id => id !== colourId)
-      : [...favorites, colourId];
-    setProfileData('colour_favorites', newFavorites);
-    setIsFavorite(!isFavorite);
-  }, [isFavorite, colourId, getProfileData, setProfileData]);
+    const newIsFavorite = !isFavorite;
+    
+    if (childId) {
+      // Save to child account
+      const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
+      const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
+      if (accountIndex !== -1) {
+        if (!accounts[accountIndex].progress) accounts[accountIndex].progress = {};
+        const favorites = accounts[accountIndex].progress.colour_favorites || [];
+        const newFavorites = newIsFavorite
+          ? [...favorites, colourId]
+          : favorites.filter(id => id !== colourId);
+        accounts[accountIndex].progress.colour_favorites = newFavorites;
+        localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
+      }
+    } else {
+      // Fallback to localStorage
+      const favorites = JSON.parse(localStorage.getItem('colour_favorites') || '[]');
+      const newFavorites = newIsFavorite
+        ? [...favorites, colourId]
+        : favorites.filter(id => id !== colourId);
+      localStorage.setItem('colour_favorites', JSON.stringify(newFavorites));
+    }
+    
+    setIsFavorite(newIsFavorite);
+  }, [isFavorite, colourId, childId]);
 
   const handleSpeak = (text) => {
     speak(text, { rate: 0.7, pitch: 1.1 });
@@ -69,9 +98,23 @@ const ColourLesson = () => {
       speak('Correct! 🎉', { rate: 0.8, pitch: 1.2 });
       announceToScreenReader('Correct!');
       
-      const progress = getProfileData('colour_progress', {});
-      progress[colourId] = { completed: true };
-      setProfileData('colour_progress', progress);
+      // Mark as completed
+      if (childId) {
+        const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
+        const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
+        if (accountIndex !== -1) {
+          if (!accounts[accountIndex].progress) accounts[accountIndex].progress = {};
+          if (!accounts[accountIndex].progress.colour_progress) accounts[accountIndex].progress.colour_progress = {};
+          accounts[accountIndex].progress.colour_progress[colourId] = { completed: true };
+          localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
+        }
+      } else {
+        // Fallback to localStorage
+        const progress = JSON.parse(localStorage.getItem('colour_progress') || '{}');
+        progress[colourId] = { completed: true };
+        localStorage.setItem('colour_progress', JSON.stringify(progress));
+      }
+      
       setIsCompleted(true);
       setShowCelebration(true);
       
@@ -241,7 +284,7 @@ const ColourLesson = () => {
               <button
                 onClick={() => {
                   setShowCelebration(false);
-                navigate('/colours');
+                  navigate('/colours');
                 }}
                 className="mt-6 btn-primary"
               >

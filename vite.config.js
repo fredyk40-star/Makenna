@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  resolve: {
+    // Force Vite to always resolve react and react-dom to the same copy
+    // Prevents "Invalid hook call" and "useContext of null" errors
+    dedupe: ['react', 'react-dom'],
+  },
   plugins: [
     react(),
     VitePWA({
@@ -46,15 +51,29 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Explicit arrow function format to force Vite 8 / Rolldown to accept it
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom/')) {
-              return 'vendor';
+            // Bundle React and React DOM together to prevent multiple copies
+            if (id.includes('node_modules/react/') || 
+                id.includes('node_modules/react-dom/') ||
+                id.includes('node_modules/scheduler/')) {
+              return 'react-vendor';
+            }
+            if (id.includes('node_modules/react-router') ||
+                id.includes('node_modules/@remix-run/')) {
+              return 'router-vendor';
             }
             if (id.includes('framer-motion/')) {
               return 'animations';
             }
+            if (id.includes('react-icons/')) {
+              return 'icons';
+            }
+            if (id.includes('@supabase/')) {
+              return 'supabase';
+            }
+            // Remaining node_modules
+            return 'vendor';
           }
         }
       }

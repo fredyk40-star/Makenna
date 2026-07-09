@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaArrowRight, FaGamepad } from 'react-icons/fa';
+import { FaArrowRight, FaGamepad, FaGift } from 'react-icons/fa';
+import RewardsStore from '../../components/RewardsStore/RewardsStore';
 
 const Games = () => {
   const gameModules = [
@@ -91,6 +92,15 @@ const Games = () => {
             )}
           </motion.div>
         ))}
+      </div>
+
+      {/* Rewards Store */}
+      <div className="mt-8">
+        <h2 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-4">
+          <FaGift className="text-yellow-500" />
+          Rewards Store
+        </h2>
+        <RewardsStore />
       </div>
 
       {/* Fun Fact */}

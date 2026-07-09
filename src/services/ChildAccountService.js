@@ -1,6 +1,6 @@
 /**
  * ChildAccountService - Manages child accounts with secure PIN storage
- * Replaces the old ProfileService with a child-account system
+ * Stores accounts in localStorage with Supabase cloud sync for cross-device access
  */
 import { StorageService } from './StorageService';
 
@@ -159,13 +159,46 @@ export class ChildAccountService {
   }
 
   /**
-   * Login a child with ID and PIN (case-insensitive)
+   * Try to sync accounts from Supabase cloud to localStorage.
+   * Returns true if sync was attempted and accounts were merged.
+   */
+  static async _syncFromCloudIfAvailable() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) return false;
+
+      const { CloudSyncService } = await import('./CloudSyncService');
+      const result = await CloudSyncService.syncFromCloud();
+      return result.success;
+    } catch (err) {
+      // Offline or Supabase unavailable — silently continue with local data
+      console.warn('Cloud sync skipped during login:', err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Login a child with ID and PIN (case-insensitive).
+   * Checks localStorage first. If account not found, pulls from Supabase
+   * and retries — enabling cross-device login.
    */
   static async loginChild(childId, pin) {
     const normalizedId = this.normalizeChildId(childId);
-    const accounts = this.getAllAccounts();
-    const account = accounts.find(a => a.childId?.toLowerCase() === normalizedId);
-    
+
+    // First attempt: check localStorage
+    let accounts = this.getAllAccounts();
+    let account = accounts.find(a => a.childId?.toLowerCase() === normalizedId);
+
+    // Second attempt: if not found locally, try pulling from Supabase cloud
+    if (!account) {
+      const synced = await this._syncFromCloudIfAvailable();
+      if (synced) {
+        // Re-read accounts after cloud sync
+        accounts = this.getAllAccounts();
+        account = accounts.find(a => a.childId?.toLowerCase() === normalizedId);
+      }
+    }
+
     if (!account) {
       throw new Error('Invalid Child ID or PIN. Please try again.');
     }

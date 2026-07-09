@@ -7,9 +7,9 @@ export const BIBLE_STORIES_DATA = [
     color: 'from-blue-400 to-cyan-400',
     content: [
       {
-  type: 'paragraph',
-  text: "In the very beginning, there was nothing but darkness. But God had a wonderful plan. On the first day, God said, \"Let there be light!\" and there was light. He called the light \"Day\" and the darkness \"Night\"."
-},
+        type: 'paragraph',
+        text: "In the very beginning, there was nothing but darkness. But God had a wonderful plan. On the first day, God said, \"Let there be light!\" and there was light. He called the light \"Day\" and the darkness \"Night\"."
+      },
       {
         type: 'paragraph',
         text: "On the second day, God made the sky and the clouds. He separated the water in the sky from the water on the earth."
@@ -34,6 +34,37 @@ export const BIBLE_STORIES_DATA = [
         type: 'paragraph',
         text: "On the seventh day, God looked at everything He had made and saw that it was very good. He rested and made this day a special, holy day."
       },
+    ],
+    comprehension: [
+      {
+        question: 'What did God create on the first day?',
+        type: 'multiple-choice',
+        options: ['Light', 'Animals', 'People', 'Plants'],
+        correct: 0
+      },
+      {
+        question: 'How many days did God use to create everything?',
+        type: 'multiple-choice',
+        options: ['Five', 'Seven', 'Six', 'Ten'],
+        correct: 1
+      },
+      {
+        question: 'What did God do on the seventh day?',
+        type: 'multiple-choice',
+        options: ['Created animals', 'Rested', 'Made the sun', 'Built a house'],
+        correct: 1
+      },
+      {
+        question: 'Who were the first man and woman?',
+        type: 'multiple-choice',
+        options: ['Noah and Sarah', 'Adam and Eve', 'David and Mary', 'Jonah and Ruth'],
+        correct: 1
+      }
+    ],
+    vocabulary: [
+      { word: 'Creation', definition: 'The act of making everything that exists', emoji: '🌍' },
+      { word: 'Darkness', definition: 'When there is no light at all', emoji: '🌑' },
+      { word: 'Holy', definition: 'Special and set apart for God', emoji: '🙏' }
     ]
   },
   {
@@ -43,7 +74,7 @@ export const BIBLE_STORIES_DATA = [
     icon: '⛵️',
     color: 'from-brown-400 to-yellow-600',
     content: [
-       {
+      {
         type: 'paragraph',
         text: "A long time ago, the world became a place that was not very nice. God saw this and was sad. But He found one good man named Noah. God told Noah He was going to wash the world clean with a great flood."
       },
@@ -67,6 +98,37 @@ export const BIBLE_STORIES_DATA = [
         type: 'paragraph',
         text: "Finally, God told Noah to come out of the ark. All the animals came out and had a new, clean world to live in. God put a beautiful rainbow in the sky as a promise that He would never flood the entire earth again."
       },
+    ],
+    comprehension: [
+      {
+        question: 'What did God tell Noah to build?',
+        type: 'multiple-choice',
+        options: ['A house', 'An ark (big boat)', 'A tower', 'A bridge'],
+        correct: 1
+      },
+      {
+        question: 'How long did the rain fall?',
+        type: 'multiple-choice',
+        options: ['Seven days', 'Forty days and nights', 'One month', 'Three days'],
+        correct: 1
+      },
+      {
+        question: 'What did the dove bring back to Noah?',
+        type: 'multiple-choice',
+        options: ['A flower', 'An olive leaf', 'A stone', 'A fish'],
+        correct: 1
+      },
+      {
+        question: 'What did God put in the sky as a promise?',
+        type: 'multiple-choice',
+        options: ['A star', 'A rainbow', 'A cloud', 'A bird'],
+        correct: 1
+      }
+    ],
+    vocabulary: [
+      { word: 'Ark', definition: 'A very large boat built to save people and animals', emoji: '⛵️' },
+      { word: 'Flood', definition: 'When water covers all the land', emoji: '🌊' },
+      { word: 'Rainbow', definition: 'Colored light in the sky that appears after rain', emoji: '🌈' }
     ]
   },
   {
@@ -75,7 +137,7 @@ export const BIBLE_STORIES_DATA = [
     summary: 'A young boy shows great courage against a giant.',
     icon: '👦🏼',
     color: 'from-red-500 to-orange-500',
-     content: [
+    content: [
       {
         type: 'paragraph',
         text: "There was a giant named Goliath. He was very tall and strong, and he scared a whole army of soldiers. Every day, Goliath would shout, \"Send someone to fight me!\" But all the soldiers were too afraid."
@@ -96,10 +158,41 @@ export const BIBLE_STORIES_DATA = [
         type: 'paragraph',
         text: "David put a stone in his slingshot, swung it around, and let it fly. The stone zoomed through the air and hit Goliath right on the forehead! The giant stumbled and fell to the ground with a loud thud."
       },
-       {
+      {
         type: 'paragraph',
         text: "The little shepherd boy, with God's help, had done the impossible. It shows us that it doesn't matter how small you are; with courage and faith, you can overcome big challenges."
       }
+    ],
+    comprehension: [
+      {
+        question: 'What was the name of the giant?',
+        type: 'multiple-choice',
+        options: ['Samson', 'Goliath', 'Saul', 'Jonah'],
+        correct: 1
+      },
+      {
+        question: 'What did David use to fight the giant?',
+        type: 'multiple-choice',
+        options: ['A sword', 'A slingshot and stones', 'A bow and arrow', 'A spear'],
+        correct: 1
+      },
+      {
+        question: 'How many stones did David pick up?',
+        type: 'multiple-choice',
+        options: ['Three', 'Seven', 'Five', 'Ten'],
+        correct: 2
+      },
+      {
+        question: 'What does this story teach us?',
+        type: 'multiple-choice',
+        options: ['Only big people can win', 'With courage and faith, you can overcome challenges', 'Stones are the best weapon', 'Giants are not real'],
+        correct: 1
+      }
+    ],
+    vocabulary: [
+      { word: 'Giant', definition: 'A very, very tall and big person', emoji: '🦸' },
+      { word: 'Slingshot', definition: 'A tool for throwing stones very fast', emoji: '🏹' },
+      { word: 'Courage', definition: 'Being brave even when you are scared', emoji: '💪' }
     ]
   },
   {
@@ -129,6 +222,37 @@ export const BIBLE_STORIES_DATA = [
         type: 'paragraph',
         text: "God heard Jonah's prayer. He commanded the fish to spit Jonah out onto dry land. Jonah was safe! This time, he obeyed God and went to Nineveh to deliver God's message."
       }
+    ],
+    comprehension: [
+      {
+        question: 'Where did God ask Jonah to go?',
+        type: 'multiple-choice',
+        options: ['Jerusalem', 'Nineveh', 'Egypt', 'Bethlehem'],
+        correct: 1
+      },
+      {
+        question: 'What happened when Jonah tried to run away?',
+        type: 'multiple-choice',
+        options: ['He found treasure', 'A big storm came', 'He got lost', 'He met a friend'],
+        correct: 1
+      },
+      {
+        question: 'How long was Jonah inside the fish?',
+        type: 'multiple-choice',
+        options: ['One day', 'Seven days', 'Three days and three nights', 'One week'],
+        correct: 2
+      },
+      {
+        question: 'What did Jonah do inside the fish?',
+        type: 'multiple-choice',
+        options: ['He slept', 'He prayed and said sorry', 'He tried to escape', 'He ate food'],
+        correct: 1
+      }
+    ],
+    vocabulary: [
+      { word: 'Prophet', definition: 'A person chosen by God to deliver His messages', emoji: '📜' },
+      { word: 'Obey', definition: 'To do what someone asks you to do', emoji: '✅' },
+      { word: 'Prayed', definition: 'Talking to God with your heart', emoji: '🙏' }
     ]
   },
 ];

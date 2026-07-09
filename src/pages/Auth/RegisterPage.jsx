@@ -82,7 +82,7 @@ const RegisterPage = () => {
         className="w-full max-w-md"
       >
         {/* AI Guided Registration Help - Stylish AI Note */}
-        <LoginGuidance pageType="register" autoPlay={true} />
+        <LoginGuidance pageType="register" autoPlay={false} />
         
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
           {/* Header */}

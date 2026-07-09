@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { FaArrowLeft, FaCheck } from 'react-icons/fa';
 import WordBuilder from '../../components/reading/WordBuilder';
 import BlendingPlayer from '../../components/reading/BlendingPlayer';
+import SentenceReader from '../../components/reading/SentenceReader';
 import readingEngine from '../../services/ReadingEngine';
 import wordBuilderService from '../../services/WordBuilderService';
 
@@ -164,6 +165,22 @@ const WordBuilderPage = () => {
           </div>
         )}
       </div>
+
+      {/* Sentence Reader */}
+      {completedWords.length > 0 && (
+        <div className="mt-4">
+          <h3 className="font-baloo text-lg font-semibold text-gray-800 dark:text-white mb-3">
+            📖 Practice Reading Sentences
+          </h3>
+          <SentenceReader
+            sentences={[
+              `I see a ${completedWords[0] || 'cat'}.`,
+              `The ${completedWords[Math.min(1, completedWords.length - 1)] || 'dog'} is here.`,
+              `We like the ${completedWords[Math.min(2, completedWords.length - 1)] || 'sun'}!`
+            ]}
+          />
+        </div>
+      )}
 
       {/* Completed Words */}
       {completedWords.length > 0 && (

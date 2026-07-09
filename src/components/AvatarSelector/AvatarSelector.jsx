@@ -50,7 +50,8 @@ const AvatarSelector = ({ childId, onSelect, showSelector = true }) => {
     if (!selectedAvatar) return null;
     
     const avatar = AvatarService.getAvatarById(selectedAvatar);
-    const IconComponent = avatar?.icon || FaUser;
+    const icon = avatar?.icon;
+    const IconComponent = typeof icon === 'string' ? null : (icon || FaUser);
     
     return (
       <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
@@ -58,7 +59,7 @@ const AvatarSelector = ({ childId, onSelect, showSelector = true }) => {
           className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
           style={{ backgroundColor: avatar?.color || '#6366f1' }}
         >
-          <IconComponent className="text-white" />
+          {typeof icon === 'string' ? <span>{icon}</span> : <IconComponent className="text-white" />}
         </div>
         <div>
           <p className="font-medium text-white">{avatar?.name || 'Selected Avatar'}</p>
@@ -93,7 +94,8 @@ const AvatarSelector = ({ childId, onSelect, showSelector = true }) => {
             
             <div className="grid grid-cols-3 gap-3">
               {availableAvatars.map(avatar => {
-                const IconComponent = avatar.icon;
+                const icon = avatar.icon;
+                const IconComponent = typeof icon === 'string' ? null : icon;
                 const unlocked = isUnlocked(avatar);
                 
                 return (
@@ -110,7 +112,7 @@ const AvatarSelector = ({ childId, onSelect, showSelector = true }) => {
                     } ${selectedAvatar === avatar.id ? 'ring-2 ring-purple-500' : ''}`}
                     style={{ backgroundColor: unlocked ? avatar.color : '#374151' }}
                   >
-                    <IconComponent className="text-2xl text-white" />
+                    {typeof icon === 'string' ? <span className="text-2xl">{icon}</span> : <IconComponent className="text-2xl text-white" />}
                     <span className="text-xs text-center">{avatar.name}</span>
                     {avatar.starsRequired > 0 && (
                       <div className="flex items-center gap-1 text-yellow-400">

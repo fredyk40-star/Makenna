@@ -13,6 +13,7 @@ import { useChildAccount } from '../../context/ChildAccountContext';
 import { voiceGuide } from '../../services/VoiceGuideService';
 import { GamificationService } from '../../services/GamificationService';
 import { announceToScreenReader } from '../../utils/accessibility';
+import AudioPlayer from '../../components/audio/AudioPlayer';
 
 const SongPlayer = () => {
   const { songId } = useParams();
@@ -390,6 +391,17 @@ const SongPlayer = () => {
               />
               <span className="text-xs text-gray-500">Max 70%</span>
             </div>
+          </div>
+        )}
+
+        {/* Audio Player */}
+        {song.audioUrl && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-soft p-4 mb-4">
+            <AudioPlayer
+              src={song.audioUrl}
+              title={song.title}
+              autoPlay={false}
+            />
           </div>
         )}
 

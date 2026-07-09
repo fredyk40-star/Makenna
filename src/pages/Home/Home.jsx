@@ -8,17 +8,28 @@ import ProgressSection from './components/ProgressSection';
 import ContinueLearning from './components/ContinueLearning';
 import ParentSection from './components/ParentSection';
 import AIAssistant from '../../components/AIAssistant/AIAssistant';
+import MemoizedCard from '../../components/common/MemoizedCard';
 
 const Home = () => {
   return (
     <div className="space-y-6 md:space-y-8 pb-4">
       <Hero />
-      <DailyQuote />
-      <DailyChallenge />
-      <ProgressSection />
+      <MemoizedCard>
+        <DailyQuote />
+      </MemoizedCard>
+      <MemoizedCard>
+        <DailyChallenge />
+      </MemoizedCard>
+      <MemoizedCard>
+        <ProgressSection />
+      </MemoizedCard>
       <NavigationCards />
-      <ContinueLearning />
-      <ParentSection />
+      <MemoizedCard>
+        <ContinueLearning />
+      </MemoizedCard>
+      <MemoizedCard>
+        <ParentSection />
+      </MemoizedCard>
       <AIAssistant />
     </div>
   );

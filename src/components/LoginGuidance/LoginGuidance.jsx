@@ -3,22 +3,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 import { loginSteps, registerSteps } from '../../data/loginGuidance';
 
-const LoginGuidance = ({ pageType = 'login', autoPlay = true }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const { speak, cancel, isSpeaking, isMuted } = useVoiceGuide();
-  
-  const steps = pageType === 'login' ? loginSteps : registerSteps;
+const LoginGuidance = ({ pageType = 'login', autoPlay = false }) => {
+   const [currentStep, setCurrentStep] = useState(0);
+   const [isMinimized, setIsMinimized] = useState(false);
+   const { speak, cancel, isSpeaking, isMuted } = useVoiceGuide();
+   
+   const steps = pageType === 'login' ? loginSteps : registerSteps;
 
-  // Auto-play guidance on mount
-  useEffect(() => {
-    if (autoPlay && !isMuted && steps.length > 0) {
-      const timer = setTimeout(() => {
-        speak(steps[0].voiceText, { rate: 0.9 });
-      }, 1000); // Wait 1 second after page load
-      return () => clearTimeout(timer);
-    }
-  }, [autoPlay, isMuted, speak, steps]);
+   // Auto-play guidance on mount - requires user interaction first
+   // Note: Browser autoplay policies block speech until user clicks/taps
+   useEffect(() => {
+     if (autoPlay && !isMuted && steps.length > 0) {
+       const timer = setTimeout(() => {
+         speak(steps[0].voiceText, { rate: 0.9 });
+       }, 2000); // Wait 2 seconds after page load
+       return () => clearTimeout(timer);
+     }
+   }, [autoPlay, isMuted, speak, steps]);
 
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {

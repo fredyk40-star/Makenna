@@ -9,6 +9,13 @@ const DEVELOPER_KEY = 'makenna_developer_pin_hash_v1';
 const DEVELOPER_SALT = 'makenna-developer-salt-v1';
 const BACKUP_KEY = 'makenna_backup_data_v1';
 const FEATURE_FLAGS_KEY = 'makenna_feature_flags_v1';
+const FAILED_ATTEMPTS_KEY = 'makenna_dev_failed_attempts_v1';
+const LOCKOUT_UNTIL_KEY = 'makenna_dev_lockout_until_v1';
+const SESSION_TOKEN_KEY = 'makenna_dev_session_v1';
+const SESSION_EXPIRY_KEY = 'makenna_dev_session_expiry_v1';
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 export class DeveloperService {
   /**
@@ -59,7 +66,376 @@ export class DeveloperService {
     if (!/^\d{4}$/.test(newPin) && !/^\d{8}$/.test(newPin)) {
       throw new Error('PIN must be 4 or 8 digits');
     }
-    return this.setDeveloperPin(newPin);
+    const result = await this.setDeveloperPin(newPin);
+    // Sync to Supabase for cross-device access
+    await this._syncPinToCloud();
+    return result;
+  }
+
+  // =====================
+  // Brute Force Protection
+  // =====================
+
+  /**
+   * Check if developer is locked out due to too many failed attempts
+   */
+  static isLockedOut() {
+    const lockoutUntil = StorageService.get(LOCKOUT_UNTIL_KEY);
+    if (!lockoutUntil) return false;
+    return Date.now() < lockoutUntil;
+  }
+
+  /**
+   * Get remaining lockout time in seconds (0 if not locked out)
+   */
+  static getLockoutRemainingSeconds() {
+    const lockoutUntil = StorageService.get(LOCKOUT_UNTIL_KEY);
+    if (!lockoutUntil) return 0;
+    const remaining = lockoutUntil - Date.now();
+    return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+  }
+
+  /**
+   * Record a failed PIN attempt. Locks out after MAX_FAILED_ATTEMPTS.
+   */
+  static recordFailedAttempt() {
+    const attempts = (StorageService.get(FAILED_ATTEMPTS_KEY) || 0) + 1;
+    StorageService.set(FAILED_ATTEMPTS_KEY, attempts);
+    if (attempts >= MAX_FAILED_ATTEMPTS) {
+      StorageService.set(LOCKOUT_UNTIL_KEY, Date.now() + LOCKOUT_DURATION_MS);
+      StorageService.set(FAILED_ATTEMPTS_KEY, 0);
+      this.logAction('DEV_LOCKOUT', { attempts });
+    }
+    return attempts;
+  }
+
+  /**
+   * Clear failed attempts (on successful login)
+   */
+  static clearFailedAttempts() {
+    StorageService.remove(FAILED_ATTEMPTS_KEY);
+    StorageService.remove(LOCKOUT_UNTIL_KEY);
+  }
+
+  // =====================
+  // Secure Session Management
+  // =====================
+
+  /**
+   * Generate a cryptographically secure session token
+   */
+  static _generateSessionToken() {
+    const array = new Uint32Array(8);
+    crypto.getRandomValues(array);
+    return Array.from(array, dec => dec.toString(36)).join('');
+  }
+
+  /**
+   * Create a secure developer session
+   */
+  static createSession() {
+    const token = this._generateSessionToken();
+    const expiry = Date.now() + SESSION_DURATION_MS;
+    StorageService.set(SESSION_TOKEN_KEY, token);
+    StorageService.set(SESSION_EXPIRY_KEY, expiry);
+    this.clearFailedAttempts();
+    this.logAction('DEV_LOGIN', { tokenPrefix: token.substring(0, 8) });
+    return token;
+  }
+
+  /**
+   * Validate the current session (returns true if valid)
+   */
+  static validateSession() {
+    const token = StorageService.get(SESSION_TOKEN_KEY);
+    const expiry = StorageService.get(SESSION_EXPIRY_KEY);
+    if (!token || !expiry) return false;
+    if (Date.now() > expiry) {
+      this.clearSession();
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Clear the session (logout)
+   */
+  static clearSession() {
+    StorageService.remove(SESSION_TOKEN_KEY);
+    StorageService.remove(SESSION_EXPIRY_KEY);
+    this.logAction('DEV_LOGOUT', {});
+  }
+
+  /**
+   * Extend the session expiry (called on user activity)
+   */
+  static extendSession() {
+    const token = StorageService.get(SESSION_TOKEN_KEY);
+    if (!token) return false;
+    StorageService.set(SESSION_EXPIRY_KEY, Date.now() + SESSION_DURATION_MS);
+    return true;
+  }
+
+  // =====================
+  // Supabase Cloud Sync for Children
+  // =====================
+
+  /**
+   * Sync all child accounts from Supabase cloud to localStorage.
+   * Returns { success, count, error } so the UI can show results.
+   */
+  static async syncChildrenFromCloud() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) {
+        return { success: false, count: 0, error: 'Supabase not configured' };
+      }
+
+      const { CloudSyncService } = await import('./CloudSyncService');
+      const result = await CloudSyncService.syncFromCloud();
+
+      if (result.success) {
+        const totalCount = ChildAccountService.getAllAccounts().length;
+        this.logAction('DEV_CLOUD_SYNC_CHILDREN', { count: totalCount });
+        return { success: true, count: totalCount, error: null };
+      }
+
+      return { success: false, count: 0, error: result.error || 'Sync failed' };
+    } catch (err) {
+      console.warn('Sync children from cloud failed:', err.message);
+      return { success: false, count: 0, error: err.message };
+    }
+  }
+
+  /**
+   * Get last cloud sync timestamp
+   */
+  static getLastSyncTime() {
+    return StorageService.get('makenna_sync_status_v1')?.lastSync || null;
+  }
+
+  // =====================
+  // Supabase Cloud Sync for Features & Updates
+  // =====================
+
+  /**
+   * Sync feature flags to Supabase (upload)
+   */
+  static async _syncFeaturesToCloud() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) return false;
+      const { supabase } = await import('./SupabaseService');
+      const flags = this.getFeatureFlags();
+      const { error } = await supabase
+        .from('feature_flags')
+        .upsert({
+          id: 'default',
+          flags: flags,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+      if (error) {
+        console.warn('Failed to sync feature flags to cloud:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('Feature flags sync skipped:', err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Pull feature flags from Supabase and merge into localStorage
+   */
+  static async syncFeaturesFromCloud() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) {
+        return { success: false, error: 'Supabase not configured' };
+      }
+      const { supabase } = await import('./SupabaseService');
+      const { data, error } = await supabase
+        .from('feature_flags')
+        .select('flags')
+        .eq('id', 'default')
+        .maybeSingle();
+      if (error || !data) {
+        return { success: false, error: error?.message || 'No flags found' };
+      }
+      // Merge cloud flags with local (cloud takes priority)
+      const localFlags = this.getFeatureFlags();
+      const merged = { ...localFlags, ...data.flags };
+      this.updateFeatureFlags(merged);
+      this.logAction('DEV_SYNC_FEATURES', { count: Object.keys(merged).length });
+      return { success: true, flags: merged };
+    } catch (err) {
+      console.warn('Feature flags pull failed:', err.message);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Sync updates to Supabase (upload all)
+   */
+  static async _syncUpdatesToCloud() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) return false;
+      const { supabase } = await import('./SupabaseService');
+      const { UpdateService } = await import('./UpdateService');
+      const updates = UpdateService.getUpdateHistory();
+      if (!updates.length) return true;
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('developer_updates')
+          .upsert({
+            id: update.id,
+            version: update.version,
+            type: update.type || 'feature',
+            changelog: update.changelog || '',
+            target: update.target || 'all',
+            target_ids: update.targetIds || [],
+            preview_children: update.previewChildren || [],
+            status: update.status || 'preview',
+            created_at: update.timestamp || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+        if (error) {
+          console.warn('Failed to sync update to cloud:', error.message);
+        }
+      }
+      return true;
+    } catch (err) {
+      console.warn('Updates sync skipped:', err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Pull updates from Supabase and merge into localStorage
+   */
+  static async syncUpdatesFromCloud() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) {
+        return { success: false, error: 'Supabase not configured', count: 0 };
+      }
+      const { supabase } = await import('./SupabaseService');
+      const { UpdateService } = await import('./UpdateService');
+      const { data, error } = await supabase
+        .from('developer_updates')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        return { success: false, error: error.message, count: 0 };
+      }
+      // Merge: cloud updates overwrite local ones with same ID
+      const localUpdates = UpdateService.getUpdateHistory();
+      const mergedIds = new Set();
+      const merged = [];
+      // Cloud first (newest)
+      for (const item of (data || [])) {
+        merged.push({
+          id: item.id,
+          version: item.version,
+          type: item.type || 'feature',
+          changelog: item.changelog || '',
+          target: item.target || 'all',
+          targetIds: item.target_ids || [],
+          previewChildren: item.preview_children || [],
+          status: item.status || 'preview',
+          timestamp: item.created_at
+        });
+        mergedIds.add(item.id);
+      }
+      // Local ones not in cloud
+      for (const local of localUpdates) {
+        if (!mergedIds.has(local.id)) {
+          merged.push(local);
+        }
+      }
+      // Save merged to localStorage
+      const { StorageService } = await import('./StorageService');
+      StorageService.set('makenna_updates_v1', merged);
+      this.logAction('DEV_SYNC_UPDATES', { count: merged.length });
+      return { success: true, count: merged.length, updates: merged };
+    } catch (err) {
+      console.warn('Updates pull failed:', err.message);
+      return { success: false, error: err.message, count: 0 };
+    }
+  }
+
+  // =====================
+  // Supabase Cloud Sync for PIN
+  // =====================
+
+  /**
+   * Sync developer PIN hash to Supabase for cross-device access
+   */
+  static async _syncPinToCloud() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) return false;
+      const { supabase } = await import('./SupabaseService');
+      const pinHash = StorageService.get(DEVELOPER_KEY);
+      if (!pinHash) return false;
+      const { error } = await supabase
+        .from('developer_auth')
+        .upsert({
+          id: 'default',
+          pin_hash: pinHash,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+      if (error) {
+        console.warn('Failed to sync developer PIN to cloud:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('Cloud sync skipped:', err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Pull developer PIN hash from Supabase (for new device login)
+   */
+  static async _syncPinFromCloud() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) return false;
+      const { supabase } = await import('./SupabaseService');
+      const { data, error } = await supabase
+        .from('developer_auth')
+        .select('pin_hash')
+        .eq('id', 'default')
+        .maybeSingle();
+      if (error || !data) return false;
+      StorageService.set(DEVELOPER_KEY, data.pin_hash);
+      return true;
+    } catch (err) {
+      console.warn('Failed to pull developer PIN from cloud:', err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Verify PIN with cloud fallback (for new devices)
+   * First checks localStorage, then pulls from Supabase and retries
+   */
+  static async verifyWithCloudFallback(pin) {
+    // First attempt: local
+    const localVerified = await this.verifyDeveloperPin(pin);
+    if (localVerified) return true;
+
+    // Second attempt: pull from Supabase and retry
+    const synced = await this._syncPinFromCloud();
+    if (synced) {
+      return await this.verifyDeveloperPin(pin);
+    }
+
+    return false;
   }
 
   /**
@@ -178,21 +554,26 @@ export class DeveloperService {
   }
 
   /**
-   * Delete child account
+   * Delete child account (moves to local trash + syncs to cloud trash)
    */
-  static deleteChild(childId) {
+  static async deleteChild(childId) {
     const account = ChildAccountService.getChild(childId);
     if (!account) return false;
     
     // Store in trash before deletion
     const trash = StorageService.get('makenna_trash_bin', []);
-    trash.push({
+    const trashEntry = {
       ...account,
       deletedAt: new Date().toISOString()
-    });
+    };
+    trash.push(trashEntry);
     StorageService.set('makenna_trash_bin', trash);
     
     ChildAccountService.deleteChild(childId);
+    
+    // Sync to Supabase cloud trash
+    await this._syncTrashToCloud(trashEntry);
+    
     return true;
   }
 
@@ -204,9 +585,9 @@ export class DeveloperService {
   }
 
   /**
-   * Restore deleted account
+   * Restore deleted account (from local trash + remove from cloud trash)
    */
-  static restoreChild(childId) {
+  static async restoreChild(childId) {
     const trash = this.getTrashBin();
     const index = trash.findIndex(a => a.childId.toLowerCase() === childId.toLowerCase());
     
@@ -220,7 +601,99 @@ export class DeveloperService {
     trash.splice(index, 1);
     StorageService.set('makenna_trash_bin', trash);
     
+    // Remove from Supabase cloud trash
+    await this._deleteFromCloudTrash(childId);
+    
     return true;
+  }
+
+  /**
+   * Sync trash items to/from Supabase
+   */
+  static async _syncTrashToCloud(trashEntry) {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) return false;
+      const { supabase } = await import('./SupabaseService');
+      const { error } = await supabase
+        .from('developer_trash')
+        .upsert({
+          child_id: trashEntry.childId,
+          full_name: trashEntry.fullName,
+          pin_hash: trashEntry.pinHash || null,
+          avatar: trashEntry.avatar || 'default',
+          progress: trashEntry.progress || {},
+          settings: trashEntry.settings || {},
+          created_at: trashEntry.createdAt,
+          deleted_at: trashEntry.deletedAt
+        }, { onConflict: 'child_id' });
+      if (error) console.warn('Failed to sync trash to cloud:', error.message);
+      return !error;
+    } catch (err) {
+      console.warn('Trash cloud sync skipped:', err.message);
+      return false;
+    }
+  }
+
+  static async _deleteFromCloudTrash(childId) {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) return false;
+      const { supabase } = await import('./SupabaseService');
+      const { error } = await supabase
+        .from('developer_trash')
+        .delete()
+        .eq('child_id', childId);
+      if (error) console.warn('Failed to delete from cloud trash:', error.message);
+      return !error;
+    } catch (err) {
+      console.warn('Trash cloud delete skipped:', err.message);
+      return false;
+    }
+  }
+
+  static async syncTrashFromCloud() {
+    try {
+      const { isSupabaseConfigured } = await import('./SupabaseService');
+      if (!isSupabaseConfigured()) {
+        return { success: false, error: 'Supabase not configured', items: [] };
+      }
+      const { supabase } = await import('./SupabaseService');
+      const { data, error } = await supabase
+        .from('developer_trash')
+        .select('*')
+        .order('deleted_at', { ascending: false });
+      if (error) {
+        return { success: false, error: error.message, items: [] };
+      }
+      // Convert to local format + merge with existing
+      const cloudTrash = (data || []).map(item => ({
+        childId: item.child_id,
+        fullName: item.full_name,
+        pinHash: item.pin_hash || null,
+        avatar: item.avatar || 'default',
+        progress: item.progress || {},
+        settings: item.settings || {},
+        createdAt: item.created_at,
+        deletedAt: item.deleted_at
+      }));
+      // Merge: cloud entries take priority, avoid duplicates
+      const localTrash = this.getTrashBin();
+      const seen = new Set();
+      const merged = [];
+      for (const entry of [...cloudTrash, ...localTrash]) {
+        if (!seen.has(entry.childId)) {
+          seen.add(entry.childId);
+          merged.push(entry);
+        }
+      }
+      StorageService.set('makenna_trash_bin', merged);
+      this.logAction('DEV_SYNC_TRASH', { count: merged.length });
+      return { success: true, count: merged.length, items: merged };
+    } catch (err) {
+      console.warn('Trash pull failed:', err.message);
+      return { success: false, error: err.message, items: [] };
+    }
   }
 
   /**
@@ -374,9 +847,9 @@ export class DeveloperService {
   }
 
   /**
-   * Permanently delete child from trash
+   * Permanently delete child from trash (local + cloud)
    */
-  static deletePermanently(childId) {
+  static async deletePermanently(childId) {
     const trash = this.getTrashBin();
     const index = trash.findIndex(a => a.childId.toLowerCase() === childId.toLowerCase());
     
@@ -384,6 +857,10 @@ export class DeveloperService {
     
     trash.splice(index, 1);
     StorageService.set('makenna_trash_bin', trash);
+    
+    // Also delete from Supabase cloud trash
+    await this._deleteFromCloudTrash(childId);
+    
     this.logAction('PERMANENT_DELETE', { childId });
     return true;
   }

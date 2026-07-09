@@ -25,8 +25,8 @@ const Welcome = () => {
         Watch • Play • Learn • Grow
       </p>
       
-      {/* PWA Installation Guidance for Parents */}
-      <PWAGuidance autoPlay={true} context="welcome" />
+{/* PWA Installation Guidance for Parents */}
+      <PWAGuidance context="welcome" />
       
       <Link to="/">
         <motion.button

@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fa';
 import { getShapeById, SHAPES_DATA } from '../../data/shapesData';
 import { useAudio } from '../../hooks/useAudio';
-import { useProfiles } from '../../context/ProfileContext';
+import { useChildAccount } from '../../context/ChildAccountContext';
 import { announceToScreenReader } from '../../utils/accessibility';
 
 const ShapeLesson = () => {
@@ -22,20 +22,30 @@ const ShapeLesson = () => {
   const [showCelebration, setShowCelebration] = useState(false);
 
   const { speak } = useAudio();
-  const { getProfileData, setProfileData } = useProfiles();
+  const { activeChild, childId } = useChildAccount();
 
   useEffect(() => {
     const found = getShapeById(shapeId);
     if (found) {
       setShape(found);
       
-      // Load progress
-      const progress = getProfileData('shape_progress', {});
-      setIsCompleted(progress[shapeId]?.completed || false);
-      
-      // Load favorites
-      const favorites = getProfileData('shape_favorites', []);
-      setIsFavorite(favorites.includes(shapeId));
+      // Load progress from child account or localStorage
+      if (childId) {
+        const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
+        const account = accounts.find(a => a.childId?.toLowerCase() === childId?.toLowerCase());
+        const progress = account?.progress?.shape_progress || {};
+        setIsCompleted(progress[shapeId]?.completed || false);
+        
+        // Load favorites
+        const favorites = account?.progress?.shape_favorites || [];
+        setIsFavorite(favorites.includes(shapeId));
+      } else {
+        // Fallback to localStorage for backward compatibility
+        const progress = JSON.parse(localStorage.getItem('shape_progress') || '{}');
+        setIsCompleted(progress[shapeId]?.completed || false);
+        const favorites = JSON.parse(localStorage.getItem('shape_favorites') || '[]');
+        setIsFavorite(favorites.includes(shapeId));
+      }
       
       // Speak shape name
       setTimeout(() => {
@@ -44,16 +54,35 @@ const ShapeLesson = () => {
     } else {
       navigate('/shapes');
     }
-  }, [shapeId, navigate, speak, getProfileData]);
+  }, [shapeId, navigate, speak, childId]);
 
   const toggleFavorite = useCallback(() => {
-    const favorites = getProfileData('shape_favorites', []);
-    const newFavorites = isFavorite
-      ? favorites.filter(id => id !== shapeId)
-      : [...favorites, shapeId];
-    setProfileData('shape_favorites', newFavorites);
-    setIsFavorite(!isFavorite);
-  }, [isFavorite, shapeId, getProfileData, setProfileData]);
+    const newIsFavorite = !isFavorite;
+    
+    if (childId) {
+      // Save to child account
+      const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
+      const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
+      if (accountIndex !== -1) {
+        if (!accounts[accountIndex].progress) accounts[accountIndex].progress = {};
+        const favorites = accounts[accountIndex].progress.shape_favorites || [];
+        const newFavorites = newIsFavorite
+          ? [...favorites, shapeId]
+          : favorites.filter(id => id !== shapeId);
+        accounts[accountIndex].progress.shape_favorites = newFavorites;
+        localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
+      }
+    } else {
+      // Fallback to localStorage
+      const favorites = JSON.parse(localStorage.getItem('shape_favorites') || '[]');
+      const newFavorites = newIsFavorite
+        ? [...favorites, shapeId]
+        : favorites.filter(id => id !== shapeId);
+      localStorage.setItem('shape_favorites', JSON.stringify(newFavorites));
+    }
+    
+    setIsFavorite(newIsFavorite);
+  }, [isFavorite, shapeId, childId]);
 
   const handleSpeak = (text) => {
     speak(text, { rate: 0.7, pitch: 1.1 });
@@ -71,9 +100,22 @@ const ShapeLesson = () => {
       announceToScreenReader('Correct!');
       
       // Mark as completed
-      const progress = getProfileData('shape_progress', {});
-      progress[shapeId] = { completed: true };
-      setProfileData('shape_progress', progress);
+      if (childId) {
+        const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
+        const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
+        if (accountIndex !== -1) {
+          if (!accounts[accountIndex].progress) accounts[accountIndex].progress = {};
+          if (!accounts[accountIndex].progress.shape_progress) accounts[accountIndex].progress.shape_progress = {};
+          accounts[accountIndex].progress.shape_progress[shapeId] = { completed: true };
+          localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
+        }
+      } else {
+        // Fallback to localStorage
+        const progress = JSON.parse(localStorage.getItem('shape_progress') || '{}');
+        progress[shapeId] = { completed: true };
+        localStorage.setItem('shape_progress', JSON.stringify(progress));
+      }
+      
       setIsCompleted(true);
       setShowCelebration(true);
       

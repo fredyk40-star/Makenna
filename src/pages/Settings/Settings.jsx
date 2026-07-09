@@ -6,6 +6,8 @@ import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import AudioSettings from '../../components/audio/AudioSettings';
 import PWAGuidance from '../../components/PWAGuidance/PWAGuidance';
+import ParentalControls from '../../components/ParentalControls/ParentalControls';
+import LessonScheduler from '../../components/LessonScheduler/LessonScheduler';
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
@@ -110,6 +112,28 @@ const Settings = () => {
         className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft"
       >
         <AudioSettings />
+      </motion.div>
+
+      {/* Parental Controls */}
+      <motion.div
+        variants={itemVariants}
+        className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft"
+      >
+        <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white mb-4">
+          Parental Controls
+        </h3>
+        <ParentalControls />
+      </motion.div>
+
+      {/* Lesson Scheduler */}
+      <motion.div
+        variants={itemVariants}
+        className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft"
+      >
+        <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white mb-4">
+          Lesson Scheduler
+        </h3>
+        <LessonScheduler />
       </motion.div>
       
       {/* Data Management */}

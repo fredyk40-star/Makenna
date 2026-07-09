@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaBell, FaTimes, FaCheck, FaTrash } from 'react-icons/fa';
 import { NotificationBellService } from '../../services/NotificationBellService';
+import { NotificationService } from '../../services/NotificationService';
 
 const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
@@ -35,11 +36,35 @@ const NotificationBell = () => {
   }, [isOpen]);
 
   const loadNotifications = () => {
-    const allNotifications = NotificationBellService.getAllNotifications();
-    const unread = allNotifications.filter(n => !n.read);
-    setNotifications(allNotifications);
+    const bellNotifications = NotificationBellService.getAllNotifications();
+    setNotifications(bellNotifications);
+    const unread = bellNotifications.filter(n => !n.read);
     setUnreadCount(unread.length);
   };
+
+  // Initialize NotificationService with default parent ID for demo
+  useEffect(() => {
+    // Sync NotificationService notifications if available
+    const parentId = 'demo_parent';
+    const parentNotifications = NotificationService.getNotifications(parentId);
+    if (parentNotifications.length > 0) {
+      const allNotifications = NotificationBellService.getAllNotifications();
+      // Merge parent notifications that don't already exist
+      parentNotifications.forEach(pn => {
+        const exists = allNotifications.some(n => n.id === pn.id);
+        if (!exists) {
+          NotificationBellService.addNotification({
+            title: pn.title,
+            message: pn.message,
+            timestamp: pn.timestamp,
+            read: pn.read,
+            icon: pn.type === 'badge_earned' ? '🏆' : pn.type === 'weekly_report' ? '📊' : '📚'
+          });
+        }
+      });
+      loadNotifications();
+    }
+  }, []);
 
   const markAsRead = (id) => {
     NotificationBellService.markAsRead(id);

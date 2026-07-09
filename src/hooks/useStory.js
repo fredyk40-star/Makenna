@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import storyEngine from '../services/StoryEngine';
 import readingAnalyticsService from '../services/ReadingAnalyticsService';
-import { useAudio } from './useAudio';
 
 export const useStory = (storyId = null) => {
   const [story, setStory] = useState(null);
@@ -16,17 +15,26 @@ export const useStory = (storyId = null) => {
   const [vocabulary, setVocabulary] = useState([]);
   const [comprehension, setComprehension] = useState([]);
   const [characters, setCharacters] = useState([]);
-  
-  const { speak, isPlaying: isAudioPlaying, stop } = useAudio();
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [speed, setSpeed] = useState(0.85);
+
+  const utteranceRef = useRef(null);
+  const wordMapRef = useRef([]);
 
   useEffect(() => {
     if (storyId) {
       loadStory(storyId);
     }
+    return () => {
+      // Cleanup speech on unmount
+      if (utteranceRef.current) {
+        window.speechSynthesis.cancel();
+        utteranceRef.current = null;
+      }
+    };
   }, [storyId]);
 
   const loadStory = useCallback((id) => {
-    // Import stories dynamically
     import('../data/stories').then(({ getStoryById }) => {
       const storyData = getStoryById(id);
       if (storyData) {
@@ -41,6 +49,8 @@ export const useStory = (storyId = null) => {
         setProgress(0);
         setIsComplete(false);
         setHighlightedWord('');
+        setAutoPlay(false);
+        wordMapRef.current = [];
       }
     });
   }, []);
@@ -52,8 +62,6 @@ export const useStory = (storyId = null) => {
       setPageNumber(pageIndex);
       setProgress(storyEngine.progress);
       setIsComplete(storyEngine.isStoryComplete());
-      
-      // Record time spent
       if (pageIndex > 0) {
         readingAnalyticsService.recordReadingTime(0.5);
       }
@@ -67,12 +75,9 @@ export const useStory = (storyId = null) => {
       setPageNumber(storyEngine.currentPage);
       setProgress(storyEngine.progress);
       setIsComplete(storyEngine.isStoryComplete());
-      
-      // Check if story is complete
       if (storyEngine.isStoryComplete()) {
         readingAnalyticsService.recordStoryCompletion(story.id);
       }
-      
       return true;
     }
     return false;
@@ -90,51 +95,171 @@ export const useStory = (storyId = null) => {
   }, []);
 
   const togglePlayPause = useCallback(() => {
-    const result = storyEngine.togglePlayPause();
-    setIsPlaying(result.isPlaying);
-    return result;
+    if (isPlaying) {
+      // Pause
+      window.speechSynthesis.pause();
+      setIsPlaying(false);
+      storyEngine.stopReading();
+      return { isPlaying: false };
+    } else {
+      // Resume or start
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+        setIsPlaying(true);
+        return { isPlaying: true };
+      } else {
+        // Start fresh
+        readPageSmooth();
+        return { isPlaying: true };
+      }
+    }
+  }, [isPlaying]);
+
+  /**
+   * Build word map from text for character-index-based highlighting
+   */
+  const buildWordMap = useCallback((text) => {
+    const words = [];
+    let currentIndex = 0;
+    const textWords = text.split(/\s+/);
+    for (const word of textWords) {
+      const startIdx = text.indexOf(word, currentIndex);
+      if (startIdx >= 0) {
+        words.push({ word, start: startIdx, end: startIdx + word.length });
+        currentIndex = startIdx + word.length;
+      }
+    }
+    wordMapRef.current = words;
+    return words;
   }, []);
+
+  /**
+   * Smooth sentence-level reading using native SpeechSynthesis onboundary
+   */
+  const readPageSmooth = useCallback(() => {
+    if (!currentPage) return;
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    setIsPlaying(true);
+    const text = currentPage.text;
+    buildWordMap(text);
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = speed;
+    utterance.pitch = 1.1;
+    utterance.lang = 'en-US';
+
+    // Try to get a good English voice
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
+                        voices.find(v => v.lang.startsWith('en-US')) ||
+                        voices.find(v => v.lang.startsWith('en'));
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
+
+    utterance.onboundary = (event) => {
+      if (event.name === 'word') {
+        const charIndex = event.charIndex;
+        // Find the word at this character position
+        const wordEntry = wordMapRef.current.find(
+          w => charIndex >= w.start && charIndex < w.end
+        );
+        if (wordEntry) {
+          setHighlightedWord(wordEntry.word);
+        }
+      }
+    };
+
+    utterance.onend = () => {
+      setHighlightedWord('');
+      setIsPlaying(false);
+      storyEngine.stopReading();
+      utteranceRef.current = null;
+
+      // Auto-play: advance to next page
+      if (autoPlay) {
+        if (storyEngine.currentPage < storyEngine.getTotalPages() - 1) {
+          const page = storyEngine.nextPage();
+          if (page) {
+            setCurrentPage(page);
+            setPageNumber(storyEngine.currentPage);
+            setProgress(storyEngine.progress);
+            setIsComplete(storyEngine.isStoryComplete());
+            // Small delay before auto-reading next page
+            setTimeout(() => readPageSmooth(), 500);
+          }
+        } else {
+          // Story complete via auto-play
+          const page = storyEngine.nextPage();
+          if (page) {
+            setCurrentPage(page);
+            setPageNumber(storyEngine.currentPage);
+            setProgress(storyEngine.progress);
+            setIsComplete(storyEngine.isStoryComplete());
+          }
+          if (storyEngine.isStoryComplete()) {
+            readingAnalyticsService.recordStoryCompletion(story?.id);
+          }
+        }
+      }
+    };
+
+    utterance.onerror = (event) => {
+      console.warn('Speech error:', event);
+      setHighlightedWord('');
+      setIsPlaying(false);
+      storyEngine.stopReading();
+      utteranceRef.current = null;
+    };
+
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }, [currentPage, speed, autoPlay, story, buildWordMap]);
 
   const readPage = useCallback(async () => {
     if (!currentPage) return;
-    
-    setIsPlaying(true);
-    const text = currentPage.text;
-    const words = text.split(' ');
-    
-    for (const word of words) {
-      setHighlightedWord(word);
-      await speak(word, {
-        rate: 0.7,
-        pitch: 1.1
-      });
-      // Small pause between words
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-    
-    setHighlightedWord('');
-    setIsPlaying(false);
-    storyEngine.stopReading();
-  }, [currentPage, speak]);
+    readPageSmooth();
+  }, [currentPage, readPageSmooth]);
 
   const stopReading = useCallback(() => {
-    stop();
+    window.speechSynthesis.cancel();
     setIsPlaying(false);
     setHighlightedWord('');
     storyEngine.stopReading();
-  }, [stop]);
+    utteranceRef.current = null;
+  }, []);
 
   const readWord = useCallback(async (word) => {
-    await speak(word, {
-      rate: 0.7,
-      pitch: 1.1
+    return new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.rate = speed;
+      utterance.pitch = 1.1;
+      utterance.lang = 'en-US';
+
+      const voices = window.speechSynthesis.getVoices();
+      const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
+                          voices.find(v => v.lang.startsWith('en-US')) ||
+                          voices.find(v => v.lang.startsWith('en'));
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      window.speechSynthesis.speak(utterance);
     });
-  }, [speak]);
+  }, [speed]);
 
   const changeMode = useCallback((mode) => {
     storyEngine.setReadingMode(mode);
     setReadingMode(mode);
-  }, []);
+    if (mode === 'read-by-myself') {
+      stopReading();
+    }
+  }, [stopReading]);
 
   const recordComprehension = useCallback((score) => {
     if (story) {
@@ -167,11 +292,16 @@ export const useStory = (storyId = null) => {
 
   const resetStory = useCallback(() => {
     storyEngine.resetStory();
+    window.speechSynthesis.cancel();
     setPageNumber(0);
     setCurrentPage(story?.pages[0] || null);
     setProgress(0);
     setIsComplete(false);
     setHighlightedWord('');
+    setAutoPlay(false);
+    setIsPlaying(false);
+    utteranceRef.current = null;
+    wordMapRef.current = [];
   }, [story]);
 
   return {
@@ -187,6 +317,10 @@ export const useStory = (storyId = null) => {
     vocabulary,
     comprehension,
     characters,
+    autoPlay,
+    setAutoPlay,
+    speed,
+    setSpeed,
     loadStory,
     goToPage,
     nextPage,
