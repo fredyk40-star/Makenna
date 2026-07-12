@@ -2,7 +2,7 @@
  * I18n Context - Multi-language support
  * Supports English, Twi, Ga, Ewe, Fante with offline caching
  */
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import en from '../locales/en.json';
 
 const I18nContext = createContext();

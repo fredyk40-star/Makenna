@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 import { loginSteps, registerSteps } from '../../data/loginGuidance';

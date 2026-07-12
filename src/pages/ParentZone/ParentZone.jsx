@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaShieldAlt, FaBookOpen, FaPercentage, FaHourglassHalf, FaStar, FaUserGraduate, FaDownload, FaBell, FaCalendar, FaClock, FaChartBar, FaChartLine, FaRegCalendarAlt, FaFileExport, FaLock, FaUnlock } from 'react-icons/fa';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';

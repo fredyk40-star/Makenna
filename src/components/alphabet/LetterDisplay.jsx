@@ -1,7 +1,7 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { motion } from 'framer-motion';
-import { FaVolumeUp } from 'react-icons/fa';
 import VoiceButton from './VoiceButton';
+import FavoriteButton from './FavoriteButton';
 
 const LetterDisplay = memo(({ 
   letter, 
@@ -26,6 +26,11 @@ const LetterDisplay = memo(({
             <div className="text-3xl md:text-4xl text-gray-600 dark:text-gray-300">
               {lowercase}
             </div>
+            <FavoriteButton
+              isFavorited={isFavorited}
+              onToggle={onFavoriteToggle}
+              label={`${isFavorited ? 'Remove' : 'Add'} ${letter} to favorites`}
+            />
           </div>
           <div className="mt-2 flex items-center justify-center md:justify-start gap-3">
             <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">

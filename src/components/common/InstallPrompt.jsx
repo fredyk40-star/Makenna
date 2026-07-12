@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { FaDownload, FaTimes } from 'react-icons/fa';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaHome, FaBook, FaGamepad, FaUser, FaCog, FaChalkboardTeacher } from 'react-icons/fa';

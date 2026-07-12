@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaChartLine, FaChartBar, FaGlobe, FaStar, FaBookOpen, FaGamepad } from 'react-icons/fa';
 import { LearningAnalytics } from '../../services/LearningAnalytics';

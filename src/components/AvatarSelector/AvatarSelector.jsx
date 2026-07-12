@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AvatarService, AVATAR_DEFINITIONS } from '../../services/AvatarService';
 import { FaUser, FaStar, FaLock } from 'react-icons/fa';

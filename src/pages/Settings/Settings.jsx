@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaCog, FaMoon, FaSun, FaTrash, FaExclamationTriangle, FaMobileAlt } from 'react-icons/fa';
 import { useTheme } from '../../context/ThemeContext';

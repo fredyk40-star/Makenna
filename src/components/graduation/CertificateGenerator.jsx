@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaDownload, FaPrint, FaShare } from 'react-icons/fa';
 import html2canvas from 'html2canvas';

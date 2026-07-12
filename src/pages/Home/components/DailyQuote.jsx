@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { useQuote } from '../../../hooks/useQuote';
 import { FaQuoteLeft } from 'react-icons/fa';

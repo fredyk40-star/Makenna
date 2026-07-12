@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaLock, FaUnlock, FaClock, FaGamepad, FaBookOpen, FaChartLine, FaMoon, FaSun, FaShieldAlt, FaBan, FaSave } from 'react-icons/fa';
 import { SafeModeService } from '../../services/SafeModeService';
@@ -104,8 +104,8 @@ const ParentalControlsComponent = () => {
         </h2>
         <div className="flex gap-4 items-center">
           <div className="flex-1">
-            <label className="block text-sm mb-1">Start Time</label>
-            <input
+            <label htmlFor="pc-input-106" className="block text-sm mb-1">Start Time</label>
+            <input id="pc-input-106"
               type="time"
               value={settings.allowedHours.start}
               onChange={(e) => handleSettingChange('allowedHours', { ...settings.allowedHours, start: e.target.value })}
@@ -113,8 +113,8 @@ const ParentalControlsComponent = () => {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-sm mb-1">End Time</label>
-            <input
+            <label htmlFor="pc-input-115" className="block text-sm mb-1">End Time</label>
+            <input id="pc-input-115"
               type="time"
               value={settings.allowedHours.end}
               onChange={(e) => handleSettingChange('allowedHours', { ...settings.allowedHours, end: e.target.value })}

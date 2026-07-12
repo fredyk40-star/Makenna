@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaFlask, FaArrowLeft, FaCheck, FaBook, FaStar, FaBullseye, FaLightbulb } from 'react-icons/fa';

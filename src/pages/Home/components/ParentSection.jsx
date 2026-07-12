@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaLock, FaUserLock, FaTimes } from 'react-icons/fa';
 import { announceToScreenReader } from '../../../utils/accessibility';

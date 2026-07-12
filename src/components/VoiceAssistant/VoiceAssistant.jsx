@@ -2,7 +2,7 @@
  * VoiceAssistant Component - Interactive voice assistant for kids
  * Provides voice-guided navigation and voice command recognition
  */
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaMicrophone, FaMicrophoneSlash, FaRobot, FaTimes } from 'react-icons/fa';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlay, FaStop, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { useReading } from '../../hooks/useReading';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { FaStar, FaTrophy, FaChartLine, FaBook, FaGamepad, FaPencilAlt } from 'react-icons/fa';
 import { useMastery } from '../../hooks/useMastery';

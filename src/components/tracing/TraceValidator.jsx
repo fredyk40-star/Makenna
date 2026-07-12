@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCheck, FaExclamationCircle, FaStar, FaSmile } from 'react-icons/fa';
 

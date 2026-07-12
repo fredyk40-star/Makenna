@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,6 +13,7 @@ import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import { getNumberById } from '../../data/numbersData';
 import { getNumberTracingData } from '../../data/numberTracingData';
 import { announceToScreenReader } from '../../utils/accessibility';
+import { NUMBERS_DATA } from '../../data/numbersData';
 
 const NumberTracing = () => {
   const { numberId } = useParams();

@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaShapes, FaGamepad } from 'react-icons/fa';
 import { Link } from 'react-router-dom';

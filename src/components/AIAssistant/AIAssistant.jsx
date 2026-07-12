@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaMicrophone, FaMicrophoneSlash, FaRobot, FaTimes, FaComment, FaPaperPlane } from 'react-icons/fa';
 import { AIAssistantService } from '../../services/AIAssistantService';
-import { ChildAccountService } from '../../services/ChildAccountService';
 import { useChildAccount } from '../../context/ChildAccountContext';
 
 const AIAssistant = () => {
@@ -17,6 +16,12 @@ const AIAssistant = () => {
   const [inputText, setInputText] = useState('');
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const handleVoiceInputRef = useRef(null);
+
+  // Keep the ref in sync with the latest handleVoiceInput
+  useEffect(() => {
+    handleVoiceInputRef.current = handleVoiceInput;
+  });
 
   useEffect(() => {
     // Initialize speech recognition
@@ -37,7 +42,7 @@ const AIAssistant = () => {
       recognitionRef.current.onend = () => {
         setIsListening(false);
         if (transcript) {
-          handleVoiceInput(transcript);
+          handleVoiceInputRef.current?.(transcript);
         }
       };
     }
@@ -185,16 +190,6 @@ const AIAssistant = () => {
     }
   };
 
-  const bounceVariants = {
-    bounce: {
-      scale: [1, 1.1, 1],
-      rotate: [0, -5, 5, -5, 0],
-      transition: {
-        duration: 0.5,
-        ease: 'easeOut'
-      }
-    }
-  };
 
   // Check if speech recognition is supported
   const isSpeechSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;

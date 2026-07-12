@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaSave, FaTrash, FaUndo, FaRedo, FaBold, FaItalic, FaUnderline, FaListOl, FaListUl, FaHeading, FaImage, FaPalette, FaCode, FaEye, FaEdit, FaTimes } from 'react-icons/fa';
 

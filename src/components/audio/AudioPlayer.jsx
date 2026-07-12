@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaPlay, FaPause, FaStop, FaVolumeUp, FaVolumeMute,
   FaUndo, FaForward, FaRedo
 } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';
+import audioService from '../../services/AudioService';
 
 const AudioPlayer = ({
   source,

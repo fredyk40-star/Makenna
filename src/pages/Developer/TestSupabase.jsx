@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../../services/SupabaseService';
 import { ChildAccountService } from '../../services/ChildAccountService';
 import { CloudSyncService } from '../../services/CloudSyncService';

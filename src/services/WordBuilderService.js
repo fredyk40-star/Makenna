@@ -1,4 +1,5 @@
 /**
+import readingEngine from './ReadingEngine';
  * Word Builder Service - Manages word building activities
  */
 

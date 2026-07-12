@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaStar, FaCheck, FaTimes, FaPencilAlt, FaBook, FaGamepad } from 'react-icons/fa';
 import { useMastery } from '../../hooks/useMastery';

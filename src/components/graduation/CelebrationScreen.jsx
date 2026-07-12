@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaStar, FaTrophy, FaRocket, FaGift } from 'react-icons/fa';
 import { useMastery } from '../../hooks/useMastery';

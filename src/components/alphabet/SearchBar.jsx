@@ -1,4 +1,4 @@
-import React, { memo, useRef, useEffect } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 

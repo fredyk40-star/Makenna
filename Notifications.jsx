@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { FaBell, FaGift, FaExclamationCircle } from 'react-icons/fa';
 

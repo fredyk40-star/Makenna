@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import GameHub from '../../components/games/GameHub';
 

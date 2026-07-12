@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { COLOURS_DATA } from '../../../data/coloursData';
 import { useAudio } from '../../../hooks/useAudio';

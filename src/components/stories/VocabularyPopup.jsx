@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { FaTimes, FaStar, FaRegStar } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';

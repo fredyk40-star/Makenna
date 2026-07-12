@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaPlus, FaCheckCircle, FaTrash } from 'react-icons/fa';
 import { LessonScheduler } from '../../services/LessonScheduler';

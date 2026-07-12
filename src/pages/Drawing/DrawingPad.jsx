@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   FaUndo, FaRedo, FaEraser, FaPencilAlt, FaTrash, FaDownload

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaBell, FaTimes, FaCheck, FaTrash } from 'react-icons/fa';
 import { NotificationBellService } from '../../services/NotificationBellService';

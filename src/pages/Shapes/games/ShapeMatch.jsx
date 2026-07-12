@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { SHAPES_DATA } from '../../../data/shapesData';
 import { useAudio } from '../../../hooks/useAudio';

@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { ProfileService } from '../services/ProfileService';
 
 export const ProfileContext = createContext();

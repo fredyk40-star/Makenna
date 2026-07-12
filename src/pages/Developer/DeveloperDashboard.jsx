@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DeveloperService } from '../../services/DeveloperService';
 import { UpdateService } from '../../services/UpdateService';

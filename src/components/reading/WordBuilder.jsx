@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaUndo, FaLightbulb, FaCheck, FaTimes } from 'react-icons/fa';
 import { useWordBuilder } from '../../hooks/useWordBuilder';

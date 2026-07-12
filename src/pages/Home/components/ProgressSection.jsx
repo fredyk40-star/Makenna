@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { FaStar, FaTrophy, FaBook, FaClock } from 'react-icons/fa';
 import { useApp } from '../../../context/AppContext';

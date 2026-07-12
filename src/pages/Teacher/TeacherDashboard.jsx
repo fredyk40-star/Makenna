@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TeacherService } from '../../services/TeacherService';
 import { ChildAccountService } from '../../services/ChildAccountService';

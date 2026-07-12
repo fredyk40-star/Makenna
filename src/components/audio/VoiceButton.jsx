@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaVolumeUp, FaVolumeMute, FaSpinner } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';
