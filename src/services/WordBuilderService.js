@@ -1,5 +1,6 @@
-/**
 import readingEngine from './ReadingEngine';
+
+/**
  * Word Builder Service - Manages word building activities
  */
 
@@ -95,6 +96,8 @@ export class WordBuilderService {
       }
     } else {
       result.message = 'Try another spot! 🤔';
+      // Keep current progress when placement is incorrect
+      result.progress = ((build.letters.length - build.shuffled.filter(l => l !== null).length) / build.letters.length) * 100;
     }
     
     build.attempts++;

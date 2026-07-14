@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FaVolumeUp } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';
 

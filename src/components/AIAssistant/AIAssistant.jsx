@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaMicrophone, FaMicrophoneSlash, FaRobot, FaTimes, FaComment, FaPaperPlane } from 'react-icons/fa';
+import { FaMicrophone, FaMicrophoneSlash, FaRobot, FaTimes, FaComment, FaPaperPlane, FaMinus, FaPlus } from 'react-icons/fa';
 import { AIAssistantService } from '../../services/AIAssistantService';
 import { useChildAccount } from '../../context/ChildAccountContext';
 
@@ -14,14 +14,75 @@ const AIAssistant = () => {
   const [transcript, setTranscript] = useState('');
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [isMinimized, setIsMinimized] = useState(() => {
+    // Load user preference from localStorage
+    try {
+      return localStorage.getItem('makenna_ai_minimized') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
   const handleVoiceInputRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
 
   // Keep the ref in sync with the latest handleVoiceInput
   useEffect(() => {
     handleVoiceInputRef.current = handleVoiceInput;
   });
+
+  // Save minimize preference
+  useEffect(() => {
+    try {
+      localStorage.setItem('makenna_ai_minimized', String(isMinimized));
+    } catch (e) {
+      // localStorage not available
+    }
+  }, [isMinimized]);
+
+  // Scroll behavior: hide on scroll down, show on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Always show when at the top of the page
+      if (currentScrollY < 50) {
+        setIsVisible(true);
+        setLastScrollY(currentScrollY);
+        return;
+      }
+
+      // Determine scroll direction
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down - hide the assistant
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up - show the assistant
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+
+      // Clear any existing timeout and set a new one to show after scrolling stops
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsVisible(true);
+      }, 3000);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [lastScrollY]);
 
   useEffect(() => {
     // Initialize speech recognition
@@ -103,6 +164,10 @@ const AIAssistant = () => {
   };
 
   const handleClick = () => {
+    if (isMinimized) {
+      setIsMinimized(false);
+      return;
+    }
     setIsOpen(!isOpen);
     
     if (!isOpen && child?.childId) {
@@ -115,6 +180,16 @@ const AIAssistant = () => {
 
   const handleClose = () => {
     setIsOpen(false);
+  };
+
+  const handleMinimize = (e) => {
+    e.stopPropagation();
+    setIsMinimized(true);
+    setIsOpen(false);
+  };
+
+  const handleExpand = () => {
+    setIsMinimized(false);
   };
 
   const startListening = () => {
@@ -178,31 +253,18 @@ const AIAssistant = () => {
     setInputText('');
   };
 
-  // Character SVG animation variants
-  const floatVariants = {
-    float: {
-      y: [0, -10, 0],
-      transition: {
-        duration: 3,
-        repeat: Infinity,
-        ease: 'easeInOut'
-      }
-    }
-  };
-
-
   // Check if speech recognition is supported
   const isSpeechSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
 
   return (
-    <div className="fixed bottom-24 right-4 z-40 pointer-events-none">
+    <div className="fixed bottom-24 left-4 z-40 pointer-events-none">
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !isMinimized && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="absolute bottom-20 right-0 mb-2 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-xl pointer-events-auto overflow-hidden"
+            className="absolute bottom-20 left-0 mb-2 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-xl pointer-events-auto overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
@@ -210,12 +272,22 @@ const AIAssistant = () => {
                 <FaRobot className="text-xl" />
                 <span className="font-bold">Makenna Assistant</span>
               </div>
-              <button
-                onClick={handleClose}
-                className="p-1 hover:bg-white/20 rounded"
-              >
-                <FaTimes />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleMinimize}
+                  className="p-1 hover:bg-white/20 rounded"
+                  title="Minimize"
+                >
+                  <FaMinus className="text-xs" />
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="p-1 hover:bg-white/20 rounded"
+                  title="Close"
+                >
+                  <FaTimes />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
@@ -283,12 +355,12 @@ const AIAssistant = () => {
 
       {/* Speech Bubble for notifications */}
       <AnimatePresence>
-        {showBubble && !isOpen && isActive && (
+        {showBubble && !isOpen && isActive && !isMinimized && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, x: 20 }}
+            initial={{ opacity: 0, scale: 0.8, x: -20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.8, x: 20 }}
-            className="absolute bottom-20 right-0 mb-2 pointer-events-auto"
+            exit={{ opacity: 0, scale: 0.8, x: -20 }}
+            className="absolute bottom-20 left-0 mb-2 pointer-events-auto"
           >
             <div className="relative bg-white rounded-2xl px-4 py-3 shadow-lg max-w-xs">
               <p className="text-sm text-gray-800 font-medium">
@@ -296,63 +368,117 @@ const AIAssistant = () => {
               </p>
               <button
                 onClick={handleClick}
-                className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-purple-600"
+                className="absolute -top-2 -left-2 bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-purple-600"
               >
                 <FaComment />
               </button>
               {/* Bubble tail */}
-              <div className="absolute bottom-0 right-6 transform translate-y-1/2 rotate-45 w-3 h-3 bg-white shadow-md" />
+              <div className="absolute bottom-0 left-6 transform translate-y-1/2 rotate-45 w-3 h-3 bg-white shadow-md" />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Floating Character */}
-      <motion.div
-        variants={floatVariants}
-        animate="float"
-        whileTap="bounce"
-        onClick={handleClick}
-        className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full shadow-lg cursor-pointer pointer-events-auto flex items-center justify-center hover:scale-105 transition-transform relative overflow-hidden"
-      >
-        {/* Animated character face */}
-        <div className="relative">
-          {/* Eyes */}
-          <div className="flex justify-center gap-2 mb-1">
-            <div className={`w-2 h-2 bg-white rounded-full ${isListening ? 'animate-ping' : 'animate-pulse'}`} />
-            <div className={`w-2 h-2 bg-white rounded-full ${isListening ? 'animate-ping' : 'animate-pulse'}`} />
-          </div>
-          {/* Mouth */}
-          <div className={`w-4 h-2 border-b-2 border-white rounded-full mx-auto ${isListening ? 'w-6 h-3 bg-white rounded-full animate-bounce' : ''}`} />
-          {/* Cheeks */}
-          <div className="absolute -left-1 top-2 w-1 h-1 bg-pink-200 rounded-full opacity-50" />
-          <div className="absolute -right-1 top-2 w-1 h-1 bg-pink-200 rounded-full opacity-50" />
-        </div>
-
-        {/* Glow effect when active */}
-        {isActive && (
+      <AnimatePresence>
+        {!isMinimized && (
           <motion.div
-            className="absolute inset-0 rounded-full bg-purple-300 opacity-30 blur-md"
+            initial={{ opacity: 0, scale: 0.5, x: -20 }}
             animate={{
-              scale: [1, 1.3, 1],
-              opacity: [0.3, 0.1, 0.3]
+              y: [0, -10, 0],
+              opacity: isVisible ? 1 : 0,
+              scale: 1,
+              x: isVisible ? 0 : -20
             }}
+            exit={{ opacity: 0, scale: 0.5, x: -20 }}
             transition={{
-              duration: 2,
-              repeat: Infinity
+              y: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+              opacity: { duration: 0.3 },
+              scale: { duration: 0.3 },
+              x: { duration: 0.3 }
             }}
-          />
-        )}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleClick}
+            className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full shadow-lg cursor-pointer pointer-events-auto flex items-center justify-center hover:scale-105 transition-transform relative overflow-hidden"
+          >
+            {/* Minimize button overlay */}
+            <button
+              onClick={handleMinimize}
+              className="absolute top-0 right-0 z-10 w-5 h-5 bg-white/80 hover:bg-white text-purple-500 rounded-full flex items-center justify-center text-[10px] shadow-sm transition-colors opacity-0 hover:opacity-100 group-hover:opacity-100"
+              style={{ opacity: 0, transition: 'opacity 0.2s' }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+              title="Minimize"
+            >
+              <FaMinus />
+            </button>
 
-        {/* Notification dot for unread messages */}
-        {!isOpen && messages.length > 0 && (
-          <motion.div
-            className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border-2 border-white"
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          />
+            {/* Animated character face */}
+            <div className="relative">
+              {/* Eyes */}
+              <div className="flex justify-center gap-2 mb-1">
+                <div className={`w-2 h-2 bg-white rounded-full ${isListening ? 'animate-ping' : 'animate-pulse'}`} />
+                <div className={`w-2 h-2 bg-white rounded-full ${isListening ? 'animate-ping' : 'animate-pulse'}`} />
+              </div>
+              {/* Mouth */}
+              <div className={`w-4 h-2 border-b-2 border-white rounded-full mx-auto ${isListening ? 'w-6 h-3 bg-white rounded-full animate-bounce' : ''}`} />
+              {/* Cheeks */}
+              <div className="absolute -left-1 top-2 w-1 h-1 bg-pink-200 rounded-full opacity-50" />
+              <div className="absolute -right-1 top-2 w-1 h-1 bg-pink-200 rounded-full opacity-50" />
+            </div>
+
+            {/* Glow effect when active */}
+            {isActive && (
+              <motion.div
+                className="absolute inset-0 rounded-full bg-purple-300 opacity-30 blur-md"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.3, 0.1, 0.3]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity
+                }}
+              />
+            )}
+
+            {/* Notification dot for unread messages */}
+            {!isOpen && messages.length > 0 && (
+              <motion.div
+                className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border-2 border-white"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+            )}
+          </motion.div>
         )}
-      </motion.div>
+      </AnimatePresence>
+
+      {/* Minimized Dot */}
+      <AnimatePresence>
+        {isMinimized && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5, x: -20 }}
+            animate={{ opacity: isVisible ? 1 : 0, scale: 1, x: isVisible ? 0 : -20 }}
+            exit={{ opacity: 0, scale: 0.5, x: -20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleExpand}
+            className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full shadow-lg cursor-pointer pointer-events-auto flex items-center justify-center relative"
+            title="Expand Makenna Assistant"
+          >
+            <FaPlus className="text-white text-xs" />
+            {messages.length > 0 && (
+              <motion.div
+                className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

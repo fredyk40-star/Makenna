@@ -1,6 +1,5 @@
 import { memo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaVolumeUp, FaStar, FaRegStar } from 'react-icons/fa';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import VoiceButton from './VoiceButton';
 import FavoriteButton from './FavoriteButton';

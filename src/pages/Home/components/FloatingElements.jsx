@@ -6,7 +6,7 @@ const FloatingElements = () => {
     { icon: '☁️', left: '60%', top: '5%', delay: 1.5, duration: 5 },
     { icon: '⭐', left: '85%', top: '15%', delay: 0.5, duration: 3 },
     { icon: '⭐', left: '5%', top: '60%', delay: 1, duration: 3.5 },
-    { icon: '🌈', left: '30%', top: '70%', delay: 0.8, duration: 6 },
+    { icon: '', left: '30%', top: '70%', delay: 0.8, duration: 6 },
     { icon: '🐦', left: '70%', top: '75%', delay: 2, duration: 4.5 },
     { icon: '☀️', left: '90%', top: '40%', delay: 0.3, duration: 5 },
   ];

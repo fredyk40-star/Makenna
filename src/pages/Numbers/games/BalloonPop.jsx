@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAudio } from '../../../hooks/useAudio';
 import { announceToScreenReader } from '../../../utils/accessibility';
 
@@ -16,7 +16,7 @@ const BalloonPop = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
   useEffect(() => {
     generateRound();
-  }, []);
+  }, [generateRound]);
 
   const generateRound = useCallback(() => {
     const max = game.maxNumber || 5;
@@ -25,20 +25,12 @@ const BalloonPop = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
     setIsRoundComplete(false);
     setTotalQuestions(prev => prev + 1);
 
-    // Generate balloons with numbers
-    const totalBalloons = 6 + Math.floor(Math.random() * 4);
-    const numbers = [target];
-    while (numbers.length < totalBalloons) {
-      let num;
-      do {
-        num = Math.floor(Math.random() * max) + 1;
-      } while (numbers.includes(num) || numbers.length >= totalBalloons);
-      numbers.push(num);
-    }
-
-    // Shuffle balloons
-    const shuffled = numbers.sort(() => Math.random() - 0.5);
-    const newBalloons = shuffled.map((num, i) => ({
+    // Generate balloons with numbers — safe generation, capped to max unique values
+    const totalBalloons = Math.min(6 + Math.floor(Math.random() * 4), max);
+    const available = Array.from({ length: max }, (_, i) => i + 1).filter(n => n !== target);
+    const extraNumbers = available.sort(() => Math.random() - 0.5).slice(0, totalBalloons - 1);
+    const numbers = [target, ...extraNumbers].sort(() => Math.random() - 0.5);
+    const newBalloons = numbers.map((num, i) => ({
       id: i,
       number: num,
       popped: false,

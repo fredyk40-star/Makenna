@@ -9,7 +9,6 @@ const CountMangoes = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [targetNumber, setTargetNumber] = useState(0);
   const [count, setCount] = useState(0);
   const [mangoes, setMangoes] = useState([]);
-  const [selectedMangoes, setSelectedMangoes] = useState([]);
   const [isCorrect, setIsCorrect] = useState(null);
   const [attempts, setAttempts] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
@@ -20,14 +19,13 @@ const CountMangoes = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
   useEffect(() => {
     generateQuestion();
-  }, []);
+  }, [generateQuestion]);
 
   const generateQuestion = useCallback(() => {
     const max = game.maxNumber || 5;
     const target = Math.floor(Math.random() * max) + 1;
     setTargetNumber(target);
     setCount(0);
-    setSelectedMangoes([]);
     setIsCorrect(null);
     setShowResult(false);
 
@@ -55,10 +53,8 @@ const CountMangoes = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
     const isSelected = mangoes.find(m => m.id === mangoId)?.selected;
     if (!isSelected) {
-      setSelectedMangoes(prev => [...prev, mangoId]);
       setCount(prev => prev + 1);
     } else {
-      setSelectedMangoes(prev => prev.filter(id => id !== mangoId));
       setCount(prev => prev - 1);
     }
   };
@@ -142,9 +138,8 @@ const CountMangoes = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       <div className="flex justify-center gap-3">
         <button
           onClick={() => {
-            setCount(0);
-            setSelectedMangoes([]);
-            setMangoes(prev => prev.map(m => ({ ...m, selected: false })));
+          setCount(0);
+          setMangoes(prev => prev.map(m => ({ ...m, selected: false })));
           }}
           className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
@@ -181,7 +176,9 @@ const CountMangoes = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       </div>
     </div>
   );
-  CountMangoes.propTypes = {
+};
+
+CountMangoes.propTypes = {
   game: PropTypes.shape({
     id: PropTypes.string,
     title: PropTypes.string,
@@ -191,7 +188,6 @@ const CountMangoes = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   onComplete: PropTypes.func.isRequired,
   onScoreUpdate: PropTypes.func.isRequired,
   onStarsUpdate: PropTypes.func.isRequired
-};
 };
 
 export default CountMangoes;

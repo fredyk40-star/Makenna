@@ -53,8 +53,10 @@ const StrokeGuide = memo(({
                 transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute top-6 left-1/2 -translate-x-1/2 text-blue-400 text-xl"
               >
-                {getArrowIcon(guide.direction) && 
-                  React.createElement(getArrowIcon(guide.direction))}
+                {(() => {
+                  const ArrowIcon = getArrowIcon(guide.direction);
+                  return ArrowIcon ? <ArrowIcon /> : null;
+                })()}
               </motion.div>
             )}
 

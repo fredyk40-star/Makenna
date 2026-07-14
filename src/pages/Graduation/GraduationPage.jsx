@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaTrophy, FaStar, FaRocket } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
 import AlphabetReview from '../../components/graduation/AlphabetReview';
 import MasteryDashboard from '../../components/graduation/MasteryDashboard';
 import CertificateGenerator from '../../components/graduation/CertificateGenerator';
@@ -20,7 +20,7 @@ const GraduationPage = () => {
     if (isAllLettersMastered()) {
       setShowCelebration(true);
     }
-  }, []);
+  }, [isAllLettersMastered]);
 
   return (
     <motion.div

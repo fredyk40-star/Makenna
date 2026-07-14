@@ -1,12 +1,32 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
-import { FaDownload, FaTimes } from 'react-icons/fa';
+import { usePWADetection } from '../../hooks/usePWADetection';
+import { FaDownload, FaTimes, FaShareAlt } from 'react-icons/fa';
 
 const InstallPrompt = () => {
-  const { isInstallable, installApp } = useInstallPrompt();
-  const [dismissed, setDismissed] = React.useState(false);
+  const { isInstallable, isInstalled, installApp } = useInstallPrompt();
+  const { platform } = usePWADetection();
+  const [dismissed, setDismissed] = useState(false);
+  const [showIOSHint, setShowIOSHint] = useState(false);
 
-  if (!isInstallable || dismissed) return null;
+  if (isInstalled || dismissed) return null;
+
+  const handleInstall = async () => {
+    if (isInstallable) {
+      const result = await installApp();
+      if (!result && platform === 'ios') {
+        setShowIOSHint(true);
+      }
+    } else if (platform === 'ios') {
+      setShowIOSHint(true);
+    }
+  };
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    setShowIOSHint(false);
+  };
 
   return (
     <AnimatePresence>
@@ -22,19 +42,42 @@ const InstallPrompt = () => {
               <h3 className="font-bold text-gray-800 dark:text-white">
                 Install Makenna Lab
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                Get the full experience with offline access!
-              </p>
+
+              {/* iOS Safari hint */}
+              <AnimatePresence>
+                {showIOSHint && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FaShareAlt className="text-blue-500 shrink-0" />
+                      <span>
+                        Tap the <strong>Share</strong> button in Safari, then scroll down and tap <strong>"Add to Home Screen"</strong>.
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {!showIOSHint && (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  Get the full experience with offline access!
+                </p>
+              )}
+
               <button
-                onClick={installApp}
+                onClick={handleInstall}
                 className="mt-3 btn-primary text-sm py-2 px-4 rounded-xl flex items-center gap-2"
               >
                 <FaDownload />
-                Install App
+                {isInstallable ? 'Install App' : 'Add to Home Screen'}
               </button>
             </div>
             <button
-              onClick={() => setDismissed(true)}
+              onClick={handleDismiss}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
               aria-label="Dismiss install prompt"
             >

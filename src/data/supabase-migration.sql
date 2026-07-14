@@ -130,8 +130,9 @@ CREATE TABLE IF NOT EXISTS developer_trash (
 ALTER TABLE developer_trash ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anon can read trash" ON developer_trash FOR SELECT USING (true);
 CREATE POLICY "Anon can insert trash" ON developer_trash FOR INSERT WITH CHECK (true);
+CREATE POLICY "Anon can update trash" ON developer_trash FOR UPDATE USING (true);
 CREATE POLICY "Anon can delete trash" ON developer_trash FOR DELETE USING (true);
-GRANT SELECT, INSERT, DELETE ON public.developer_trash TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.developer_trash TO anon;
 
 -- APP INSTRUCTIONS:
 -- 1. Parents sign up with: supabase.auth.signUp({ email, password })

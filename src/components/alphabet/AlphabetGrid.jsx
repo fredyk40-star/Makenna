@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaStar, FaLock, FaCheck } from 'react-icons/fa';
+import { FaStar, FaCheck } from 'react-icons/fa';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { staggerContainer } from '../../utils/constants';
 

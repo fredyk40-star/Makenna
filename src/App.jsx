@@ -16,7 +16,6 @@ import OfflineDetector from './components/common/OfflineDetector';
 import InstallPrompt from './components/common/InstallPrompt';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import VoiceAssistant from './components/VoiceAssistant/VoiceAssistant';
 import AIAssistant from './components/AIAssistant/AIAssistant';
 import UpdatePreviewBanner from './components/UpdatePreview/UpdatePreviewBanner';
 
@@ -140,7 +139,6 @@ const AppContent = () => {
       <OfflineDetector />
       <InstallPrompt />
       <VoiceGuideProvider>
-        <VoiceAssistant />
         <AIAssistant />
         <UpdatePreviewBanner />
         <AnimatePresence mode="wait">

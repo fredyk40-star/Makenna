@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaCheck } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
 import WordBuilder from '../../components/reading/WordBuilder';
 import BlendingPlayer from '../../components/reading/BlendingPlayer';
 import SentenceReader from '../../components/reading/SentenceReader';
-import readingEngine from '../../services/ReadingEngine';
 import wordBuilderService from '../../services/WordBuilderService';
 
 const WordBuilderPage = () => {
@@ -91,7 +90,7 @@ const WordBuilderPage = () => {
       <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${(completedWords.length / wordList.length) * 100}%` }}
+          animate={{ width: `${wordList.length > 0 ? (completedWords.length / wordList.length) * 100 : 0}%` }}
           transition={{ duration: 0.5 }}
           className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"
         />

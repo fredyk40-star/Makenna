@@ -14,7 +14,7 @@ const CelebrationScreen = ({
   useEffect(() => {
     // Generate celebration particles
     const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#A78BFA', '#F472B6', '#34D399', '#FB923C'];
-    const emojis = ['🌟', '⭐', '🎉', '🎊', '✨', '🌈', '🎈', '🎆'];
+    const emojis = ['🌟', '⭐', '🎉', '🎊', '✨', '', '🎈', '🎆'];
     const newParticles = [];
     
     for (let i = 0; i < 60; i++) {

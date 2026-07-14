@@ -36,7 +36,7 @@ export const QUOTES = [
   'Every day is a new adventure! 🚀',
   'You can do anything! 💪',
   'Keep shining bright! ✨',
-  'Dream big, little one! 🌈',
+  'Dream big, little one! ',
   'You make the world brighter! 🌟',
 ];
 

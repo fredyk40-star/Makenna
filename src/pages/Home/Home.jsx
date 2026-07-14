@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
 import Hero from './components/Hero';
 import NavigationCards from './components/NavigationCards';
 import DailyQuote from './components/DailyQuote';
@@ -7,7 +5,6 @@ import DailyChallenge from './components/DailyChallenge';
 import ProgressSection from './components/ProgressSection';
 import ContinueLearning from './components/ContinueLearning';
 import ParentSection from './components/ParentSection';
-import AIAssistant from '../../components/AIAssistant/AIAssistant';
 import MemoizedCard from '../../components/common/MemoizedCard';
 
 const Home = () => {
@@ -30,7 +27,6 @@ const Home = () => {
       <MemoizedCard>
         <ParentSection />
       </MemoizedCard>
-      <AIAssistant />
     </div>
   );
 };

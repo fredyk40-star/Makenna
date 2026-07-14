@@ -104,7 +104,7 @@ export const NUMBERS_STORIES = [
       {
         pageNumber: 5,
         text: 'Two happy goats, two tasty mangoes, one perfect day!',
-        illustration: '🌈',
+        illustration: '',
         interactive: { tap: { action: 'speak', text: 'Perfect day' } }
       }
     ],
@@ -319,7 +319,7 @@ export const NUMBERS_STORIES = [
     vocabulary: [
       { word: 'River', definition: 'A large stream of water that flows across land', emoji: '🌊' },
       { word: 'Swim', definition: 'To move through water', emoji: '🏊' },
-      { word: 'Colourful', definition: 'Having many bright colours', emoji: '🌈' }
+      { word: 'Colourful', definition: 'Having many bright colours', emoji: '' }
     ],
     comprehension: [
       {

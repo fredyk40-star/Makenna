@@ -1060,7 +1060,7 @@ export const ALPHABET_DATA = [
       },
       {
         word: 'Rainbow',
-        image: '🌈',
+        image: '',
         pronunciation: '/ˈreɪn.bəʊ/',
         sentence: 'The rainbow has many colors.',
         description: 'A colorful arch in the sky after rain.'

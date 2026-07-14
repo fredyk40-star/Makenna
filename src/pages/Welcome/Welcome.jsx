@@ -15,7 +15,7 @@ const Welcome = () => {
         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         className="text-8xl md:text-9xl mb-6"
       >
-        🌈
+        
       </motion.div>
       <h1 className="font-baloo text-4xl md:text-5xl font-bold text-primary dark:text-blue-400 mb-4">
         Welcome to Makenna Learning Lab!

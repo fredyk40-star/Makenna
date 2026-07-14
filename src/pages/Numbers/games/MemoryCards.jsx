@@ -28,7 +28,7 @@ const MemoryCards = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
     const newCards = [];
     numbers.forEach((num, index) => {
-      const emojis = ['⭐', '🍎', '🐱', '🚗', '🌈', '🎈', '🍕', '🐶', '🌸', '⭐'];
+      const emojis = ['⭐', '🍎', '🐱', '🚗', '', '🎈', '🍕', '🐶', '🌸', '⭐'];
       const emoji = emojis[index % emojis.length];
       newCards.push({
         id: `num-${index}`,

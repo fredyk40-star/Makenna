@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAudio } from '../../../hooks/useAudio';
 import { announceToScreenReader } from '../../../utils/accessibility';
 
@@ -11,7 +11,6 @@ const BubbleBurst = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [correctBursts, setCorrectBursts] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [isRoundComplete, setIsRoundComplete] = useState(false);
-  const [spokenNumber, setSpokenNumber] = useState(0);
 
   const { speak, isPlaying } = useAudio();
   const speechTimeoutRef = useRef(null);
@@ -23,29 +22,21 @@ const BubbleBurst = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
         clearTimeout(speechTimeoutRef.current);
       }
     };
-  }, []);
+  }, [generateRound]);
 
   const generateRound = useCallback(() => {
     const max = game.maxNumber || 10;
     const target = Math.floor(Math.random() * max) + 1;
     setCurrentNumber(target);
-    setSpokenNumber(target);
     setIsRoundComplete(false);
     setTotalQuestions(prev => prev + 1);
 
-    // Generate bubbles with numbers
-    const totalBubbles = 8 + Math.floor(Math.random() * 4);
-    const numbers = [target];
-    while (numbers.length < totalBubbles) {
-      let num;
-      do {
-        num = Math.floor(Math.random() * max) + 1;
-      } while (numbers.includes(num) || numbers.length >= totalBubbles);
-      numbers.push(num);
-    }
-
-    const shuffled = numbers.sort(() => Math.random() - 0.5);
-    const newBubbles = shuffled.map((num, i) => ({
+    // Generate bubbles with numbers — safe generation, capped to max unique values
+    const totalBubbles = Math.min(8 + Math.floor(Math.random() * 4), max);
+    const available = Array.from({ length: max }, (_, i) => i + 1).filter(n => n !== target);
+    const extraNumbers = available.sort(() => Math.random() - 0.5).slice(0, totalBubbles - 1);
+    const numbers = [target, ...extraNumbers].sort(() => Math.random() - 0.5);
+    const newBubbles = numbers.map((num, i) => ({
       id: i,
       number: num,
       burst: false,

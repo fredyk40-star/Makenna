@@ -44,7 +44,7 @@ const TopBar = () => {
             transition={{ type: 'spring', stiffness: 300 }}
             className="text-3xl md:text-4xl"
           >
-            🌈
+            
           </motion.div>
           <div className="hidden xs:block">
             <h1 className="font-baloo text-xl md:text-2xl font-bold text-primary dark:text-blue-400">

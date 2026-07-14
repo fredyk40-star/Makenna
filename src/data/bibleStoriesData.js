@@ -128,7 +128,7 @@ export const BIBLE_STORIES_DATA = [
     vocabulary: [
       { word: 'Ark', definition: 'A very large boat built to save people and animals', emoji: '⛵️' },
       { word: 'Flood', definition: 'When water covers all the land', emoji: '🌊' },
-      { word: 'Rainbow', definition: 'Colored light in the sky that appears after rain', emoji: '🌈' }
+      { word: 'Rainbow', definition: 'Colored light in the sky that appears after rain', emoji: '' }
     ]
   },
   {
