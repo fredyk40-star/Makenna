@@ -18,6 +18,12 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import AIAssistant from './components/AIAssistant/AIAssistant';
 import UpdatePreviewBanner from './components/UpdatePreview/UpdatePreviewBanner';
+import ArcadeGamePage from './pages/Games/ArcadeGamePage';
+import {
+  ALPHABET_ARCADE_GAMES,
+  SHAPES_ARCADE_GAMES,
+  MUSIC_ARCADE_GAMES,
+} from './data/arcadeGamesData';
 
 // Lazy load pages with error handling
 const lazyWithErrorHandler = (importFn) => {
@@ -54,7 +60,6 @@ const ShapesHome = lazyWithErrorHandler(() => import('./pages/Shapes/ShapesHome'
 const ShapeLesson = lazyWithErrorHandler(() => import('./pages/Shapes/ShapeLesson'));
 const ColoursHome = lazyWithErrorHandler(() => import('./pages/Colours/ColoursHome'));
 const ColourLesson = lazyWithErrorHandler(() => import('./pages/Colours/ColourLesson'));
-const ComingSoon = lazyWithErrorHandler(() => import('./pages/ComingSoon/ComingSoon'));
 const Profile = lazyWithErrorHandler(() => import('./pages/Profile/Profile'));
 const Settings = lazyWithErrorHandler(() => import('./pages/Settings/Settings'));
 const ParentZone = lazyWithErrorHandler(() => import('./pages/ParentZone/ParentZone'));
@@ -72,10 +77,6 @@ const TracingPage = lazyWithErrorHandler(() => import('./pages/Alphabet/TracingP
 
 const AlphabetGames = lazyWithErrorHandler(() => import('./pages/Games/AlphabetGames'));
 const ShapesGames = lazyWithErrorHandler(() => import('./pages/Shapes/ShapesGames'));
-
-const ShapeMatch = lazyWithErrorHandler(() => import('./pages/Shapes/games/ShapeMatch'));
-const FindObject = lazyWithErrorHandler(() => import('./pages/Shapes/games/FindObject'));
-const ColourPicker = lazyWithErrorHandler(() => import('./pages/Shapes/games/ColourPicker'));
 
 const NumbersHome = lazyWithErrorHandler(() => import('./pages/Numbers/NumbersHome'));
 const NumberLesson = lazyWithErrorHandler(() => import('./pages/Numbers/NumberLesson'));
@@ -173,13 +174,27 @@ const AppContent = () => {
                   <Route path="alphabet/lesson/:letterId" element={<LessonPage />} />
                   <Route path="alphabet/trace/:letterId" element={<TracingPage />} />
                   <Route path="games/alphabet" element={<AlphabetGames />} />
+                  <Route
+                    path="games/alphabet/:gameId"
+                    element={
+                      <ArcadeGamePage
+                        collection={ALPHABET_ARCADE_GAMES}
+                        fallbackPath="/games/alphabet"
+                        aliases={{ bingo: 'alphabet-bingo', order: 'alphabet-order' }}
+                      />
+                    }
+                  />
                   <Route path="shapes" element={<ShapesHome />} />
                   <Route path="games/shapes" element={<ShapesGames />} />
-                  <Route path="games/shapes/shape-match" element={<ShapeMatch />} />
-                  <Route path="games/shapes/find-the-shape" element={<FindObject />} />
-                  <Route path="games/shapes/colour-picker" element={<ColourPicker />} />
-                  <Route path="games/shapes/shape-sorting" element={<ComingSoon />} />
-                  <Route path="games/shapes/shape-memory" element={<ComingSoon />} />
+                  <Route
+                    path="games/shapes/:gameId"
+                    element={
+                      <ArcadeGamePage
+                        collection={SHAPES_ARCADE_GAMES}
+                        fallbackPath="/games/shapes"
+                      />
+                    }
+                  />
                   <Route path="shapes/lesson/:shapeId" element={<ShapeLesson />} />
                   <Route path="animal-safari" element={<AnimalSafari />} />
                   <Route path="music" element={<MusicLibrary />} />
@@ -187,6 +202,15 @@ const AppContent = () => {
                   <Route path="music/karaoke/:songId" element={<KaraokePlayer />} />
                   <Route path="music/record/:songId" element={<RecordVoice />} />
                   <Route path="music/games" element={<MusicGames />} />
+                  <Route
+                    path="music/games/:gameId"
+                    element={
+                      <ArcadeGamePage
+                        collection={MUSIC_ARCADE_GAMES}
+                        fallbackPath="/music/games"
+                      />
+                    }
+                  />
                   <Route path="drawing" element={<Drawing />} />
                   <Route path="reading/word-builder" element={<WordBuilder />} />
                   <Route path="reading/sight-words" element={<SightWords />} />

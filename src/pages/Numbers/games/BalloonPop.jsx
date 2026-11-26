@@ -14,10 +14,6 @@ const BalloonPop = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
   const { speak } = useAudio();
 
-  useEffect(() => {
-    generateRound();
-  }, [generateRound]);
-
   const generateRound = useCallback(() => {
     const max = game.maxNumber || 5;
     const target = Math.floor(Math.random() * max) + 1;
@@ -44,6 +40,10 @@ const BalloonPop = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
     speak(`Pop the balloon with number ${target}`, { rate: 0.7, pitch: 1.1 });
     announceToScreenReader(`Find and pop number ${target}`);
   }, [game.maxNumber, speak]);
+
+  useEffect(() => {
+    generateRound();
+  }, [generateRound]);
 
   const handlePop = (balloonId) => {
     const balloon = balloons.find(b => b.id === balloonId);

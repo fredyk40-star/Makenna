@@ -15,15 +15,6 @@ const BubbleBurst = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const { speak, isPlaying } = useAudio();
   const speechTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    generateRound();
-    return () => {
-      if (speechTimeoutRef.current) {
-        clearTimeout(speechTimeoutRef.current);
-      }
-    };
-  }, [generateRound]);
-
   const generateRound = useCallback(() => {
     const max = game.maxNumber || 10;
     const target = Math.floor(Math.random() * max) + 1;
@@ -54,6 +45,15 @@ const BubbleBurst = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       announceToScreenReader(`Find and pop number ${target}`);
     }, 500);
   }, [game.maxNumber, speak]);
+
+  useEffect(() => {
+    generateRound();
+    return () => {
+      if (speechTimeoutRef.current) {
+        clearTimeout(speechTimeoutRef.current);
+      }
+    };
+  }, [generateRound]);
 
   const handleBurst = (bubbleId) => {
     const bubble = bubbles.find(b => b.id === bubbleId);

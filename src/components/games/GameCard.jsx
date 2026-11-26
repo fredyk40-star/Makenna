@@ -118,17 +118,19 @@ const GameCard = ({ game, isFavorite, onFavoriteToggle }) => {
             {getCompletionStatus()}
           </div>
 
-          <Link to={game.path || '#'}>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+          <motion.div whileHover={{ scale: game.locked ? 1 : 1.05 }} whileTap={{ scale: game.locked ? 1 : 0.95 }}>
+            <Link
+              to={game.path || '#'}
+              onClick={(event) => {
+                if (game.locked) event.preventDefault();
+              }}
+              aria-disabled={game.locked || undefined}
+              aria-label={game.locked ? `${game.title} is locked` : `Play ${game.title}`}
               className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-medium transition-all duration-300 ${
                 game.locked
                   ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                   : 'bg-primary text-white hover:bg-primary-dark shadow-soft hover:shadow-glow'
               }`}
-              disabled={game.locked}
-              aria-label={`Play ${game.title}`}
             >
               {game.locked ? (
                 <FaLock className="text-xs" />
@@ -136,8 +138,8 @@ const GameCard = ({ game, isFavorite, onFavoriteToggle }) => {
                 <FaPlay className="text-xs" />
               )}
               {game.locked ? 'Locked' : 'Play'}
-            </motion.button>
-          </Link>
+            </Link>
+          </motion.div>
         </div>
       </div>
     </motion.div>

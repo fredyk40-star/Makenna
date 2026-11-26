@@ -17,10 +17,6 @@ const CountMangoes = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
   const { speak } = useAudio();
 
-  useEffect(() => {
-    generateQuestion();
-  }, [generateQuestion]);
-
   const generateQuestion = useCallback(() => {
     const max = game.maxNumber || 5;
     const target = Math.floor(Math.random() * max) + 1;
@@ -43,6 +39,10 @@ const CountMangoes = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
     speak(`Count ${target} mangoes`, { rate: 0.7, pitch: 1.1 });
   }, [game.maxNumber, speak]);
+
+  useEffect(() => {
+    generateQuestion();
+  }, [generateQuestion]);
 
   const handleMangoClick = (mangoId) => {
     if (isCorrect !== null || showResult) return;

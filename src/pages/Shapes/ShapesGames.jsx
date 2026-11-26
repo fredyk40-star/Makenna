@@ -39,24 +39,24 @@ const ShapesGames = () => {
     {
       id: 'shape-sorting',
       title: 'Shape Sorting',
-      description: 'Sort objects by shape! Coming soon.',
+      description: 'Sort objects by shape!',
       icon: '📥',
       difficulty: 'easy',
       category: 'shapes',
       estimatedTime: 5,
       path: '/games/shapes/shape-sorting',
-      locked: true
+      locked: false
     },
     {
       id: 'shape-memory',
       title: 'Shape Memory',
-      description: 'Flip cards and find matching shapes! Coming soon.',
+      description: 'Flip cards and find matching shapes!',
       icon: '🃏',
       difficulty: 'medium',
       category: 'memory',
       estimatedTime: 8,
       path: '/games/shapes/shape-memory',
-      locked: true
+      locked: false
     }
   ];
 

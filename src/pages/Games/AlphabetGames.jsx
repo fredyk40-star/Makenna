@@ -56,7 +56,7 @@ const AlphabetGames = () => {
       difficulty: 'medium',
       category: 'letters',
       estimatedTime: 10,
-      path: '/games/alphabet/bingo',
+      path: '/games/alphabet/alphabet-bingo',
       locked: false
     },
     {
@@ -67,7 +67,7 @@ const AlphabetGames = () => {
       difficulty: 'medium',
       category: 'letters',
       estimatedTime: 7,
-      path: '/games/alphabet/order',
+      path: '/games/alphabet/alphabet-order',
       locked: false
     },
     {
@@ -90,7 +90,7 @@ const AlphabetGames = () => {
       category: 'letters',
       estimatedTime: 8,
       path: '/games/alphabet/vowel-sorting',
-      locked: true
+      locked: false
     },
     {
       id: 'shadow-match',
@@ -134,7 +134,7 @@ const AlphabetGames = () => {
       category: 'letters',
       estimatedTime: 10,
       path: '/games/alphabet/treasure-hunt',
-      locked: true
+      locked: false
     }
   ];
 

@@ -251,16 +251,14 @@ const MusicGames = () => {
                   <div className="flex items-center gap-1 text-sm">
                     <span className="text-gray-500 dark:text-gray-400">{stars}</span>
                   </div>
-                  <button
-                    onClick={() => {
-                      // For now, show placeholder - actual games would be implemented separately
-                      alert(`${game.title} is coming soon! Keep checking back for more musical fun!`);
-                    }}
+                  <Link
+                    to={`/music/games/${game.id}`}
+                    aria-label={`Play ${game.title}`}
                     className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-medium bg-primary text-white hover:bg-primary-dark transition-colors"
                   >
                     <FaPlay className="text-xs" />
                     Play
-                  </button>
+                  </Link>
                 </div>
 
                 {/* Progress Bar */}

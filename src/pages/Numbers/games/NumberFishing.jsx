@@ -16,10 +16,6 @@ const NumberFishing = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
   const { speak } = useAudio();
 
-  useEffect(() => {
-    generateRound();
-  }, [generateRound]);
-
   const generateRound = useCallback(() => {
     const max = game.maxNumber || 5;
     const target = Math.floor(Math.random() * max) + 1;
@@ -48,6 +44,10 @@ const NumberFishing = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
     speak(`Catch the fish with number ${target}!`, { rate: 0.7, pitch: 1.1 });
     announceToScreenReader(`Find and catch number ${target}`);
   }, [game.maxNumber, speak]);
+
+  useEffect(() => {
+    generateRound();
+  }, [generateRound]);
 
   const handleCatch = (fishId) => {
     const fishItem = fish.find(f => f.id === fishId);
