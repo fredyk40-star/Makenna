@@ -99,7 +99,10 @@ export class CanvasEngine {
         isEraser: this.isEraser
       });
       
-      this.undoStack.push(this.strokes.length - 1);
+      this.undoStack.push({
+        index: this.strokes.length - 1,
+        stroke: this.strokes[this.strokes.length - 1],
+      });
       this.redoStack = [];
     }
     
@@ -117,8 +120,9 @@ export class CanvasEngine {
   undo() {
     if (this.undoStack.length === 0) return false;
     
-    const index = this.undoStack.pop();
-    this.redoStack.push(index);
+    const { index, stroke } = this.undoStack.pop();
+    this.strokes.splice(index, 1);
+    this.redoStack.push({ index, stroke });
     this.redraw();
     return true;
   }
@@ -129,8 +133,9 @@ export class CanvasEngine {
   redo() {
     if (this.redoStack.length === 0) return false;
     
-    const index = this.redoStack.pop();
-    this.undoStack.push(index);
+    const { index, stroke } = this.redoStack.pop();
+    this.strokes.splice(index, 0, stroke);
+    this.undoStack.push({ index, stroke });
     this.redraw();
     return true;
   }

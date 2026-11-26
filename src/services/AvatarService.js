@@ -7,6 +7,14 @@ import { GamificationService } from './GamificationService';
 
 const AVATAR_STORAGE_KEY = 'makenna_selected_avatar';
 
+// The rewards store uses a few shorter ids than the avatar catalog.
+const AVATAR_ID_ALIASES = {
+  star: 'default',
+  ghanaian: 'ghanaian-child',
+};
+
+const resolveAvatarId = (avatarId) => AVATAR_ID_ALIASES[avatarId] || avatarId;
+
 // Avatar definitions
 export const AVATAR_DEFINITIONS = [
   { id: 'default', name: 'Star', icon: '⭐', category: 'free', starsRequired: 0, unlocked: true },
@@ -39,9 +47,10 @@ export class AvatarService {
   static getUnlockedAvatars(childId) {
     const state = GamificationService.getState(childId);
     const stars = state?.stars || 0;
+    const purchased = Array.isArray(state?.unlockedAvatars) ? state.unlockedAvatars : [];
     
     return AVATAR_DEFINITIONS
-      .filter(avatar => avatar.starsRequired <= stars || avatar.unlocked)
+      .filter(avatar => avatar.unlocked || avatar.starsRequired <= stars || purchased.includes(avatar.id))
       .map(avatar => avatar.id);
   }
 
@@ -63,16 +72,39 @@ export class AvatarService {
   }
 
   /**
-   * Get available avatars for a child (based on stars)
+   * Get available avatars for a child (based on stars or purchases)
    */
   static getAvailableAvatars(childId) {
     const state = GamificationService.getState(childId);
     const stars = state?.stars || 0;
+    const purchased = Array.isArray(state?.unlockedAvatars) ? state.unlockedAvatars : [];
     
     return AVATAR_DEFINITIONS.map(avatar => ({
       ...avatar,
-      unlocked: avatar.starsRequired <= stars || avatar.unlocked
+      unlocked: avatar.unlocked || avatar.starsRequired <= stars || purchased.includes(avatar.id)
     }));
+  }
+
+  /**
+   * Mark an avatar as unlocked after a store purchase.
+   * The currency is already deducted by RewardsStore, so this only records ownership.
+   */
+  static unlockAvatar(childId, avatarId) {
+    if (!childId) return { success: false, reason: 'No child selected' };
+
+    const resolvedId = resolveAvatarId(avatarId);
+    const avatar = AVATAR_DEFINITIONS.find(entry => entry.id === resolvedId);
+    if (!avatar) return { success: false, reason: 'Invalid avatar' };
+
+    const state = GamificationService.getState(childId);
+    const unlocked = Array.isArray(state.unlockedAvatars) ? state.unlockedAvatars : [];
+
+    if (!unlocked.includes(resolvedId)) {
+      state.unlockedAvatars = [...unlocked, resolvedId];
+      GamificationService.saveState(childId, state);
+    }
+
+    return { success: true, id: resolvedId };
   }
 
   /**

@@ -63,8 +63,12 @@ export class RewardsStore {
     const reward = this.findReward(itemId);
     if (!reward) return { success: false, message: 'Item not found' };
 
+    if (this.getPurchasedItems(childId).includes(itemId)) {
+      return { success: false, message: 'You already own this item' };
+    }
+
     const gamState = GamificationService.getState(childId);
-    const currency = itemType === 'coins' ? gamState.coins : gamState.stars;
+    const currency = itemType === 'coins' ? (gamState.coins || 0) : (gamState.stars || 0);
 
     if (currency < reward.price) {
       return { success: false, message: 'Not enough currency' };
@@ -85,9 +89,12 @@ export class RewardsStore {
       StorageService.set(`${REWARDS_KEY}_${childId}`, purchases);
     }
 
-    // Unlock avatar if applicable
+    // Unlock avatar if applicable (currency was already deducted above)
     if (reward.type === 'avatar') {
-      AvatarService.unlockAvatar(childId, itemId);
+      const unlock = AvatarService.unlockAvatar(childId, itemId);
+      if (!unlock?.success) {
+        console.warn('Avatar unlock failed:', unlock?.reason || 'unknown reason');
+      }
     }
 
     return { success: true, message: 'Purchase successful!', item: reward };

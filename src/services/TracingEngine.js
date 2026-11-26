@@ -1,7 +1,133 @@
 /**
- * Tracing Engine - Core tracing and validation logic
- * Supports uppercase, lowercase, numbers, shapes, words, and sentences
+ * Tracing Engine - stroke guides and validation for handwriting practice.
+ *
+ * All guide/validation coordinates are normalized to a 0-100 box so they work
+ * at any canvas size and device pixel ratio.
  */
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const strokeDirection = (start, end) => {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (Math.abs(dx) > Math.abs(dy)) return dx >= 0 ? 'right' : 'left';
+  return dy >= 0 ? 'down' : 'up';
+};
+
+/** Sample a polyline into evenly spaced points for smooth guides and checks. */
+const sampleStroke = (controls, count = 18) => {
+  const lengths = [];
+  let total = 0;
+
+  for (let i = 1; i < controls.length; i += 1) {
+    const length = Math.hypot(controls[i][0] - controls[i - 1][0], controls[i][1] - controls[i - 1][1]);
+    lengths.push(length);
+    total += length;
+  }
+
+  if (total === 0) {
+    return controls.map(([x, y], index) => ({
+      x,
+      y,
+      t: controls.length === 1 ? 0 : index / (controls.length - 1),
+    }));
+  }
+
+  return Array.from({ length: count }, (_, index) => {
+    let remaining = (index / (count - 1)) * total;
+    let segment = 0;
+
+    while (segment < lengths.length - 1 && remaining > lengths[segment]) {
+      remaining -= lengths[segment];
+      segment += 1;
+    }
+
+    const ratio = lengths[segment] ? clamp(remaining / lengths[segment], 0, 1) : 0;
+    const [startX, startY] = controls[segment];
+    const [endX, endY] = controls[segment + 1];
+
+    return {
+      x: startX + (endX - startX) * ratio,
+      y: startY + (endY - startY) * ratio,
+      t: index / (count - 1),
+    };
+  });
+};
+
+// Each entry is a list of strokes; each stroke is a list of [x, y] control points.
+const UPPERCASE_STROKES = {
+  A: [[[50, 10], [15, 90]], [[50, 10], [85, 90]], [[28, 60], [72, 60]]],
+  B: [[[25, 10], [25, 90]], [[25, 10], [58, 10], [76, 22], [76, 36], [58, 48], [25, 48]],
+    [[25, 48], [62, 48], [80, 60], [80, 76], [62, 90], [25, 90]]],
+  C: [[[80, 22], [64, 10], [40, 12], [20, 30], [20, 70], [40, 88], [64, 90], [80, 78]]],
+  D: [[[20, 10], [20, 90]], [[20, 10], [55, 10], [80, 28], [80, 72], [55, 90], [20, 90]]],
+  E: [[[76, 10], [20, 10], [20, 90], [76, 90]], [[20, 50], [66, 50]]],
+  F: [[[22, 10], [22, 90]], [[22, 10], [76, 10]], [[22, 50], [66, 50]]],
+  G: [[[80, 26], [64, 10], [38, 12], [20, 30], [20, 70], [38, 88], [64, 90], [80, 76],
+    [80, 55], [55, 55]]],
+  H: [[[22, 10], [22, 90]], [[78, 10], [78, 90]], [[22, 50], [78, 50]]],
+  I: [[[50, 10], [50, 90]], [[30, 10], [70, 10]], [[30, 90], [70, 90]]],
+  J: [[[68, 10], [68, 70], [52, 88], [32, 88], [18, 72]]],
+  K: [[[22, 10], [22, 90]], [[80, 10], [22, 56]], [[38, 42], [82, 90]]],
+  L: [[[25, 10], [25, 90], [78, 90]]],
+  M: [[[15, 90], [15, 10], [50, 56], [85, 10], [85, 90]]],
+  N: [[[20, 90], [20, 10], [80, 90], [80, 10]]],
+  O: [[[50, 10], [28, 22], [18, 45], [18, 70], [35, 90], [65, 90], [82, 70], [82, 45],
+    [72, 22], [50, 10]]],
+  P: [[[22, 90], [22, 10], [62, 10], [78, 22], [78, 42], [62, 52], [22, 52]]],
+  Q: [[[50, 10], [28, 22], [18, 45], [18, 70], [35, 90], [65, 90], [82, 70], [82, 45],
+    [72, 22], [50, 10]], [[55, 68], [82, 92]]],
+  R: [[[22, 90], [22, 10], [62, 10], [78, 22], [78, 42], [62, 52], [22, 52]],
+    [[55, 52], [82, 90]]],
+  S: [[[76, 20], [60, 10], [34, 14], [22, 30], [40, 45], [62, 50], [78, 66], [68, 84],
+    [44, 92], [22, 80]]],
+  T: [[[15, 10], [85, 10]], [[50, 10], [50, 90]]],
+  U: [[[20, 10], [20, 65], [35, 88], [65, 88], [80, 65], [80, 10]]],
+  V: [[[15, 10], [50, 90], [85, 10]]],
+  W: [[[10, 10], [26, 90], [50, 40], [74, 90], [90, 10]]],
+  X: [[[18, 10], [82, 90]], [[82, 10], [18, 90]]],
+  Y: [[[15, 10], [50, 48], [85, 10]], [[50, 48], [50, 90]]],
+  Z: [[[18, 10], [82, 10], [18, 90], [82, 90]]],
+};
+
+const LOWERCASE_STROKES = {
+  a: [[[64, 30], [46, 18], [28, 32], [28, 66], [42, 82], [60, 74], [66, 56], [46, 42],
+    [30, 54], [30, 70], [46, 82], [66, 72]]],
+  b: [[[22, 10], [22, 90]], [[22, 54], [44, 74], [64, 64], [72, 44], [60, 24], [40, 22],
+    [22, 40]]],
+  c: [[[76, 28], [55, 18], [32, 28], [24, 50], [28, 72], [48, 84], [70, 74]]],
+  d: [[[68, 30], [48, 18], [28, 32], [28, 64], [45, 80], [65, 72], [70, 52], [50, 38],
+    [30, 50]], [[72, 10], [72, 90]]],
+  e: [[[24, 56], [72, 56], [70, 72], [50, 84], [30, 76], [22, 60], [32, 44], [52, 38],
+    [70, 46]]],
+  f: [[[66, 12], [42, 18], [30, 40], [30, 78], [42, 88]], [[18, 48], [62, 48]]],
+  g: [[[68, 28], [48, 18], [28, 32], [28, 64], [45, 80], [65, 72], [68, 50], [48, 38],
+    [30, 50]], [[68, 30], [68, 82], [55, 95], [34, 92]]],
+  h: [[[22, 10], [22, 90]], [[22, 48], [40, 68], [60, 60], [68, 40], [68, 90]]],
+  i: [[[46, 26], [46, 90]], [[42, 10], [52, 10], [52, 17], [42, 17], [42, 10]]],
+  j: [[[56, 26], [56, 78], [42, 92], [24, 88]], [[52, 10], [62, 10]]],
+  k: [[[22, 10], [22, 90]], [[66, 44], [22, 62]], [[36, 50], [70, 90]]],
+  l: [[[35, 10], [35, 90]]],
+  m: [[[18, 88], [18, 40], [35, 62], [50, 40], [50, 88]],
+    [[50, 54], [68, 62], [82, 40], [82, 88]]],
+  n: [[[22, 88], [22, 40]], [[22, 52], [42, 66], [62, 58], [68, 38], [68, 88]]],
+  o: [[[50, 22], [30, 32], [24, 52], [30, 72], [50, 82], [70, 72], [76, 52], [70, 32],
+    [50, 22]]],
+  p: [[[22, 94], [22, 30]], [[22, 32], [45, 20], [65, 30], [70, 48], [60, 62], [40, 62],
+    [22, 50]]],
+  q: [[[65, 32], [45, 20], [28, 32], [28, 58], [45, 70], [65, 58], [65, 38], [45, 28]],
+    [[68, 30], [68, 94]]],
+  r: [[[22, 88], [22, 38]], [[22, 54], [38, 68], [58, 60], [66, 44]]],
+  s: [[[68, 26], [50, 18], [30, 28], [28, 45], [48, 52], [65, 60], [65, 76], [45, 86],
+    [25, 76]]],
+  t: [[[45, 12], [45, 78], [58, 88]], [[25, 42], [65, 42]]],
+  u: [[[22, 30], [22, 64], [38, 82], [58, 70], [68, 42], [68, 88]]],
+  v: [[[20, 30], [45, 88], [70, 30]]],
+  w: [[[12, 30], [28, 88], [45, 48], [62, 88], [78, 30]]],
+  x: [[[22, 30], [70, 88]], [[70, 30], [22, 88]]],
+  y: [[[20, 30], [45, 68], [70, 30]], [[45, 68], [35, 92], [18, 88]]],
+  z: [[[22, 30], [70, 30], [22, 88], [72, 88]]],
+};
 
 export class TracingEngine {
   constructor() {
@@ -12,269 +138,176 @@ export class TracingEngine {
     this.letterPaths = this.initializeLetterPaths();
   }
 
-  /**
-   * Initialize letter path data for all uppercase and lowercase letters
-   * Each letter is defined as a series of strokes with start/end points
-   */
   initializeLetterPaths() {
-    // This is a simplified version - in production, this would be more detailed
-    // with actual bezier curves and precise stroke data
-
-
-    // Uppercase letters - simplified stroke data
-    const uppercasePaths = this.generateUppercasePaths();
-    const lowercasePaths = this.generateLowercasePaths();
-
-    return { ...uppercasePaths, ...lowercasePaths };
-  }
-
-  /**
-   * Generate uppercase letter paths
-   */
-  generateUppercasePaths() {
     const paths = {};
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-    for (const letter of letters) {
-      paths[letter] = this.generateLetterPath(letter, 'uppercase');
+    for (const [letter, strokes] of Object.entries(UPPERCASE_STROKES)) {
+      paths[letter] = this.buildPath(letter, 'uppercase', strokes);
+    }
+    for (const [letter, strokes] of Object.entries(LOWERCASE_STROKES)) {
+      paths[letter] = this.buildPath(letter, 'lowercase', strokes);
     }
 
     return paths;
   }
 
-  /**
-   * Generate lowercase letter paths
-   */
-  generateLowercasePaths() {
-    const paths = {};
-    const letters = 'abcdefghijklmnopqrstuvwxyz';
-
-    for (const letter of letters) {
-      paths[letter] = this.generateLetterPath(letter, 'lowercase');
-    }
-
-    return paths;
-  }
-
-  /**
-   * Generate path data for a specific letter
-   * This is a simplified generator - production would use actual coordinate data
-   */
-  generateLetterPath(letter, caseType) {
-    // Generate a simple path based on letter shape
-    const strokes = [];
-    const numStrokes = this.getStrokeCount(letter, caseType);
-
-    for (let i = 0; i < numStrokes; i++) {
-      strokes.push({
-        id: `stroke-${i}`,
-        order: i,
-        points: this.generateStrokePoints(letter, i, caseType),
-        startPoint: { x: 10 + (i * 20), y: 10 },
-        endPoint: { x: 10 + (i * 20), y: 50 },
-        direction: i % 2 === 0 ? 'down' : 'up',
-        completed: false
-      });
-    }
-
+  buildPath(letter, caseType, strokes) {
     return {
       letter,
       caseType,
-      strokes,
-      totalStrokes: numStrokes,
-      bounds: {
-        minX: 0,
-        minY: 0,
-        maxX: 100,
-        maxY: 100
-      }
+      strokes: strokes.map((controls, order) => {
+        const points = sampleStroke(controls);
+        const start = points[0];
+        const end = points[points.length - 1];
+
+        return {
+          id: `stroke-${order}`,
+          order,
+          points,
+          startPoint: { x: start.x, y: start.y },
+          endPoint: { x: end.x, y: end.y },
+          direction: strokeDirection(start, end),
+          completed: false,
+        };
+      }),
+      totalStrokes: strokes.length,
+      bounds: { minX: 0, minY: 0, maxX: 100, maxY: 100 },
     };
   }
 
-  /**
-   * Get number of strokes for a letter
-   */
-  getStrokeCount(letter, ___caseType) {
-    // Simplified stroke count
-    const counts = {
-      'A': 3, 'B': 3, 'C': 1, 'D': 2, 'E': 4, 'F': 3, 'G': 2,
-      'H': 3, 'I': 3, 'J': 2, 'K': 3, 'L': 2, 'M': 4, 'N': 3,
-      'O': 1, 'P': 2, 'Q': 2, 'R': 3, 'S': 1, 'T': 2, 'U': 2,
-      'V': 2, 'W': 4, 'X': 2, 'Y': 3, 'Z': 3,
-      'a': 2, 'b': 2, 'c': 1, 'd': 2, 'e': 1, 'f': 2, 'g': 2,
-      'h': 2, 'i': 2, 'j': 2, 'k': 2, 'l': 1, 'm': 3, 'n': 2,
-      'o': 1, 'p': 2, 'q': 2, 'r': 2, 's': 1, 't': 2, 'u': 2,
-      'v': 2, 'w': 4, 'x': 2, 'y': 2, 'z': 2
-    };
-
-    return counts[letter] || 2;
+  getStrokeCount(letter, caseType = 'uppercase') {
+    return this.getLetterPath(letter, caseType).strokes.length;
   }
 
-  /**
-   * Generate stroke points for a letter
-   */
-  generateStrokePoints(___letter, ___strokeIndex, ___caseType) {
-    // Generate sample points along a path
-    const points = [];
-    const numPoints = 20 + Math.floor(Math.random() * 10);
+  getLetterPath(letter, caseType = 'uppercase') {
+    const key = caseType === 'uppercase' ? String(letter || '').toUpperCase() : String(letter || '').toLowerCase();
+    return this.letterPaths[key]
+      || this.letterPaths[key?.toUpperCase()]
+      || this.buildPath(key || 'A', caseType, UPPERCASE_STROKES.A);
+  }
 
-    for (let i = 0; i < numPoints; i++) {
-      const t = i / numPoints;
-      const x = 10 + (t * 80) + (Math.random() - 0.5) * 5;
-      const y = 10 + (t * 80) + (Math.random() - 0.5) * 5;
-      points.push({ x, y, t });
+  /** Validate a trace. Points must be normalized to the 0-100 guide box. */
+  validateTrace(tracePoints, letter, caseType = 'uppercase', options = {}) {
+    const path = this.getLetterPath(letter, caseType);
+    const tolerance = options.tolerance ?? this.getDifficultySettings(options.difficulty).tolerance;
+    const points = Array.isArray(tracePoints) ? tracePoints : [];
+
+    if (points.length < 6) {
+      return {
+        valid: false, score: 0, accuracy: 0, completion: 0,
+        directionCorrect: false, orderCorrect: false,
+        errors: ['Trace more of the letter'],
+      };
     }
 
-    return points;
-  }
-
-  /**
-   * Get letter path data
-   */
-  getLetterPath(letter, caseType = 'uppercase') {
-    const key = caseType === 'uppercase' ? letter.toUpperCase() : letter.toLowerCase();
-    return this.letterPaths[key] || this.generateLetterPath(letter, caseType);
-  }
-
-  /**
-   * Validate a trace against the correct path
-   */
-  validateTrace(tracePoints, letter, caseType = 'uppercase') {
-    const path = this.getLetterPath(letter, caseType);
-    if (!path) return { valid: false, score: 0, errors: ['Path not found'] };
-
-    // Calculate accuracy
-    const accuracy = this.calculateAccuracy(tracePoints, path);
-
-    // Calculate completion
-    const completion = this.calculateCompletion(tracePoints, path);
-
-    // Check direction
-    const directionCorrect = this.checkDirection(tracePoints, path);
-
-    // Check order
-    const orderCorrect = this.checkOrder(tracePoints, path);
-
-    // Calculate overall score
-    const score = (accuracy * 0.4 + completion * 0.3 + (directionCorrect ? 0.15 : 0) + (orderCorrect ? 0.15 : 0));
+    const accuracy = this.calculateAccuracy(points, path, tolerance);
+    const completion = this.calculateCompletion(points, path, tolerance);
+    const coverage = this.getStrokeCoverage(points, path, tolerance);
+    const minCoverage = coverage.length ? Math.min(...coverage) : 0;
+    const directionCorrect = this.checkDirection(points, path);
+    const orderCorrect = this.checkOrder(points, path);
+    const score = clamp(completion * 0.55 + accuracy * 0.45, 0, 1);
 
     return {
-      valid: score >= 0.6,
-      score: Math.min(1, score),
+      valid: score >= 0.62 && completion >= 0.55 && minCoverage >= 0.3,
+      score,
       accuracy,
       completion,
       directionCorrect,
       orderCorrect,
-      errors: this.generateErrors(accuracy, completion, directionCorrect, orderCorrect)
+      errors: this.generateErrors(accuracy, completion),
     };
   }
 
-  /**
-   * Calculate trace accuracy
-   */
-  calculateAccuracy(tracePoints, path) {
+  /** Live progress helper - how much of the guide has been covered so far. */
+  getTraceProgress(tracePoints, letter, caseType = 'uppercase', tolerance = 13) {
+    const points = Array.isArray(tracePoints) ? tracePoints : [];
+    if (points.length === 0) return 0;
+    return this.calculateCompletion(points, this.getLetterPath(letter, caseType), tolerance);
+  }
+
+  getStrokeCoverage(tracePoints, path, tolerance) {
+    return path.strokes.map(stroke => (
+      stroke.points.filter(point => tracePoints.some(tracePoint => (
+        this.distance(tracePoint, point) <= tolerance
+      ))).length / stroke.points.length
+    ));
+  }
+
+  calculateAccuracy(tracePoints, path, tolerance = 13) {
     if (tracePoints.length === 0 || path.strokes.length === 0) return 0;
 
-    // For each trace point, find nearest path point and calculate distance
+    let matched = 0;
     let totalDeviation = 0;
-    let matchedPoints = 0;
+    const limit = tolerance * 1.6;
 
     for (const tracePoint of tracePoints) {
       let minDistance = Infinity;
       for (const stroke of path.strokes) {
         for (const pathPoint of stroke.points) {
           const distance = this.distance(tracePoint, pathPoint);
-          if (distance < minDistance) {
-            minDistance = distance;
-          }
+          if (distance < minDistance) minDistance = distance;
         }
       }
-      if (minDistance < 20) { // Threshold for acceptable deviation
+
+      if (minDistance <= limit) {
+        matched += 1;
         totalDeviation += minDistance;
-        matchedPoints++;
       }
     }
 
-    const accuracy = matchedPoints / tracePoints.length;
-    const avgDeviation = matchedPoints > 0 ? totalDeviation / matchedPoints : Infinity;
-
-    // Convert deviation to a score (0-1)
-    const deviationScore = Math.max(0, 1 - (avgDeviation / 30));
-
-    return (accuracy * 0.6 + deviationScore * 0.4);
+    const closeness = matched > 0 ? clamp(1 - (totalDeviation / matched) / limit, 0, 1) : 0;
+    return (matched / tracePoints.length) * 0.6 + closeness * 0.4;
   }
 
-  /**
-   * Calculate completion percentage
-   */
-  calculateCompletion(tracePoints, path) {
+  calculateCompletion(tracePoints, path, tolerance = 13) {
     if (tracePoints.length === 0 || path.strokes.length === 0) return 0;
-
-    // Count how much of the path has been covered
-    let coveredLength = 0;
-    let totalLength = 0;
-
-    for (const stroke of path.strokes) {
-      totalLength += stroke.points.length;
-      for (const pathPoint of stroke.points) {
-        for (const tracePoint of tracePoints) {
-          if (this.distance(tracePoint, pathPoint) < 15) {
-            coveredLength++;
-            break;
-          }
-        }
-      }
-    }
-
-    return Math.min(1, coveredLength / totalLength);
+    const coverage = this.getStrokeCoverage(tracePoints, path, tolerance);
+    return coverage.reduce((sum, value) => sum + value, 0) / coverage.length;
   }
 
-  /**
-   * Check if tracing direction is correct
-   */
   checkDirection(tracePoints, path) {
     if (tracePoints.length < 2) return false;
 
-    // Simplified direction checking
-    const traceDirection = this.getDirection(tracePoints);
-    const pathDirection = this.getDirection(path.strokes[0]?.points || []);
+    const coveredStroke = path.strokes.reduce((best, stroke, index) => {
+      const covered = stroke.points.filter(point => (
+        tracePoints.some(tracePoint => this.distance(tracePoint, point) <= 14)
+      )).length;
+      return covered > best.covered ? { covered, index } : best;
+    }, { covered: -1, index: 0 });
 
-    const angleDiff = Math.abs(traceDirection - pathDirection);
-    return angleDiff < Math.PI / 4 || angleDiff > 7 * Math.PI / 4;
+    const strokeDirectionAngle = this.getDirection(path.strokes[coveredStroke.index]?.points || []);
+    const angleDiff = Math.abs(this.getDirection(tracePoints) - strokeDirectionAngle);
+    return Math.min(angleDiff, Math.PI * 2 - angleDiff) < Math.PI / 2;
   }
 
-  /**
-   * Check if stroke order is correct
-   */
   checkOrder(tracePoints, path) {
-    if (tracePoints.length === 0 || path.strokes.length === 0) return true;
+    if (tracePoints.length < 2) return true;
 
-    // Simplified: check if trace follows stroke order
-    let strokeIndex = 0;
-    let pointsInStroke = 0;
+    let previous = -1;
+    let inOrder = 0;
 
     for (const tracePoint of tracePoints) {
-      if (strokeIndex < path.strokes.length) {
-        const stroke = path.strokes[strokeIndex];
-        for (const pathPoint of stroke.points) {
-          if (this.distance(tracePoint, pathPoint) < 15) {
-            pointsInStroke++;
-            break;
+      let nearest = 0;
+      let minDistance = Infinity;
+
+      path.strokes.forEach((stroke, index) => {
+        for (const point of stroke.points) {
+          const distance = this.distance(tracePoint, point);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearest = index;
           }
         }
-        if (pointsInStroke > stroke.points.length * 0.5) {
-          strokeIndex++;
-          pointsInStroke = 0;
-        }
-      }
+      });
+
+      if (nearest >= previous) inOrder += 1;
+      previous = nearest;
     }
 
-    return strokeIndex >= path.strokes.length - 1;
+    return inOrder / tracePoints.length >= 0.6;
   }
 
-  /**
-   * Get direction of a set of points
-   */
   getDirection(points) {
     if (points.length < 2) return 0;
     const first = points[0];
@@ -282,108 +315,62 @@ export class TracingEngine {
     return Math.atan2(last.y - first.y, last.x - first.x);
   }
 
-  /**
-   * Calculate distance between two points
-   */
   distance(p1, p2) {
-    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+    return Math.hypot(p2.x - p1.x, p2.y - p1.y);
   }
 
-  /**
-   * Generate error messages based on trace quality
-   */
-  generateErrors(accuracy, completion, directionCorrect, orderCorrect) {
+  generateErrors(accuracy, completion) {
     const errors = [];
-
-    if (accuracy < 0.5) {
-      errors.push('Try to stay on the line');
-    }
-    if (completion < 0.5) {
-      errors.push('Complete the whole letter');
-    }
-    if (!directionCorrect) {
-      errors.push('Try tracing the letter in the right direction');
-    }
-    if (!orderCorrect) {
-      errors.push('Follow the stroke order shown');
-    }
-
+    if (accuracy < 0.5) errors.push('Try to stay on the line');
+    if (completion < 0.55) errors.push('Trace the whole letter');
     return errors;
   }
 
-  /**
-   * Get stroke guide points for a letter
-   */
   getGuidePoints(letter, caseType = 'uppercase') {
     const path = this.getLetterPath(letter, caseType);
-    if (!path) return [];
 
-    const guidePoints = [];
-    for (const stroke of path.strokes) {
-      guidePoints.push({
-        start: stroke.startPoint,
-        end: stroke.endPoint,
-        direction: stroke.direction,
-        order: stroke.order
-      });
-    }
-
-    return guidePoints;
+    return path.strokes.map(stroke => ({
+      start: stroke.startPoint,
+      end: stroke.endPoint,
+      direction: stroke.direction,
+      order: stroke.order,
+      points: stroke.points,
+    }));
   }
 
-  /**
-   * Get stroke animation data
-   */
   getStrokeAnimation(letter, caseType = 'uppercase') {
     const path = this.getLetterPath(letter, caseType);
-    if (!path) return null;
 
     return {
       strokes: path.strokes.map(stroke => ({
         id: stroke.id,
         points: stroke.points,
-        duration: 1000 + (stroke.points.length * 20),
-        delay: stroke.order * 300
+        duration: 900 + stroke.points.length * 18,
+        delay: stroke.order * 320,
       })),
-      totalDuration: path.strokes.length * 300 + 1000 + (path.strokes[0]?.points.length || 10) * 20
+      totalDuration: path.strokes.reduce((total, stroke) => total + 320 + stroke.points.length * 18, 900),
     };
   }
 
-  /**
-   * Get difficulty settings
-   */
   getDifficultySettings(difficulty = 'medium') {
     const settings = {
       easy: {
-        lineWidth: 8,
-        snapDistance: 20,
-        guideOpacity: 0.8,
-        showArrows: true,
-        showDots: true,
-        assistance: 'high'
+        lineWidth: 8, snapDistance: 20, guideOpacity: 0.8,
+        showArrows: true, showDots: true, assistance: 'high', tolerance: 17,
       },
       medium: {
-        lineWidth: 5,
-        snapDistance: 12,
-        guideOpacity: 0.6,
-        showArrows: true,
-        showDots: true,
-        assistance: 'medium'
+        lineWidth: 5, snapDistance: 12, guideOpacity: 0.6,
+        showArrows: true, showDots: true, assistance: 'medium', tolerance: 13,
       },
       hard: {
-        lineWidth: 3,
-        snapDistance: 5,
-        guideOpacity: 0.3,
-        showArrows: false,
-        showDots: false,
-        assistance: 'low'
-      }
+        lineWidth: 3, snapDistance: 5, guideOpacity: 0.3,
+        showArrows: false, showDots: false, assistance: 'low', tolerance: 9,
+      },
     };
 
     return settings[difficulty] || settings.medium;
   }
 }
 
-// Singleton instance
 const tracingEngine = new TracingEngine();
 export default tracingEngine;

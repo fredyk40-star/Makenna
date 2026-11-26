@@ -15,6 +15,7 @@ const NumberTracing = () => {
   const { numberId } = useParams();
   const navigate = useNavigate();
   const canvasRef = useRef(null);
+  const tracePointsRef = useRef([]);
   const [number, setNumber] = useState(null);
   const [tracingData, setTracingData] = useState(null);
   const [mode, setMode] = useState('guided'); // 'guided' | 'free'
@@ -69,95 +70,95 @@ const NumberTracing = () => {
     const clientX = e.clientX || e.touches?.[0]?.clientX || e.changedTouches?.[0]?.clientX || 0;
     const clientY = e.clientY || e.touches?.[0]?.clientY || e.changedTouches?.[0]?.clientY || 0;
 
+    // CanvasEngine scales its context by devicePixelRatio, so it expects CSS pixels.
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
     return {
-      x: (clientX - rect.left) * (canvasRef.current.width / rect.width),
-      y: (clientY - rect.top) * (canvasRef.current.height / rect.height)
+      x,
+      y,
+      nx: (x / rect.width) * 100,
+      ny: (y / rect.height) * 100,
     };
   }, []);
+
+  // Validate only the stroke currently highlighted in the guide.
+  const validateTrace = useCallback(() => {
+    if (!canvasEngine || !tracingData) return;
+
+    const points = tracePointsRef.current;
+    const stroke = tracingData.strokes[currentStroke];
+    if (!stroke || points.length < 6) return;
+
+    const tolerance = 14;
+    const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const covered = stroke.points.filter(point => (
+      points.some(tracePoint => distance(tracePoint, point) <= tolerance)
+    )).length;
+    const completion = covered / stroke.points.length;
+    const closePoints = points.filter(tracePoint => (
+      stroke.points.some(point => distance(tracePoint, point) <= tolerance * 1.6)
+    )).length;
+    const precision = closePoints / points.length;
+    const score = completion * 0.6 + precision * 0.4;
+    const accuracyScore = Math.round(score * 100);
+    const isAccurate = score >= 0.6 && completion >= 0.55;
+
+    setAccuracy(accuracyScore);
+    setTraceResult({ accuracy: accuracyScore, isAccurate });
+
+    if (!isAccurate) {
+      announceToScreenReader(`Keep trying! ${accuracyScore}% accuracy`);
+      speak('Keep trying! You can do it!', { rate: 0.9, pitch: 1.1 });
+      return;
+    }
+
+    announceToScreenReader(`Great job! ${accuracyScore}% accuracy`);
+    speak('Great job!', { rate: 0.9, pitch: 1.2 });
+
+    if (currentStroke + 1 < tracingData.strokes.length) {
+      setCurrentStroke(prev => prev + 1);
+      return;
+    }
+
+    setIsComplete(true);
+    setShowCelebration(true);
+    markCompleted(numberId);
+    markMastered(numberId);
+    speak('You traced the number perfectly!', { rate: 0.9, pitch: 1.2 });
+  }, [canvasEngine, tracingData, currentStroke, markCompleted, markMastered, numberId, speak]);
 
   // Handle pointer events for tracing
   const handlePointerDown = useCallback((e) => {
     e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     const coords = getCoordinates(e);
+    tracePointsRef.current = [{ x: coords.nx, y: coords.ny }];
+    setTraceResult(null);
+    setAccuracy(0);
     startDrawing(coords.x, coords.y);
   }, [startDrawing, getCoordinates]);
 
   const handlePointerMove = useCallback((e) => {
     e.preventDefault();
     const coords = getCoordinates(e);
+    tracePointsRef.current.push({ x: coords.nx, y: coords.ny });
     continueDrawing(coords.x, coords.y);
   }, [continueDrawing, getCoordinates]);
 
   const handlePointerUp = useCallback((e) => {
     e.preventDefault();
+    if (e.currentTarget?.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
     endDrawing();
 
-    // Validate trace in guided mode
-    if (mode === 'guided' && tracingData) {
-      validateTrace();
-    }
-  }, [endDrawing, mode, tracingData]);
-
-  // Validate the trace against the guide
-  const validateTrace = useCallback(() => {
-    if (!canvasEngine || !tracingData) return;
-
-    // Get the drawn strokes
-    const strokes = canvasEngine.strokes;
-    if (strokes.length === 0) return;
-
-    // Simple validation - check if trace covers the guide path
-    let matchedPoints = 0;
-    let totalPoints = 0;
-
-    for (const stroke of tracingData.strokes) {
-      for (const point of stroke.points) {
-        totalPoints++;
-        let foundMatch = false;
-        for (const drawnStroke of strokes) {
-          for (const drawnPoint of drawnStroke.points) {
-            const distance = Math.sqrt(
-              Math.pow(drawnPoint.x - point.x, 2) +
-              Math.pow(drawnPoint.y - point.y, 2)
-            );
-            if (distance < 20) {
-              foundMatch = true;
-              break;
-            }
-          }
-          if (foundMatch) break;
-        }
-        if (foundMatch) matchedPoints++;
-      }
-    }
-
-    const accuracyScore = totalPoints > 0 ? Math.round((matchedPoints / totalPoints) * 100) : 0;
-    setAccuracy(accuracyScore);
-
-    const isAccurate = accuracyScore > 60;
-    setTraceResult({ accuracy: accuracyScore, isAccurate });
-
-    if (isAccurate) {
-      announceToScreenReader(`Great job! ${accuracyScore}% accuracy`);
-      speak('Great job!', { rate: 0.9, pitch: 1.2 });
-
-      if (currentStroke < tracingData.strokes.length - 1) {
-        setCurrentStroke(prev => prev + 1);
-      } else {
-        setIsComplete(true);
-        setShowCelebration(true);
-        markCompleted(numberId);
-        markMastered(numberId);
-        speak('You traced the number perfectly!', { rate: 0.9, pitch: 1.2 });
-      }
-    } else {
-      announceToScreenReader(`Keep trying! ${accuracyScore}% accuracy`);
-      speak('Keep trying! You can do it!', { rate: 0.9, pitch: 1.1 });
-    }
-  }, [canvasEngine, tracingData, currentStroke, markCompleted, markMastered, numberId, speak]);
+    if (mode === 'guided' && tracingData) validateTrace();
+  }, [endDrawing, mode, tracingData, validateTrace]);
 
   // Reset the tracing
   const handleReset = useCallback(() => {
+    tracePointsRef.current = [];
     clearCanvas();
     setCurrentStroke(0);
     setIsComplete(false);
@@ -340,7 +341,7 @@ const NumberTracing = () => {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
+          onPointerCancel={handlePointerUp}
           style={{ touchAction: 'none' }}
         />
 

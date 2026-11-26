@@ -32,8 +32,8 @@ const StrokeGuide = memo(({
             transition={{ delay: index * 0.1 }}
             className="absolute"
             style={{
-              left: guide.start?.x || '20%',
-              top: guide.start?.y || '20%',
+              left: `${guide.start?.x ?? 20}%`,
+              top: `${guide.start?.y ?? 20}%`,
             }}
           >
             {/* Start dot */}

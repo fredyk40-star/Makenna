@@ -19,8 +19,8 @@ const TracingCanvas = ({
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [, setIsAnimating] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
+  const completedRef = useRef(false);
 
   const {
     startTrace,
@@ -35,7 +35,8 @@ const TracingCanvas = ({
     changeDifficulty,
     difficulty,
     animationData,
-    guideData
+    guideData,
+    liveProgress
   } = useTracing(letter, caseType, canvasRef);
 
   const {
@@ -60,18 +61,28 @@ const TracingCanvas = ({
     const clientX = e.clientX || e.touches?.[0]?.clientX || e.changedTouches?.[0]?.clientX || 0;
     const clientY = e.clientY || e.touches?.[0]?.clientY || e.changedTouches?.[0]?.clientY || 0;
 
+    // CanvasEngine scales its context by devicePixelRatio, so it expects CSS pixels.
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
     return {
-      x: (clientX - rect.left) * (canvasRef.current.width / rect.width),
-      y: (clientY - rect.top) * (canvasRef.current.height / rect.height)
+      x,
+      y,
+      nx: (x / rect.width) * 100,
+      ny: (y / rect.height) * 100,
     };
   }, []);
 
   const handlePointerDown = useCallback((e) => {
     e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     const coords = getCoordinates(e);
 
+    completedRef.current = false;
+    setShowCelebration(false);
+
     if (mode === 'trace') {
-      startTrace(coords.x, coords.y);
+      startTrace(coords.x, coords.y, coords.nx, coords.ny);
     } else {
       startDrawing(coords.x, coords.y);
     }
@@ -82,26 +93,29 @@ const TracingCanvas = ({
     const coords = getCoordinates(e);
 
     if (mode === 'trace') {
-      continueTrace(coords.x, coords.y);
-      // Update progress
-      const progress = getTraceProgress();
-      if (onProgress) onProgress(progress);
+      continueTrace(coords.x, coords.y, coords.nx, coords.ny);
     } else {
       continueDrawing(coords.x, coords.y);
     }
-  }, [mode, continueTrace, continueDrawing, getCoordinates, onProgress, getTraceProgress]);
+  }, [mode, continueTrace, continueDrawing, getCoordinates]);
 
   useEffect(() => {
-    if (traceResult?.valid) {
+    if (mode === 'trace' && onProgress) onProgress(liveProgress);
+  }, [liveProgress, mode, onProgress]);
+
+  useEffect(() => {
+    if (traceResult?.valid && !completedRef.current) {
+      completedRef.current = true;
       setShowCelebration(true);
-      if (onComplete) {
-        onComplete(traceResult);
-      }
+      if (onComplete) onComplete(traceResult);
     }
   }, [traceResult, onComplete]);
 
   const handlePointerUp = useCallback((e) => {
     e.preventDefault();
+    if (e.currentTarget?.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
 
     if (mode === 'trace') {
       endTrace();
@@ -236,7 +250,7 @@ const TracingCanvas = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         style={{ touchAction: 'none' }}
       />
 
@@ -257,7 +271,6 @@ const TracingCanvas = ({
           animationData={animationData}
           letter={letter}
           caseType={caseType}
-          onComplete={() => setIsAnimating(false)}
           className="absolute inset-0 pointer-events-none"
         />
       )}
