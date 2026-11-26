@@ -3,7 +3,7 @@
  * Tracks achievements beyond basic stars
  */
 import { StorageService } from './StorageService';
-import { GamificationService } from './GamificationService';
+
 
 const ACHIEVEMENTS_KEY = 'makenna_achievements';
 

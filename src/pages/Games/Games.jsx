@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaArrowRight, FaGamepad, FaGift } from 'react-icons/fa';
+import { FaArrowRight, FaGift } from 'react-icons/fa';
 import RewardsStore from '../../components/RewardsStore/RewardsStore';
 
 const Games = () => {

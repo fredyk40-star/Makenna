@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaCheck, FaStar, FaVolumeUp,
-  FaArrowRight
-} from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
 import { COUNTING_ITEMS } from '../../data/mathsData';
 import { useAudio } from '../../hooks/useAudio';
 import { useProfiles } from '../../context/ProfileContext';
@@ -16,7 +13,7 @@ const Counting = () => {
   const [items, setItems] = useState([]);
   const [targetCount, setTargetCount] = useState(0);
   const [counted, setCounted] = useState(0);
-  const [selectedItems, setSelectedItems] = useState([]);
+  const [, setSelectedItems] = useState([]);
   const [isCorrect, setIsCorrect] = useState(null);
   const [score, setScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
@@ -75,7 +72,7 @@ const Counting = () => {
   const handleItemClick = (itemId) => {
     if (isCorrect !== null) return;
 
-    setItems(prev => prev.map(item => 
+    setItems(prev => prev.map(item =>
       item.id === itemId ? { ...item, selected: !item.selected } : item
     ));
 
@@ -116,8 +113,8 @@ const Counting = () => {
       });
 
       if (totalQuestions >= 5) {
-        const finalScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
-        const stars = finalScore >= 90 ? 5 : finalScore >= 70 ? 3 : 1;
+        Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
+
         setShowCelebration(true);
         setTimeout(() => {
           setShowCelebration(false);
@@ -179,8 +176,8 @@ const Counting = () => {
           <motion.button
             key={item.id}
             initial={{ scale: 0, rotate: -180 }}
-            animate={{ 
-              scale: 1, 
+            animate={{
+              scale: 1,
               rotate: item.selected ? 180 : 0,
               opacity: item.selected ? 0.7 : 1
             }}
@@ -191,8 +188,8 @@ const Counting = () => {
             className={`absolute text-3xl transition-all duration-300 ${
               item.selected ? 'ring-2 ring-green-400 rounded-full' : ''
             }`}
-            style={{ 
-              left: `${item.x}%`, 
+            style={{
+              left: `${item.x}%`,
               top: `${item.y}%`,
               transform: 'translate(-50%, -50%)'
             }}

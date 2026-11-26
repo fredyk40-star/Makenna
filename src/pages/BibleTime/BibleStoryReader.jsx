@@ -198,13 +198,14 @@ const BibleStoryReader = () => {
         return (
           <p className="text-xl md:text-2xl font-baloo text-center leading-relaxed text-gray-800 dark:text-white">
             {text.split(/\s+/).map((word, idx) => (
-              <span
+              <button
+                type="button"
                 key={idx}
                 onClick={() => handleReadWord(word)}
                 className="cursor-pointer hover:text-primary hover:underline transition-colors inline-block mx-[2px]"
               >
                 {word}
-              </span>
+              </button>
             ))}
           </p>
         );

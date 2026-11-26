@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+
 import { FaChartBar, FaChartLine, FaCalendar, FaStar } from 'react-icons/fa';
 import { LearningAnalytics } from '../../services/LearningAnalytics';
 import { ChildAccountService } from '../../services/ChildAccountService';
@@ -93,7 +93,7 @@ const ProgressAnalyticsComponent = () => {
         <div className="flex items-end justify-between h-full gap-2">
           {analytics.progressTrend?.slice(-10).map((item, index) => (
             <div key={index} className="flex flex-col items-center flex-1">
-              <div 
+              <div
                 className="w-full bg-purple-500 rounded-t"
                 style={{ height: `${Math.max(10, item.progress)}%` }}
               />

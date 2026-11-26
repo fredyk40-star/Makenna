@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAudio } from '../../../hooks/useAudio';
 import { announceToScreenReader } from '../../../utils/accessibility';
 
@@ -67,7 +67,7 @@ const MemoryCards = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
     if (!card || card.matched || card.flipped || selectedCards.includes(cardId)) return;
 
     // Flip the card
-    setCards(prev => prev.map(c => 
+    setCards(prev => prev.map(c =>
       c.id === cardId ? { ...c, flipped: true } : c
     ));
 
@@ -81,7 +81,7 @@ const MemoryCards = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
       if (card1.pairId === card2.pairId && card1.id !== card2.id) {
         // Match found
-        setCards(prev => prev.map(c => 
+        setCards(prev => prev.map(c =>
           c.pairId === card1.pairId ? { ...c, matched: true } : c
         ));
         setMatchedPairs(prev => [...prev, card1.pairId]);
@@ -111,7 +111,7 @@ const MemoryCards = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
         announceToScreenReader('Not a match');
 
         setTimeout(() => {
-          setCards(prev => prev.map(c => 
+          setCards(prev => prev.map(c =>
             c.id === card1.id || c.id === card2.id ? { ...c, flipped: false } : c
           ));
           setSelectedCards([]);

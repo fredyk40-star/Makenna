@@ -4,7 +4,7 @@
  */
 import { StorageService } from './StorageService';
 import AdaptiveLearningService from './AdaptiveLearningService';
-import { ProfileService } from './ProfileService';
+
 
 const REVISION_KEY = 'makenna_revision_plans';
 
@@ -41,14 +41,14 @@ export class RevisionPlanner {
    * Detect forgotten lessons (items with low mastery and old last attempt)
    */
   static detectForgottenLessons(childId, thresholdDays = 7) {
-    const allPlans = StorageService.get(REVISION_KEY, {});
+    StorageService.get(REVISION_KEY, {});
     const items = [];
-    
+
     // Check adaptive learning data
     for (const [itemId, record] of AdaptiveLearningService.performanceData) {
       const daysSince = (Date.now() - record.lastAttempt) / (1000 * 60 * 60 * 24);
       const mastery = AdaptiveLearningService.calculateMastery(itemId);
-      
+
       // Item is forgotten if: low mastery AND not practiced in threshold days
       if (mastery < 50 && daysSince > thresholdDays) {
         items.push({
@@ -60,7 +60,7 @@ export class RevisionPlanner {
         });
       }
     }
-    
+
     return items.sort((a, b) => b.priority - a.priority);
   }
 
@@ -93,11 +93,11 @@ export class RevisionPlanner {
   static generateWeeklyTimetable(childId) {
     const forgotten = this.detectForgottenLessons(childId);
     const timetable = [];
-    
+
     // Generate timetable for 5 days (weekdays)
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const subjects = ['Alphabet', 'Numbers', 'Reading', 'Maths', 'Science', 'Shapes', 'Colours'];
-    
+
     forgotten.slice(0, 5).forEach((item, index) => {
       timetable.push({
         day: days[index] || days[days.length - 1],
@@ -109,7 +109,7 @@ export class RevisionPlanner {
         completed: false
       });
     });
-    
+
     // Fill remaining days with general practice
     for (let i = timetable.length; i < 5; i++) {
       timetable.push({
@@ -122,7 +122,7 @@ export class RevisionPlanner {
         completed: false
       });
     }
-    
+
     return timetable;
   }
 
@@ -163,7 +163,7 @@ export class RevisionPlanner {
   static getTodaysRevision(childId) {
     const plan = this.getPlan(childId);
     const today = new Date().toISOString().split('T')[0];
-    
+
     return plan.weeklyTimetable.filter(
       item => item.date === today && !item.completed
     );
@@ -174,7 +174,7 @@ export class RevisionPlanner {
    */
   static updateSpacedRepetition(childId, itemId, mastered = true) {
     const plan = this.getPlan(childId);
-    
+
     if (!plan.spacedRepetition[itemId]) {
       plan.spacedRepetition[itemId] = {
         intervals: [],
@@ -182,9 +182,9 @@ export class RevisionPlanner {
         streak: 0
       };
     }
-    
+
     const spaced = plan.spacedRepetition[itemId];
-    
+
     if (mastered) {
       spaced.streak++;
       const nextInterval = SPACED_INTERVALS[Math.min(spaced.streak, SPACED_INTERVALS.length - 1)];
@@ -194,7 +194,7 @@ export class RevisionPlanner {
       spaced.streak = 0;
       spaced.nextReview = Date.now() + (1 * 24 * 60 * 60 * 1000); // Review tomorrow
     }
-    
+
     this.savePlan(childId, plan);
   }
 
@@ -204,9 +204,9 @@ export class RevisionPlanner {
   static getDueForRepetition(childId) {
     const plan = this.getPlan(childId);
     const now = Date.now();
-    
+
     return Object.entries(plan.spacedRepetition || {})
-      .filter(([itemId, data]) => data.nextReview <= now)
+      .filter(([_itemId, data]) => data.nextReview <= now)
       .map(([itemId]) => itemId);
   }
 
@@ -218,7 +218,7 @@ export class RevisionPlanner {
     const forgotten = this.detectForgottenLessons(childId);
     const dueForRepetition = this.getDueForRepetition(childId);
     const todaysRevision = this.getTodaysRevision(childId);
-    
+
     return {
       totalForgotten: forgotten.length,
       totalDueForRepetition: dueForRepetition.length,

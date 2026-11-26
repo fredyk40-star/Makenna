@@ -7,10 +7,10 @@ const TreasureHunt = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [hiddenNumbers, setHiddenNumbers] = useState([]);
   const [foundNumbers, setFoundNumbers] = useState([]);
   const [targetNumbers, setTargetNumbers] = useState([]);
-  const [score, setScore] = useState(0);
+  const [, setScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
-  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [, setTotalQuestions] = useState(0);
   const [showHint, setShowHint] = useState(false);
 
   const { speak } = useAudio();
@@ -33,7 +33,7 @@ const TreasureHunt = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
     setTotalQuestions(prev => prev + 1);
 
     // Create hiding spots (6x6 grid)
-    const spots = [];
+
     const totalSpots = 36;
     const shuffledNumbers = [];
     // Fill with numbers
@@ -41,7 +41,7 @@ const TreasureHunt = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       const num = numbers[Math.floor(Math.random() * numbers.length)];
       shuffledNumbers.push(num);
     }
-    
+
     const newSpots = shuffledNumbers.map((num, i) => ({
       id: i,
       number: num,
@@ -62,7 +62,7 @@ const TreasureHunt = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
     const spot = hiddenNumbers.find(s => s.id === spotId);
     if (!spot || spot.found) return;
 
-    setHiddenNumbers(prev => prev.map(s => 
+    setHiddenNumbers(prev => prev.map(s =>
       s.id === spotId ? { ...s, found: true } : s
     ));
 
@@ -71,7 +71,7 @@ const TreasureHunt = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       setScore(prev => prev + 10);
       speak(`Found number ${spot.number}! 🎉`, { rate: 0.8, pitch: 1.2 });
       announceToScreenReader(`Found number ${spot.number}`);
-      
+
       const newScore = Math.round((foundNumbers.length + 1) / targetNumbers.length * 100);
       onScoreUpdate(newScore);
 

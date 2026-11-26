@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaFlask, FaArrowLeft, FaCheck, FaBook, FaStar, FaBullseye, FaLightbulb } from 'react-icons/fa';
+import { FaFlask, FaArrowLeft, FaCheck, FaBook, FaStar, FaLightbulb } from 'react-icons/fa';
 import { SCIENCE_DATA } from '../../data/scienceData';
 
 const ScienceLab = () => {
@@ -34,7 +34,7 @@ const ScienceLab = () => {
             Science Lab
           </h1>
         </div>
-        
+
         {/* Progress Stats */}
         <div className="flex gap-4">
           <div className="bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-xl flex items-center gap-2">
@@ -50,7 +50,7 @@ const ScienceLab = () => {
 
       {/* Progress Bar */}
       <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-        <div 
+        <div
           className="bg-gradient-to-r from-green-500 to-blue-500 h-full rounded-full transition-all duration-500"
           style={{ width: `${progressPercentage}%` }}
         />
@@ -61,9 +61,9 @@ const ScienceLab = () => {
         {SCIENCE_DATA.map((activity, index) => {
           const isCompleted = completedExperiments.includes(activity.id);
           return (
-            <Link 
-              to={activity.status === 'coming-soon' ? '#' : activity.path} 
-              key={activity.id} 
+            <Link
+              to={activity.status === 'coming-soon' ? '#' : activity.path}
+              key={activity.id}
               className={activity.status === 'coming-soon' ? 'cursor-not-allowed' : ''}
               onClick={() => {
                 if (activity.status !== 'coming-soon') {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CanvasEngine } from '../services/CanvasEngine';
 
 export const useDrawing = (canvasRef, options = {}) => {
@@ -16,7 +16,7 @@ export const useDrawing = (canvasRef, options = {}) => {
   const [isEraser, setIsEraser] = useState(false);
   const [hasDrawing, setHasDrawing] = useState(false);
   const [colors] = useState([
-    '#2563EB', '#FF6B6B', '#4ECDC4', '#FFE66D', 
+    '#2563EB', '#FF6B6B', '#4ECDC4', '#FFE66D',
     '#A78BFA', '#F472B6', '#34D399', '#FB923C'
   ]);
 
@@ -27,10 +27,10 @@ export const useDrawing = (canvasRef, options = {}) => {
       engine.setLineWidth(lineWidth);
       engine.changeMode(mode);
       setCanvasEngine(engine);
-      
+
       // Check if there are strokes
       setHasDrawing(engine.strokes.length > 0);
-      
+
       return () => {
         engine.dispose();
       };

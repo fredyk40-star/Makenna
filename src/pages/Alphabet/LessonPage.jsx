@@ -1,22 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaArrowRight, FaHome, FaStar, FaRegStar,
-  FaVolumeUp, FaCheck, FaLock, FaPlay, FaHeadphones
+import {
+  FaArrowLeft, FaArrowRight, FaCheck, FaHeadphones
 } from 'react-icons/fa';
 import { ALPHABET_DATA, getLetterById } from '../../data/alphabetData';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
-import { usePhonics } from '../../hooks/usePhonics';
+
 import LetterDisplay from '../../components/alphabet/LetterDisplay';
 import VocabularyCard from '../../components/alphabet/VocabularyCard';
 import NavigationButtons from '../../components/alphabet/NavigationButtons';
 import FavoriteButton from '../../components/alphabet/FavoriteButton';
-import VoiceButton from '../../components/alphabet/VoiceButton';
+
 import ProgressIndicator from '../../components/alphabet/ProgressIndicator';
 import PhonicsPlayer from '../../components/phonics/PhonicsPlayer';
 import ListeningActivity from '../../components/phonics/ListeningActivity';
-import { fadeInUp, staggerContainer } from '../../utils/constants';
+import { staggerContainer } from '../../utils/constants';
 import { FaPenFancy } from 'react-icons/fa';
 
 const LessonPage = () => {
@@ -28,13 +27,12 @@ const LessonPage = () => {
     addTimeSpent,
     isLetterCompleted,
     isLetterFavorited,
-    toggleFavoriteLetter,
-    getProgress
+    toggleFavoriteLetter
   } = useAlphabetProgress();
 
   const [letter, setLetter] = useState(null);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [showPronunciation, setShowPronunciation] = useState(false);
+  const [, ] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
   const [showListeningActivity, setShowListeningActivity] = useState(false);
   const timerRef = useRef(null);
@@ -45,7 +43,7 @@ const LessonPage = () => {
       setLetter(foundLetter);
       markOpened(letterId);
       setStartTime(Date.now());
-      
+
       // Start timer
       timerRef.current = setInterval(() => {
         setStartTime(prev => prev);
@@ -109,10 +107,10 @@ const LessonPage = () => {
 
   const handleNavigateLetter = (direction) => {
     const currentIndex = ALPHABET_DATA.findIndex(l => l.id === letterId);
-    const newIndex = direction === 'next' 
+    const newIndex = direction === 'next'
       ? Math.min(currentIndex + 1, ALPHABET_DATA.length - 1)
       : Math.max(currentIndex - 1, 0);
-    
+
     if (newIndex !== currentIndex) {
       navigate(`/alphabet/lesson/${ALPHABET_DATA[newIndex].id}`);
     }

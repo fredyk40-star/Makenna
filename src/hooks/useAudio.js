@@ -3,7 +3,6 @@ import audioService from '../services/AudioService';
 
 export const useAudio = (options = {}) => {
   const {
-    autoPlay = false,
     volume = 1,
     playbackRate = 1,
     onEnd = null,
@@ -14,11 +13,11 @@ export const useAudio = (options = {}) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [currentTime, ] = useState(0);
+  const [duration, ] = useState(0);
   const [error, setError] = useState(null);
-  
-  const audioRef = useRef(null);
+
+  useRef(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -46,7 +45,7 @@ export const useAudio = (options = {}) => {
   const play = useCallback(async (source, options = {}) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const audioBuffer = await audioService.loadAudio(source, options);
       const result = await audioService.play(audioBuffer, {
@@ -67,7 +66,7 @@ export const useAudio = (options = {}) => {
           if (onError) onError(err);
         }
       });
-      
+
       setIsLoading(false);
       return result;
     } catch (err) {
@@ -81,7 +80,7 @@ export const useAudio = (options = {}) => {
   const speak = useCallback(async (text, options = {}) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const result = await audioService.speak(text, {
         rate: options.rate || 0.9,
@@ -101,7 +100,7 @@ export const useAudio = (options = {}) => {
           if (onError) onError(err);
         }
       });
-      
+
       setIsLoading(false);
       return result;
     } catch (err) {

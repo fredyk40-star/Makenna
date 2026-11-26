@@ -48,7 +48,7 @@ export class AdaptiveLearningService {
    */
   recordPerformance(itemId, data) {
     const { correct, incorrect, time, difficulty } = data;
-    
+
     if (!this.performanceData.has(itemId)) {
       this.performanceData.set(itemId, {
         attempts: 0,
@@ -59,19 +59,19 @@ export class AdaptiveLearningService {
         difficulty: difficulty || 'medium'
       });
     }
-    
+
     const record = this.performanceData.get(itemId);
     record.attempts += (correct + incorrect);
     record.correct += correct;
     record.incorrect += incorrect;
     record.totalTime += time;
     record.lastAttempt = Date.now();
-    
+
     // Calculate mastery level
     const mastery = this.calculateMastery(itemId);
     this.difficultyMap.set(itemId, this.getRecommendedDifficulty(mastery));
     this.recommendations.set(itemId, this.generateRecommendation(itemId));
-    
+
     this.saveToStorage();
     return { mastery, difficulty: this.difficultyMap.get(itemId), recommendation: this.recommendations.get(itemId) };
   }
@@ -82,11 +82,11 @@ export class AdaptiveLearningService {
   calculateMastery(itemId) {
     const record = this.performanceData.get(itemId);
     if (!record || record.attempts === 0) return 0;
-    
+
     const accuracy = record.correct / record.attempts;
     const consistency = Math.min(1, record.attempts / 10);
     const speedScore = Math.max(0, 1 - (record.totalTime / (record.attempts * 5)));
-    
+
     return Math.round((accuracy * 0.6 + consistency * 0.2 + speedScore * 0.2) * 100);
   }
 
@@ -105,10 +105,10 @@ export class AdaptiveLearningService {
   generateRecommendation(itemId) {
     const record = this.performanceData.get(itemId);
     if (!record) return null;
-    
+
     const mastery = this.calculateMastery(itemId);
-    const accuracy = record.correct / Math.max(1, record.attempts);
-    
+
+
     if (mastery >= 80) {
       return {
         action: 'advance',
@@ -136,7 +136,7 @@ export class AdaptiveLearningService {
   getPerformanceSummary(itemId) {
     const record = this.performanceData.get(itemId);
     if (!record) return null;
-    
+
     return {
       itemId,
       attempts: record.attempts,
@@ -177,7 +177,7 @@ export class AdaptiveLearningService {
       const mastery = this.calculateMastery(itemId);
       const lastAttempt = record.lastAttempt;
       const daysSinceLast = (Date.now() - lastAttempt) / (1000 * 60 * 60 * 24);
-      
+
       // Prioritize items with low mastery or not practiced recently
       const priority = (100 - mastery) * 0.6 + Math.min(daysSinceLast, 30) * 0.4;
       items.push({
@@ -187,7 +187,7 @@ export class AdaptiveLearningService {
         daysSinceLast: Math.round(daysSinceLast)
       });
     }
-    
+
     return items
       .sort((a, b) => b.priority - a.priority)
       .slice(0, limit);
@@ -223,18 +223,18 @@ export class AdaptiveLearningService {
     let itemsMastered = 0;
     let itemsInProgress = 0;
     let itemsNeedingReview = 0;
-    
+
     for (const [itemId, record] of this.performanceData) {
       totalAttempts += record.attempts;
       totalCorrect += record.correct;
       totalIncorrect += record.incorrect;
-      
+
       const mastery = this.calculateMastery(itemId);
       if (mastery >= 80) itemsMastered++;
       else if (mastery >= 50) itemsInProgress++;
       else itemsNeedingReview++;
     }
-    
+
     return {
       totalAttempts,
       totalCorrect,

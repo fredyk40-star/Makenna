@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaStar, FaCheck, FaTimes, FaPencilAlt, FaBook, FaGamepad } from 'react-icons/fa';
+import { FaCheck, FaPencilAlt, FaBook, FaGamepad } from 'react-icons/fa';
 import { useMastery } from '../../hooks/useMastery';
 
 const AlphabetReview = ({ className = '' }) => {
@@ -48,7 +48,7 @@ const AlphabetReview = ({ className = '' }) => {
           const level = getLetterMasteryLevel(id);
           const statusIcon = getStatusIcon(level);
           const statusColor = getStatusColor(level);
-          
+
           return (
             <motion.button
               key={id}

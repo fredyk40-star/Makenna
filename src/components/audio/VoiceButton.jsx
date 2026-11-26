@@ -8,11 +8,11 @@ const VoiceButton = ({
   label = 'Listen',
   className = '',
   size = 'medium',
-  showWaveform = false,
+  showWaveform: _showWaveform = false,
   onPlay = null,
   onEnd = null,
   onError = null,
-  autoPlay = false
+  autoPlay: _autoPlay = false
 }) => {
   const { speak, isPlaying, isLoading, stop } = useAudio({
     onEnd,
@@ -54,8 +54,8 @@ const VoiceButton = ({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       className={`relative rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-        isPlaying 
-          ? 'bg-primary text-white shadow-glow' 
+        isPlaying
+          ? 'bg-primary text-white shadow-glow'
           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
       } ${sizeClasses[size]} ${className}`}
       aria-label={isPlaying ? 'Stop speaking' : label}

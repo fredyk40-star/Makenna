@@ -6,7 +6,7 @@ import StrokeGuide from './StrokeGuide';
 import StrokeAnimator from './StrokeAnimator';
 import TraceValidator from './TraceValidator';
 import CelebrationOverlay from './CelebrationOverlay';
-import { FaArrowLeft, FaArrowRight, FaUndo, FaRedo, FaEraser, FaPencilAlt } from 'react-icons/fa';
+import { FaUndo, FaRedo, FaEraser, FaPencilAlt } from 'react-icons/fa';
 
 const TracingCanvas = ({
   letter,
@@ -19,55 +19,47 @@ const TracingCanvas = ({
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [, setIsAnimating] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
-  
+
   const {
     startTrace,
     continueTrace,
     endTrace,
-    isTracing,
     traceResult,
     clearTrace,
     undoLast,
     redoLast,
     getTraceProgress,
-    getTraceAccuracy,
-    isTraceValid,
     getEncouragementMessage,
     changeDifficulty,
     difficulty,
-    settings,
     animationData,
     guideData
   } = useTracing(letter, caseType, canvasRef);
 
   const {
-    isDrawing,
     isEraser,
     color,
     colors,
-    lineWidth,
     startDrawing,
     continueDrawing,
     endDrawing,
     changeColor,
-    changeLineWidth,
     toggleEraser,
     clearCanvas,
     undo,
-    redo,
-    hasDrawing
+    redo
   } = useDrawing(canvasRef);
 
   // Handle mouse/touch events
   const getCoordinates = useCallback((e) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
-    
+
     const clientX = e.clientX || e.touches?.[0]?.clientX || e.changedTouches?.[0]?.clientX || 0;
     const clientY = e.clientY || e.touches?.[0]?.clientY || e.changedTouches?.[0]?.clientY || 0;
-    
+
     return {
       x: (clientX - rect.left) * (canvasRef.current.width / rect.width),
       y: (clientY - rect.top) * (canvasRef.current.height / rect.height)
@@ -77,7 +69,7 @@ const TracingCanvas = ({
   const handlePointerDown = useCallback((e) => {
     e.preventDefault();
     const coords = getCoordinates(e);
-    
+
     if (mode === 'trace') {
       startTrace(coords.x, coords.y);
     } else {
@@ -88,7 +80,7 @@ const TracingCanvas = ({
   const handlePointerMove = useCallback((e) => {
     e.preventDefault();
     const coords = getCoordinates(e);
-    
+
     if (mode === 'trace') {
       continueTrace(coords.x, coords.y);
       // Update progress
@@ -110,7 +102,7 @@ const TracingCanvas = ({
 
   const handlePointerUp = useCallback((e) => {
     e.preventDefault();
-    
+
     if (mode === 'trace') {
       endTrace();
     } else {
@@ -204,7 +196,7 @@ const TracingCanvas = ({
               }`}
               aria-label={isEraser ? 'Switch to pen' : 'Switch to eraser'}
             >
-              {isEraser ? <FaPencil className="w-4 h-4" /> : <FaEraser className="w-4 h-4" />}
+              {isEraser ? <FaPencilAlt className="w-4 h-4" /> : <FaEraser className="w-4 h-4" />}
             </button>
           )}
 

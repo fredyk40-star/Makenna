@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { FaPlay, FaStop, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { useReading } from '../../hooks/useReading';
 
-const SentenceReader = ({ 
+const SentenceReader = ({
   sentences = [],
   onComplete = null,
-  className = '' 
+  className = ''
 }) => {
   const {
     currentSentence,
@@ -20,11 +20,10 @@ const SentenceReader = ({
     readWord,
     getSentenceProgress,
     isLastSentence,
-    isFirstSentence,
-    resetReading
+    isFirstSentence
   } = useReading();
 
-  const [autoPlay, setAutoPlay] = useState(false);
+  const [, ] = useState(false);
 
   useEffect(() => {
     if (sentences.length > 0) {

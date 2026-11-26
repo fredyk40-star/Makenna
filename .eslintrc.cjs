@@ -13,7 +13,7 @@ module.exports = {
     'plugin:jsx-a11y/recommended',
     'plugin:security/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs', 'vite.config.js'],
+  ignorePatterns: ['dist', 'scripts', '.eslintrc.cjs', 'vite.config.js'],
   parserOptions: { 
     ecmaVersion: 'latest', 
     sourceType: 'module' 
@@ -35,6 +35,19 @@ module.exports = {
     ],
     'react/prop-types': 'off',
     'react/no-unescaped-entities': 'off',
+
+    // Unused bindings that are intentionally kept for API/shape reasons use a leading underscore.
+    'no-unused-vars': [
+      'error',
+      {
+        vars: 'all',
+        args: 'after-used',
+        ignoreRestSiblings: true,
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      },
+    ],
     
     // Accessibility rules
     'jsx-a11y/alt-text': 'warn',

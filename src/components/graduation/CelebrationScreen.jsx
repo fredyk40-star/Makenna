@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaStar, FaTrophy, FaRocket, FaGift } from 'react-icons/fa';
+import { FaRocket } from 'react-icons/fa';
 import { useMastery } from '../../hooks/useMastery';
 
-const CelebrationScreen = ({ 
+const CelebrationScreen = ({
   onContinue = null,
-  className = '' 
+  className = ''
 }) => {
-  const { isAllLettersMastered, progressSummary } = useMastery();
+  const { progressSummary } = useMastery();
   const [particles, setParticles] = useState([]);
   const [showCelebration, setShowCelebration] = useState(true);
 
@@ -16,7 +16,7 @@ const CelebrationScreen = ({
     const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#A78BFA', '#F472B6', '#34D399', '#FB923C'];
     const emojis = ['🌟', '⭐', '🎉', '🎊', '✨', '', '🎈', '🎆'];
     const newParticles = [];
-    
+
     for (let i = 0; i < 60; i++) {
       newParticles.push({
         id: i,
@@ -78,7 +78,7 @@ const CelebrationScreen = ({
                     ease: 'easeOut'
                   }}
                   className="absolute text-3xl"
-                  style={{ 
+                  style={{
                     color: particle.color,
                     fontSize: particle.size
                   }}

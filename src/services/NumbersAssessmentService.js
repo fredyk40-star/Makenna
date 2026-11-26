@@ -41,28 +41,28 @@ export class NumbersAssessmentService {
 
   generateAssessment(numberData, progressData) {
     const questions = [];
-    
+
     // Number Recognition
     questions.push(...this.generateRecognitionQuestions(numberData, progressData));
-    
+
     // Counting Questions
     questions.push(...this.generateCountingQuestions(numberData, progressData));
-    
+
     // Missing Number Questions
     questions.push(...this.generateMissingNumberQuestions(numberData, progressData));
-    
+
     // Comparison Questions
     questions.push(...this.generateComparisonQuestions(numberData, progressData));
-    
+
     // Word-Number Matching
     questions.push(...this.generateWordMatchQuestions(numberData, progressData));
-    
+
     // Listening Questions
     questions.push(...this.generateListeningQuestions(numberData, progressData));
-    
+
     // Simple Addition
     questions.push(...this.generateAdditionQuestions(numberData, progressData));
-    
+
     // Simple Subtraction
     questions.push(...this.generateSubtractionQuestions(numberData, progressData));
 
@@ -72,14 +72,14 @@ export class NumbersAssessmentService {
     this.score = 0;
     this.isComplete = false;
     this.answers = [];
-    
+
     return this.questions;
   }
 
-  generateRecognitionQuestions(numberData, progressData) {
+  generateRecognitionQuestions(numberData, ___progressData) {
     const questions = [];
     const numbers = Object.keys(numberData);
-    
+
     for (const num of numbers) {
       if (Math.random() < 0.3) {
         const options = this.getRandomNumbers(num, numbers, 3);
@@ -98,10 +98,10 @@ export class NumbersAssessmentService {
     return questions;
   }
 
-  generateCountingQuestions(numberData, progressData) {
+  generateCountingQuestions(___numberData, ___progressData) {
     const questions = [];
     const max = 10;
-    
+
     for (let i = 1; i <= max; i++) {
       if (Math.random() < 0.2) {
         const emojis = ['⭐', '🍎', '🐱', '🚗'];
@@ -122,10 +122,10 @@ export class NumbersAssessmentService {
     return questions;
   }
 
-  generateMissingNumberQuestions(numberData, progressData) {
+  generateMissingNumberQuestions(___numberData, ___progressData) {
     const questions = [];
     const max = 10;
-    
+
     for (let start = 1; start <= max - 3; start++) {
       if (Math.random() < 0.2) {
         const missing = start + Math.floor(Math.random() * 3);
@@ -149,10 +149,10 @@ export class NumbersAssessmentService {
     return questions;
   }
 
-  generateComparisonQuestions(numberData, progressData) {
+  generateComparisonQuestions(___numberData, ___progressData) {
     const questions = [];
     const max = 10;
-    
+
     for (let i = 1; i <= max - 1; i++) {
       if (Math.random() < 0.15) {
         const a = i;
@@ -176,13 +176,13 @@ export class NumbersAssessmentService {
     return questions;
   }
 
-  generateWordMatchQuestions(numberData, progressData) {
+  generateWordMatchQuestions(___numberData, ___progressData) {
     const questions = [];
     const numberWords = {
       '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five',
       '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine', '10': 'ten'
     };
-    
+
     for (const [num, word] of Object.entries(numberWords)) {
       if (Math.random() < 0.2) {
         const options = this.getRandomWords(word, Object.values(numberWords), 3);
@@ -200,10 +200,10 @@ export class NumbersAssessmentService {
     return questions;
   }
 
-  generateListeningQuestions(numberData, progressData) {
+  generateListeningQuestions(___numberData, ___progressData) {
     const questions = [];
     const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-    
+
     for (const num of numbers) {
       if (Math.random() < 0.15) {
         const options = this.getRandomNumbers(num, numbers, 3);
@@ -222,10 +222,10 @@ export class NumbersAssessmentService {
     return questions;
   }
 
-  generateAdditionQuestions(numberData, progressData) {
+  generateAdditionQuestions(___numberData, ___progressData) {
     const questions = [];
     const max = 5;
-    
+
     for (let i = 1; i <= max; i++) {
       for (let j = 1; j <= max; j++) {
         if (i + j <= 10 && Math.random() < 0.1) {
@@ -246,10 +246,10 @@ export class NumbersAssessmentService {
     return questions;
   }
 
-  generateSubtractionQuestions(numberData, progressData) {
+  generateSubtractionQuestions(___numberData, ___progressData) {
     const questions = [];
     const max = 5;
-    
+
     for (let i = max; i >= 1; i--) {
       for (let j = 1; j < i; j++) {
         if (i - j >= 0 && Math.random() < 0.1) {
@@ -296,10 +296,10 @@ export class NumbersAssessmentService {
 
   submitAnswer(answer) {
     if (this.isComplete || this.currentIndex >= this.questions.length) return null;
-    
+
     const question = this.questions[this.currentIndex];
     const isCorrect = answer === question.correct;
-    
+
     this.answers.push({
       questionId: question.id,
       type: question.type,
@@ -307,11 +307,11 @@ export class NumbersAssessmentService {
       answer,
       correctAnswer: question.options[question.correct]
     });
-    
+
     if (isCorrect) {
       this.score++;
     }
-    
+
     // Update number performance
     if (question.number) {
       if (!this.numberPerformance[question.number]) {
@@ -322,15 +322,15 @@ export class NumbersAssessmentService {
         this.numberPerformance[question.number].correct++;
       }
     }
-    
+
     this.currentIndex++;
-    
+
     if (this.currentIndex >= this.questions.length) {
       this.isComplete = true;
     }
-    
+
     this.saveToStorage();
-    
+
     return {
       isCorrect,
       currentScore: this.score,
@@ -350,13 +350,13 @@ export class NumbersAssessmentService {
     const total = this.questions.length;
     const correct = this.score;
     const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
-    
+
     let level = 'Bronze';
     if (percentage >= 90) level = 'Master';
     else if (percentage >= 80) level = 'Diamond';
     else if (percentage >= 70) level = 'Gold';
     else if (percentage >= 50) level = 'Silver';
-    
+
     // Calculate number mastery
     const numberMastery = {};
     for (const [num, data] of Object.entries(this.numberPerformance)) {
@@ -368,7 +368,7 @@ export class NumbersAssessmentService {
         total: data.total
       };
     }
-    
+
     return {
       total,
       correct,

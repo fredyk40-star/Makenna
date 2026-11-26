@@ -256,7 +256,7 @@ export class ReadingEngine {
   generateBlendingSequence(word) {
     const letters = this.segmentWord(word);
     const sequence = [];
-    
+
     // Build up the word gradually
     for (let i = 0; i < letters.length; i++) {
       const partial = letters.slice(0, i + 1);
@@ -270,7 +270,7 @@ export class ReadingEngine {
         isComplete: i === letters.length - 1
       });
     }
-    
+
     return sequence;
   }
 
@@ -288,9 +288,9 @@ export class ReadingEngine {
    */
   generateReadingPractice(level = 1) {
     const sentences = [];
-    const words = this.getSightWords(level);
+    this.getSightWords(level);
     const families = Object.values(this.wordFamilies);
-    
+
     // Simple sentences with sight words and CVC words
     const templates = [
       'I am a {word}.',
@@ -302,13 +302,13 @@ export class ReadingEngine {
       'Can you see the {word}?',
       'The {word} is here.'
     ];
-    
+
     // Generate sentences
     for (let i = 0; i < 10; i++) {
       const family = families[Math.floor(Math.random() * families.length)];
       const word = family.words[Math.floor(Math.random() * family.words.length)];
       const template = templates[Math.floor(Math.random() * templates.length)];
-      
+
       sentences.push({
         sentence: template.replace('{word}', word),
         word: word,
@@ -316,7 +316,7 @@ export class ReadingEngine {
         level: level
       });
     }
-    
+
     return sentences;
   }
 

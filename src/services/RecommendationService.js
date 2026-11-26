@@ -4,9 +4,9 @@
  */
 import { StorageService } from './StorageService';
 import { LearningAnalytics } from './LearningAnalytics';
-import { StoryEngine } from './StoryEngine'; // Assuming this exists for story data
+ // Assuming this exists for story data
 
-const RECOMMENDATION_KEY = 'makenna_recommendations';
+
 const FEEDBACK_KEY = 'makenna_recommendation_feedback';
 
 export class RecommendationService {

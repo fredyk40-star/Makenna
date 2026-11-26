@@ -1,11 +1,7 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaStar, FaCheck, FaTimes, 
-  FaHeart, FaRegHeart, FaPlay, FaPause,
-  FaVolumeUp, FaVolumeMute
-} from 'react-icons/fa';
+import { FaArrowLeft, FaHeart, FaRegHeart } from 'react-icons/fa';
 import { getGameById } from '../../data/numbersGamesData';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import gameProgressService from '../../services/GameProgressService';
@@ -66,11 +62,11 @@ const GameTemplate = () => {
   const [game, setGame] = useState(null);
   const [score, setScore] = useState(0);
   const [stars, setStars] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
+  const [, setIsComplete] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
   const [isFavorite, setIsFavorite] = useState(false);
-  
+
   const { markCompleted, markMastered } = useNumbersProgress();
 
   useEffect(() => {
@@ -78,7 +74,7 @@ const GameTemplate = () => {
     if (found) {
       setGame(found);
       setStartTime(Date.now());
-      
+
       // Load favorite status
       try {
         const favorites = JSON.parse(localStorage.getItem('numbers_game_favorites') || '[]');
@@ -110,7 +106,7 @@ const GameTemplate = () => {
 
   const handleGameComplete = useCallback((result) => {
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-    
+
     // Record progress
     gameProgressService.recordProgress(gameId, {
       score: result.score || 0,
@@ -119,13 +115,13 @@ const GameTemplate = () => {
       completed: true,
       gameId: gameId
     });
-    
+
     // Update numbers progress
     markCompleted(gameId);
     if (result.score > 80) {
       markMastered(gameId);
     }
-    
+
     // Adaptive learning
     adaptiveLearningService.recordPerformance(gameId, {
       correct: result.correct || 0,
@@ -133,12 +129,12 @@ const GameTemplate = () => {
       time: timeSpent,
       difficulty: game?.difficulty || 'medium'
     });
-    
+
     setScore(result.score || 0);
     setStars(result.stars || 0);
     setIsComplete(true);
     setShowCelebration(true);
-    
+
     announceToScreenReader(`Game complete! You scored ${result.score}%`);
   }, [gameId, startTime, game, markCompleted, markMastered]);
 

@@ -15,9 +15,9 @@ export default function TestSupabase() {
     setLoading(true);
     try {
       if (!isSupabaseConfigured() || !supabase) {
-        setConnectionStatus({ 
-          success: false, 
-          message: 'Supabase is not configured. Check .env file.' 
+        setConnectionStatus({
+          success: false,
+          message: 'Supabase is not configured. Check .env file.'
         });
         return;
       }
@@ -29,24 +29,24 @@ export default function TestSupabase() {
         .limit(10);
 
       if (error) {
-        setConnectionStatus({ 
-          success: false, 
-          message: `Connection error: ${error.message}` 
+        setConnectionStatus({
+          success: false,
+          message: `Connection error: ${error.message}`
         });
       } else {
-        setConnectionStatus({ 
-          success: true, 
-          message: `Connected successfully! Found ${data.length} records.` 
+        setConnectionStatus({
+          success: true,
+          message: `Connected successfully! Found ${data.length} records.`
         });
         setCloudData(data);
-        
+
         // Load local data too
         setLocalData(ChildAccountService.getAllAccounts());
       }
     } catch (error) {
-      setConnectionStatus({ 
-        success: false, 
-        message: `Error: ${error.message}` 
+      setConnectionStatus({
+        success: false,
+        message: `Error: ${error.message}`
       });
     }
     setLoading(false);
@@ -81,7 +81,7 @@ export default function TestSupabase() {
   // Insert test record
   const insertTestRecord = async () => {
     if (!supabase) return;
-    
+
     setLoading(true);
     try {
       const testAccount = {
@@ -102,7 +102,7 @@ export default function TestSupabase() {
         .select();
 
       if (error) throw error;
-      
+
       setSyncResult({ success: true, message: 'Test record inserted!', data });
       await testConnection();
     } catch (error) {
@@ -124,7 +124,7 @@ export default function TestSupabase() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6 text-purple-600">Supabase Test Mode</h1>
-      
+
       {/* Connection Status */}
       {connectionStatus && (
         <div className={`p-4 rounded-lg mb-6 ${
@@ -136,35 +136,35 @@ export default function TestSupabase() {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 mb-6">
-        <button 
+        <button
           onClick={testConnection}
           disabled={loading}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
         >
           Test Connection
         </button>
-        <button 
+        <button
           onClick={syncToCloud}
           disabled={loading}
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
         >
           Sync Local → Cloud
         </button>
-        <button 
+        <button
           onClick={syncFromCloud}
           disabled={loading}
           className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 disabled:opacity-50"
         >
           Sync Cloud → Local
         </button>
-        <button 
+        <button
           onClick={insertTestRecord}
           disabled={loading}
           className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 disabled:opacity-50"
         >
           Insert Test Record
         </button>
-        <button 
+        <button
           onClick={refreshAll}
           disabled={loading}
           className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 disabled:opacity-50"
@@ -189,8 +189,8 @@ export default function TestSupabase() {
           <h2 className="text-xl font-semibold mb-3 text-green-600">Cloud Data (Supabase)</h2>
           <p className="text-sm text-gray-500 mb-2">Table: child_accounts</p>
           <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-96">
-            {cloudData.length > 0 
-              ? JSON.stringify(cloudData, null, 2) 
+            {cloudData.length > 0
+              ? JSON.stringify(cloudData, null, 2)
               : 'No data found in cloud database'}
           </pre>
           <p className="text-xs text-gray-400 mt-2">Total records: {cloudData.length}</p>
@@ -201,8 +201,8 @@ export default function TestSupabase() {
           <h2 className="text-xl font-semibold mb-3 text-blue-600">Local Data (Browser)</h2>
           <p className="text-sm text-gray-500 mb-2">Storage key: makenna_child_accounts_v2</p>
           <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-96">
-            {localData.length > 0 
-              ? JSON.stringify(localData, null, 2) 
+            {localData.length > 0
+              ? JSON.stringify(localData, null, 2)
               : 'No child accounts registered yet'}
           </pre>
           <p className="text-xs text-gray-400 mt-2">Total accounts: {localData.length}</p>
@@ -215,15 +215,15 @@ export default function TestSupabase() {
         <div className="font-mono text-xs bg-white p-3 rounded space-y-2">
           <p className="text-gray-600 mb-2">Run in browser console (F12):</p>
           <code className="block text-purple-600">
-            // Show window utilities<br/>
+            {'// Show window utilities'}<br/>
             window.MakennaDebug.getAllData()
           </code>
           <code className="block text-purple-600">
-            // Clear all storage<br/>
+            {'// Clear all storage'}<br/>
             localStorage.clear()
           </code>
           <code className="block text-purple-600">
-            // Show all localStorage keys<br/>
+            {'// Show all localStorage keys'}<br/>
             Object.keys(localStorage)
           </code>
         </div>

@@ -5,13 +5,13 @@ import { pwaSteps, pwaTips } from '../../data/pwaGuidance';
 import { usePWADetection } from '../../hooks/usePWADetection';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { StorageService } from '../../services/StorageService';
-import { FaDownload, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaDownload } from 'react-icons/fa';
 
 const PWAGuidance = ({ autoPlay = false, context = 'welcome' }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showGuidance, setShowGuidance] = useState(true);
-  
+
   const { speak, cancel, isSpeaking, isMuted } = useVoiceGuide();
   const { platform, isInstalled, canInstall, getPlatformName, getPlatformIcon } = usePWADetection();
   const { installApp } = useInstallPrompt();
@@ -126,10 +126,10 @@ const PWAGuidance = ({ autoPlay = false, context = 'welcome' }) => {
                     <div
                       key={index}
                       className={`w-3 h-3 rounded-full transition-all ${
-                        index === currentStep 
-                          ? 'bg-blue-500 scale-125' 
-                          : index < currentStep 
-                            ? 'bg-green-500' 
+                        index === currentStep
+                          ? 'bg-blue-500 scale-125'
+                          : index < currentStep
+                            ? 'bg-green-500'
                             : 'bg-gray-300 dark:bg-gray-600'
                       }`}
                       aria-label={`Step ${index + 1} ${index === currentStep ? 'active' : ''}`}

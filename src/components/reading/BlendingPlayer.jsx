@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { FaPlay, FaStop } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';
 
-const BlendingPlayer = ({ 
+const BlendingPlayer = ({
   word,
   onComplete = null,
-  className = '' 
+  className = ''
 }) => {
   const [sequence, setSequence] = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -24,7 +24,7 @@ const BlendingPlayer = ({
   const generateBlendingSequence = (word) => {
     const letters = word.toLowerCase().split('');
     const sequence = [];
-    
+
     for (let i = 0; i < letters.length; i++) {
       const partial = letters.slice(0, i + 1);
       sequence.push({
@@ -33,19 +33,19 @@ const BlendingPlayer = ({
         letters: partial
       });
     }
-    
+
     return sequence;
   };
 
   const playBlend = async () => {
     if (!sequence.length || isPlaying) return;
-    
+
     setIsPlaying(true);
     setCurrentStep(0);
-    
+
     for (let i = 0; i < sequence.length; i++) {
       setCurrentStep(i);
-      
+
       // Speak each letter separately for blending
       if (i < sequence[i].letters.length) {
         await speak(sequence[i].letters[i], {
@@ -54,7 +54,7 @@ const BlendingPlayer = ({
         });
         await new Promise(resolve => setTimeout(resolve, 300));
       }
-      
+
       // Then speak the partial word
       if (i > 0) {
         await speak(sequence[i].word, {
@@ -62,10 +62,10 @@ const BlendingPlayer = ({
           pitch: 1.1
         });
       }
-      
+
       await new Promise(resolve => setTimeout(resolve, 500));
     }
-    
+
     setIsPlaying(false);
     if (onComplete) onComplete();
   };

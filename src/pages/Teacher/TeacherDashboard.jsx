@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TeacherService } from '../../services/TeacherService';
 import { ChildAccountService } from '../../services/ChildAccountService';
-import { FaChalkboard, FaUsers, FaClipboardList, FaPlus, FaEdit, FaTrash, FaGraduationCap, FaChartBar, FaCalendar, FaClock, FaCog } from 'react-icons/fa';
+import { FaChalkboard, FaUsers, FaClipboardList, FaPlus, FaEdit, FaGraduationCap, FaCog } from 'react-icons/fa';
 import TeacherMode from '../../components/TeacherMode/TeacherMode';
 import ContentEditor from '../../components/ContentEditor/ContentEditor';
 
@@ -10,14 +10,14 @@ const TeacherDashboard = () => {
   const [classes, setClasses] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [activeTab, setActiveTab] = useState('classes');
-  const [selectedClass, setSelectedClass] = useState(null);
+  const [, setSelectedClass] = useState(null);
   const [showCreateClass, setShowCreateClass] = useState(false);
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [newClass, setNewClass] = useState({ name: '', description: '' });
-  const [newAssignment, setNewAssignment] = useState({ 
-    title: '', 
-    description: '', 
-    dueDate: '', 
+  const [newAssignment, setNewAssignment] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
     classId: ''
   });
 
@@ -48,11 +48,7 @@ const TeacherDashboard = () => {
     }
   };
 
-  const getClassStudents = (classId) => {
-    const classData = TeacherService.getClass(classId);
-    if (!classData) return [];
-    return classData.studentIds.map(id => ChildAccountService.getChild(id)).filter(Boolean);
-  };
+
 
   const tabs = [
     { id: 'classes', label: 'Classes', icon: FaChalkboard },
@@ -86,8 +82,8 @@ const TeacherDashboard = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-blue-600 text-white' 
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
               }`}
             >

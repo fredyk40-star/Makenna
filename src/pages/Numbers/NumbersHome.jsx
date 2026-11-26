@@ -1,18 +1,15 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  FaStar, FaCheck, FaArrowLeft, FaSearch, 
-  FaHeart, FaRegHeart, FaLock, FaPlay, FaFire, FaMedal
-} from 'react-icons/fa';
+import { FaStar, FaCheck, FaSearch, FaHeart, FaRegHeart } from 'react-icons/fa';
 import { NUMBERS_DATA, searchNumbers } from '../../data/numbersData';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import { staggerContainer } from '../../utils/constants';
 
 const NumbersHome = () => {
-  const { 
-    isNumberCompleted, 
-    isNumberFavorited, 
+  const {
+    isNumberCompleted,
+    isNumberFavorited,
     isNumberMastered,
     getCompletionPercentage,
     getMasteryPercentage
@@ -24,15 +21,15 @@ const NumbersHome = () => {
 
   useEffect(() => {
     let results = NUMBERS_DATA;
-    
+
     if (searchQuery.trim()) {
       results = searchNumbers(searchQuery);
     }
-    
+
     if (showFavorites) {
       results = results.filter(num => isNumberFavorited(num.id));
     }
-    
+
     setFilteredNumbers(results);
   }, [searchQuery, showFavorites, isNumberFavorited]);
 
@@ -58,7 +55,7 @@ const NumbersHome = () => {
           <p className="text-gray-600 dark:text-gray-300 mt-1">
             Learn numbers 0 to 20 with fun activities!
           </p>
-          
+
           {/* Progress Ring */}
           <div className="flex items-center gap-6 mt-4">
             <div className="flex items-center gap-2">
@@ -171,8 +168,8 @@ const NumbersHome = () => {
               key={num.id}
               variants={{
                 initial: { opacity: 0, scale: 0.9 },
-                animate: { 
-                  opacity: 1, 
+                animate: {
+                  opacity: 1,
                   scale: 1,
                   transition: { delay: index * 0.05 }
                 }
@@ -196,7 +193,7 @@ const NumbersHome = () => {
                 <div className="mt-2 text-2xl">
                   {num.emoji}
                 </div>
-                
+
                 {/* Status Indicators */}
                 <div className="mt-2 flex items-center justify-center gap-1">
                   {isCompleted && (

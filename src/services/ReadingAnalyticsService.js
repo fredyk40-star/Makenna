@@ -46,16 +46,16 @@ export class ReadingAnalyticsService {
   /**
    * Record story completion
    */
-  recordStoryCompletion(storyId) {
+  recordStoryCompletion(___storyId) {
     this.stats.storiesCompleted++;
-    
+
     // Update streak
     const today = new Date().toDateString();
     if (this.stats.lastReadDate !== today) {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toDateString();
-      
+
       if (this.stats.lastReadDate === yesterdayStr) {
         this.stats.readingStreak++;
       } else {
@@ -63,10 +63,10 @@ export class ReadingAnalyticsService {
       }
       this.stats.lastReadDate = today;
     }
-    
+
     // Update reading level (every 5 stories)
     this.stats.readingLevel = Math.floor(this.stats.storiesCompleted / 5) + 1;
-    
+
     this.saveToStorage();
   }
 
@@ -156,7 +156,7 @@ export class ReadingAnalyticsService {
    */
   getAchievements() {
     const achievements = [];
-    
+
     if (this.stats.storiesCompleted >= 1) {
       achievements.push({ id: 'first-story', name: 'First Story', icon: '🌟' });
     }
@@ -184,7 +184,7 @@ export class ReadingAnalyticsService {
     if (this.stats.readingStreak >= 30) {
       achievements.push({ id: 'streak-30', name: 'Month Streak', icon: '🌙' });
     }
-    
+
     return achievements;
   }
 

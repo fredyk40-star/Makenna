@@ -208,7 +208,7 @@ export class StoryEngine {
   /**
    * Get reading progress for a story
    */
-  getStoryProgress(storyId) {
+  getStoryProgress(___storyId) {
     // This would be expanded to track per-story progress
     return {
       completed: this.progress === 100,

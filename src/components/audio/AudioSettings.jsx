@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  FaVolumeUp, FaVolumeMute, FaMusic, FaMicrophone,
-  FaPlay, FaTachometerAlt, FaToggleOn, FaToggleOff
-} from 'react-icons/fa';
+import { FaVolumeUp, FaMusic, FaMicrophone, FaPlay, FaTachometerAlt, FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import audioService from '../../services/AudioService';
 import { useProfiles } from '../../context/ProfileContext';
 
@@ -44,12 +41,12 @@ const AudioSettings = ({ className = '' }) => {
     applySettings(newSettings);
   };
 
-  const SettingSlider = ({ 
-    label, 
-    icon: Icon, 
-    settingKey,
-    min = 0, 
-    max = 1, 
+  const SettingSlider = ({
+    label,
+    icon: Icon,
+    settingKey: _settingKey,
+    min = 0,
+    max = 1,
     step = 0.01,
     value,
     onChange
@@ -79,12 +76,12 @@ const AudioSettings = ({ className = '' }) => {
     </div>
   );
 
-  const ToggleButton = ({ label, settingKey, value, onChange }) => (
+  const ToggleButton = ({ label, settingKey: _settingKey, value, onChange }) => (
     <button
       onClick={() => onChange(!value)}
       className={`flex items-center justify-between p-4 rounded-xl transition-all duration-300 ${
-        value 
-          ? 'bg-primary/10 text-primary' 
+        value
+          ? 'bg-primary/10 text-primary'
           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
       }`}
       aria-label={`Toggle ${label}`}

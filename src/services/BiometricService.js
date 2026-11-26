@@ -3,7 +3,7 @@
  * Provides secure biometric authentication as an alternative to PIN
  */
 import { StorageService } from './StorageService';
-import { ChildAccountService } from './ChildAccountService';
+
 
 const BIOMETRIC_KEY = 'makenna_biometric_credentials';
 const BIOMETRIC_ENABLED_KEY = 'makenna_biometric_enabled';
@@ -28,7 +28,7 @@ export class BiometricService {
    */
   static async isAvailable() {
     if (!this.isSupported()) return false;
-    
+
     try {
       const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       return available;
@@ -117,7 +117,7 @@ export class BiometricService {
     };
 
     const credential = await window.navigator.credentials.create({ publicKey });
-    
+
     return btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
   }
 
@@ -150,8 +150,8 @@ export class BiometricService {
         timeout: 60000,
       };
 
-      const assertion = await window.navigator.credentials.get({ publicKey });
-      
+      await window.navigator.credentials.get({ publicKey });
+
       // If we get here, authentication succeeded
       return {
         success: true,

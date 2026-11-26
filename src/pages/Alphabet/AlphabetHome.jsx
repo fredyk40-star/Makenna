@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaStar, FaLock, FaChevronRight, FaFire, FaMedal, FaChartLine } from 'react-icons/fa';
+import { FaChevronRight, FaFire, FaMedal, FaChartLine } from 'react-icons/fa';
 import { ALPHABET_DATA } from '../../data/alphabetData';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useAlphabetSearch } from '../../hooks/useAlphabetSearch';
-import { useChildAccount } from '../../context/ChildAccountContext';
-import { AchievementService } from '../../services/AchievementService';
+
+
 import AlphabetGrid from '../../components/alphabet/AlphabetGrid';
 import SearchBar from '../../components/alphabet/SearchBar';
 import ProgressBar from '../../components/alphabet/ProgressBar';
 import { fadeInUp, staggerContainer } from '../../utils/constants';
 
 const AlphabetHome = () => {
-  const { getCompletionPercentage, isLetterCompleted } = useAlphabetProgress();
-  const { query, setQuery, results, hasResults } = useAlphabetSearch();
+  const { getCompletionPercentage } = useAlphabetProgress();
+  const { query, setQuery, results } = useAlphabetSearch();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [filteredLetters, setFilteredLetters] = useState(ALPHABET_DATA);
 
@@ -29,7 +29,7 @@ const AlphabetHome = () => {
     // Apply search filter
     if (query.trim()) {
       const searchResults = results.length > 0 ? results : [];
-      letters = letters.filter(letter => 
+      letters = letters.filter(letter =>
         searchResults.some(result => result.id === letter.id)
       );
     }

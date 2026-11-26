@@ -19,12 +19,12 @@ export class TracingEngine {
   initializeLetterPaths() {
     // This is a simplified version - in production, this would be more detailed
     // with actual bezier curves and precise stroke data
-    const paths = {};
-    
+
+
     // Uppercase letters - simplified stroke data
     const uppercasePaths = this.generateUppercasePaths();
     const lowercasePaths = this.generateLowercasePaths();
-    
+
     return { ...uppercasePaths, ...lowercasePaths };
   }
 
@@ -34,11 +34,11 @@ export class TracingEngine {
   generateUppercasePaths() {
     const paths = {};
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    
+
     for (const letter of letters) {
       paths[letter] = this.generateLetterPath(letter, 'uppercase');
     }
-    
+
     return paths;
   }
 
@@ -48,11 +48,11 @@ export class TracingEngine {
   generateLowercasePaths() {
     const paths = {};
     const letters = 'abcdefghijklmnopqrstuvwxyz';
-    
+
     for (const letter of letters) {
       paths[letter] = this.generateLetterPath(letter, 'lowercase');
     }
-    
+
     return paths;
   }
 
@@ -64,7 +64,7 @@ export class TracingEngine {
     // Generate a simple path based on letter shape
     const strokes = [];
     const numStrokes = this.getStrokeCount(letter, caseType);
-    
+
     for (let i = 0; i < numStrokes; i++) {
       strokes.push({
         id: `stroke-${i}`,
@@ -76,7 +76,7 @@ export class TracingEngine {
         completed: false
       });
     }
-    
+
     return {
       letter,
       caseType,
@@ -94,7 +94,7 @@ export class TracingEngine {
   /**
    * Get number of strokes for a letter
    */
-  getStrokeCount(letter, caseType) {
+  getStrokeCount(letter, ___caseType) {
     // Simplified stroke count
     const counts = {
       'A': 3, 'B': 3, 'C': 1, 'D': 2, 'E': 4, 'F': 3, 'G': 2,
@@ -106,25 +106,25 @@ export class TracingEngine {
       'o': 1, 'p': 2, 'q': 2, 'r': 2, 's': 1, 't': 2, 'u': 2,
       'v': 2, 'w': 4, 'x': 2, 'y': 2, 'z': 2
     };
-    
+
     return counts[letter] || 2;
   }
 
   /**
    * Generate stroke points for a letter
    */
-  generateStrokePoints(letter, strokeIndex, caseType) {
+  generateStrokePoints(___letter, ___strokeIndex, ___caseType) {
     // Generate sample points along a path
     const points = [];
     const numPoints = 20 + Math.floor(Math.random() * 10);
-    
+
     for (let i = 0; i < numPoints; i++) {
       const t = i / numPoints;
       const x = 10 + (t * 80) + (Math.random() - 0.5) * 5;
       const y = 10 + (t * 80) + (Math.random() - 0.5) * 5;
       points.push({ x, y, t });
     }
-    
+
     return points;
   }
 
@@ -145,13 +145,13 @@ export class TracingEngine {
 
     // Calculate accuracy
     const accuracy = this.calculateAccuracy(tracePoints, path);
-    
+
     // Calculate completion
     const completion = this.calculateCompletion(tracePoints, path);
-    
+
     // Check direction
     const directionCorrect = this.checkDirection(tracePoints, path);
-    
+
     // Check order
     const orderCorrect = this.checkOrder(tracePoints, path);
 
@@ -174,11 +174,11 @@ export class TracingEngine {
    */
   calculateAccuracy(tracePoints, path) {
     if (tracePoints.length === 0 || path.strokes.length === 0) return 0;
-    
+
     // For each trace point, find nearest path point and calculate distance
     let totalDeviation = 0;
     let matchedPoints = 0;
-    
+
     for (const tracePoint of tracePoints) {
       let minDistance = Infinity;
       for (const stroke of path.strokes) {
@@ -194,13 +194,13 @@ export class TracingEngine {
         matchedPoints++;
       }
     }
-    
+
     const accuracy = matchedPoints / tracePoints.length;
     const avgDeviation = matchedPoints > 0 ? totalDeviation / matchedPoints : Infinity;
-    
+
     // Convert deviation to a score (0-1)
     const deviationScore = Math.max(0, 1 - (avgDeviation / 30));
-    
+
     return (accuracy * 0.6 + deviationScore * 0.4);
   }
 
@@ -209,11 +209,11 @@ export class TracingEngine {
    */
   calculateCompletion(tracePoints, path) {
     if (tracePoints.length === 0 || path.strokes.length === 0) return 0;
-    
+
     // Count how much of the path has been covered
     let coveredLength = 0;
     let totalLength = 0;
-    
+
     for (const stroke of path.strokes) {
       totalLength += stroke.points.length;
       for (const pathPoint of stroke.points) {
@@ -225,7 +225,7 @@ export class TracingEngine {
         }
       }
     }
-    
+
     return Math.min(1, coveredLength / totalLength);
   }
 
@@ -234,11 +234,11 @@ export class TracingEngine {
    */
   checkDirection(tracePoints, path) {
     if (tracePoints.length < 2) return false;
-    
+
     // Simplified direction checking
     const traceDirection = this.getDirection(tracePoints);
     const pathDirection = this.getDirection(path.strokes[0]?.points || []);
-    
+
     const angleDiff = Math.abs(traceDirection - pathDirection);
     return angleDiff < Math.PI / 4 || angleDiff > 7 * Math.PI / 4;
   }
@@ -248,11 +248,11 @@ export class TracingEngine {
    */
   checkOrder(tracePoints, path) {
     if (tracePoints.length === 0 || path.strokes.length === 0) return true;
-    
+
     // Simplified: check if trace follows stroke order
     let strokeIndex = 0;
     let pointsInStroke = 0;
-    
+
     for (const tracePoint of tracePoints) {
       if (strokeIndex < path.strokes.length) {
         const stroke = path.strokes[strokeIndex];
@@ -268,7 +268,7 @@ export class TracingEngine {
         }
       }
     }
-    
+
     return strokeIndex >= path.strokes.length - 1;
   }
 
@@ -294,7 +294,7 @@ export class TracingEngine {
    */
   generateErrors(accuracy, completion, directionCorrect, orderCorrect) {
     const errors = [];
-    
+
     if (accuracy < 0.5) {
       errors.push('Try to stay on the line');
     }
@@ -307,7 +307,7 @@ export class TracingEngine {
     if (!orderCorrect) {
       errors.push('Follow the stroke order shown');
     }
-    
+
     return errors;
   }
 
@@ -317,7 +317,7 @@ export class TracingEngine {
   getGuidePoints(letter, caseType = 'uppercase') {
     const path = this.getLetterPath(letter, caseType);
     if (!path) return [];
-    
+
     const guidePoints = [];
     for (const stroke of path.strokes) {
       guidePoints.push({
@@ -327,7 +327,7 @@ export class TracingEngine {
         order: stroke.order
       });
     }
-    
+
     return guidePoints;
   }
 
@@ -337,7 +337,7 @@ export class TracingEngine {
   getStrokeAnimation(letter, caseType = 'uppercase') {
     const path = this.getLetterPath(letter, caseType);
     if (!path) return null;
-    
+
     return {
       strokes: path.strokes.map(stroke => ({
         id: stroke.id,
@@ -379,7 +379,7 @@ export class TracingEngine {
         assistance: 'low'
       }
     };
-    
+
     return settings[difficulty] || settings.medium;
   }
 }

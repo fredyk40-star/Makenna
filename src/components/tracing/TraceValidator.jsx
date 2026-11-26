@@ -1,11 +1,11 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCheck, FaExclamationCircle, FaStar, FaSmile } from 'react-icons/fa';
+import { FaCheck, FaExclamationCircle } from 'react-icons/fa';
 
-const TraceValidator = memo(({ 
-  result, 
+const TraceValidator = memo(({
+  result,
   message,
-  className = '' 
+  className = ''
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -13,7 +13,7 @@ const TraceValidator = memo(({
 
   const { score, accuracy, completion, valid, errors } = result;
   const percentage = Math.round(score * 100);
-  
+
   const getEmoji = () => {
     if (percentage >= 90) return '🌟';
     if (percentage >= 70) return '😊';
@@ -51,7 +51,7 @@ const TraceValidator = memo(({
           <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
             {message}
           </p>
-          
+
           {/* Progress bar */}
           <div className="mt-2 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <motion.div

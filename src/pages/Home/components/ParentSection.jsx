@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaLock, FaUserLock, FaTimes } from 'react-icons/fa';
-import { announceToScreenReader } from '../../../utils/accessibility';
+import { motion } from 'framer-motion';
+import { FaLock, FaTimes } from 'react-icons/fa';
+
 import ParentZonePage from '../../../pages/ParentZone/ParentZone';
 
 const ParentSection = () => {
@@ -9,10 +9,10 @@ const ParentSection = () => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [showPinInput, setShowPinInput] = useState(false);
-  const [attempts, setAttempts] = useState(0);
+  const [, ] = useState(0);
   const pinInputRef = useRef(null);
-  const CORRECT_PIN = '1234';
-  const MAX_ATTEMPTS = 5;
+
+
 
   useEffect(() => {
     if (showPinInput && pinInputRef.current) {
@@ -20,31 +20,7 @@ const ParentSection = () => {
     }
   }, [showPinInput]);
 
-  const handlePinSubmit = (e) => {
-    e.preventDefault();
-    if (pin === CORRECT_PIN) {
-      setIsLocked(false);
-      setError('');
-      setPin('');
-      setShowPinInput(false);
-      setAttempts(0);
-      announceToScreenReader('Parent zone unlocked');
-    } else {
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      setError(`Incorrect PIN. ${MAX_ATTEMPTS - newAttempts} attempts remaining`);
-      setPin('');
-      
-      if (newAttempts >= MAX_ATTEMPTS) {
-        setError('Too many attempts. Please wait 30 seconds.');
-        setTimeout(() => {
-          setAttempts(0);
-          setError('');
-        }, 30000);
-      }
-      announceToScreenReader('Incorrect PIN');
-    }
-  };
+
 
   const handlePinKeypad = (digit) => {
     if (pin.length < 4) {
@@ -63,19 +39,7 @@ const ParentSection = () => {
     setError('');
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key >= '0' && e.key <= '9' && pin.length < 4) {
-      handlePinKeypad(e.key);
-    } else if (e.key === 'Backspace') {
-      handlePinBackspace();
-    } else if (e.key === 'Enter' && pin.length === 4) {
-      handlePinSubmit(e);
-    } else if (e.key === 'Escape') {
-      setShowPinInput(false);
-      setPin('');
-      setError('');
-    }
-  };
+
 
   if (isLocked) {
     return (
@@ -116,7 +80,7 @@ const ParentSection = () => {
                   <FaTimes className="text-xl" aria-hidden="true" />
                 </button>
               </div>
-              
+
               {/* PIN Display */}
               <div className="flex justify-center gap-3">
                 {[0, 1, 2, 3].map((index) => (

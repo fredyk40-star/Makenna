@@ -1,12 +1,12 @@
 import { memo, useEffect, useRef } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 
-const StrokeAnimator = memo(({ 
-  animationData, 
-  letter, 
-  caseType,
+const StrokeAnimator = memo(({
+  animationData,
+  letter: __letter,
+  caseType: __caseType,
   onComplete = null,
-  className = '' 
+  className = ''
 }) => {
   const controls = useAnimation();
   const containerRef = useRef(null);
@@ -27,7 +27,7 @@ const StrokeAnimator = memo(({
         }
         if (onComplete) onComplete();
       };
-      
+
       animateStrokes();
     }
   }, [animationData, controls, onComplete]);
@@ -41,7 +41,7 @@ const StrokeAnimator = memo(({
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
       >
-        {animationData.strokes.map((stroke, index) => (
+        {animationData.strokes.map((stroke, __index) => (
           <motion.path
             key={stroke.id}
             d={`M ${stroke.points.map(p => `${p.x},${p.y}`).join(' L ')}`}

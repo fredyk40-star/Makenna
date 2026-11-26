@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaPaintBrush, FaSave, FaStar, FaFolder, FaPalette } from 'react-icons/fa';
+import { FaArrowLeft, FaPaintBrush, FaStar, FaFolder, FaPalette } from 'react-icons/fa';
 import DrawingPad from './DrawingPad';
 
 const Drawing = () => {
@@ -41,7 +41,7 @@ const Drawing = () => {
             Drawing Pad
           </h1>
         </div>
-        
+
         {/* Stats Bar */}
         <div className="flex gap-3 flex-wrap">
           <div className="bg-purple-100 dark:bg-purple-900/30 px-4 py-2 rounded-xl flex items-center gap-2">
@@ -87,8 +87,8 @@ const Drawing = () => {
             {savedDrawings.length > 0 ? (
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {savedDrawings.slice(0, 6).map((drawing) => (
-                  <div 
-                    key={drawing.id} 
+                  <div
+                    key={drawing.id}
                     className="aspect-square rounded-lg flex items-center justify-center text-2xl"
                     style={{ background: drawing.bg }}
                   >
@@ -118,8 +118,8 @@ const Drawing = () => {
             </div>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
               {savedDrawings.map((drawing) => (
-                <motion.div 
-                  key={drawing.id} 
+                <motion.div
+                  key={drawing.id}
                   whileHover={{ scale: 1.05 }}
                   className="aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer shadow-soft"
                   style={{ background: drawing.bg }}

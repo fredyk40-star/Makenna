@@ -4,12 +4,12 @@ import { useAudio } from './useAudio';
 
 export const useReading = () => {
   const [currentSentence, setCurrentSentence] = useState(null);
-  const [currentWord, setCurrentWord] = useState('');
+  const [currentWord, ] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceSentences, setPracticeSentences] = useState([]);
   const [isReading, setIsReading] = useState(false);
   const [highlightedWord, setHighlightedWord] = useState('');
-  
+
   const { speak, isPlaying } = useAudio();
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export const useReading = () => {
 
   const startReading = useCallback((sentenceIndex = 0) => {
     if (practiceSentences.length === 0) return;
-    
+
     setIsReading(true);
     setCurrentIndex(sentenceIndex);
     setCurrentSentence(practiceSentences[sentenceIndex]);
@@ -51,10 +51,10 @@ export const useReading = () => {
 
   const readSentence = useCallback(async (sentence) => {
     if (!sentence) return;
-    
+
     const words = sentence.sentence.split(' ');
     setHighlightedWord('');
-    
+
     // Read each word with highlighting
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
@@ -66,7 +66,7 @@ export const useReading = () => {
       // Wait a bit between words
       await new Promise(resolve => setTimeout(resolve, 300));
     }
-    
+
     setHighlightedWord('');
   }, [speak]);
 
@@ -81,13 +81,13 @@ export const useReading = () => {
   const readWordFamily = useCallback(async (family) => {
     const data = readingEngine.getWordFamily(family);
     if (!data) return;
-    
+
     // Read family sound
     await speak(data.sound, {
       rate: 0.7,
       pitch: 1.1
     });
-    
+
     // Read examples
     for (const word of data.words.slice(0, 3)) {
       await new Promise(resolve => setTimeout(resolve, 300));

@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaArrowRight, FaPlay, FaPause, 
-  FaVolumeUp, FaVolumeMute, FaBook, FaHeadphones,
+import {
+  FaArrowLeft, FaArrowRight, FaPlay, FaPause,
+  FaBook, FaHeadphones,
   FaList, FaTimes, FaForward, FaTachometerAlt,
-  FaCheck, FaChevronLeft, FaChevronRight, FaStar,
-  FaGripVertical
+  FaCheck, FaGripVertical
 } from 'react-icons/fa';
 import { useStory } from '../../hooks/useStory';
 import { useComprehension } from '../../hooks/useComprehension';
@@ -246,7 +245,7 @@ const BookReader = ({ storyId, onClose = null }) => {
                   <h3 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white">
                     Quiz Time!
                   </h3>
-                  
+
                   {!comprehensionQuiz.isComplete && comprehensionQuiz.currentQuestion ? (
                     <>
                       {/* Progress bar */}
@@ -260,11 +259,11 @@ const BookReader = ({ storyId, onClose = null }) => {
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Question {comprehensionQuiz.currentQuestionIndex + 1} of {comprehensionQuiz.totalQuestions}
                       </p>
-                      
+
                       <p className="text-lg font-semibold text-gray-800 dark:text-white mt-4">
                         {comprehensionQuiz.currentQuestion.question}
                       </p>
-                      
+
                       <div className="grid gap-3 mt-4">
                         {comprehensionQuiz.currentQuestion.options.map((option, idx) => (
                           <button
@@ -328,7 +327,7 @@ const BookReader = ({ storyId, onClose = null }) => {
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Drag and arrange the events in the correct order
                   </p>
-                  
+
                   {!sequenceCorrect ? (
                     <>
                       <div className="space-y-2 mt-4 max-h-[300px] overflow-y-auto">
@@ -414,7 +413,7 @@ const BookReader = ({ storyId, onClose = null }) => {
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Great new words from this story!
                   </p>
-                  
+
                   {vocabulary.length > 0 ? (
                     <div className="grid gap-3 mt-4 max-h-[350px] overflow-y-auto">
                       {vocabulary.map((vocab, idx) => (
@@ -442,7 +441,7 @@ const BookReader = ({ storyId, onClose = null }) => {
                   ) : (
                     <p className="text-gray-500">No vocabulary words for this story.</p>
                   )}
-                  
+
                   <button
                     onClick={handlePostStoryNext}
                     className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg mt-2"

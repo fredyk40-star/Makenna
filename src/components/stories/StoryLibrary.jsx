@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { FaSearch, FaFilter, FaStar, FaRegStar } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+
+import { FaSearch } from 'react-icons/fa';
 import StoryCard from './StoryCard';
 import { STORIES, searchStories } from '../../data/stories';
 import readingAnalyticsService from '../../services/ReadingAnalyticsService';
 
-const StoryLibrary = ({ 
+const StoryLibrary = ({
   title = 'Story Library 📚',
   subtitle = 'Choose a story to read!',
-  className = '' 
+  className = ''
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState('all');
   const [filterDifficulty, setFilterDifficulty] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterCategory, ] = useState('all');
   const [filteredStories, setFilteredStories] = useState([]);
   const [favorites, setFavorites] = useState([]);
 
@@ -26,34 +26,34 @@ const StoryLibrary = ({
 
   useEffect(() => {
     let filtered = [...STORIES];
-    
+
     // Search filter
     if (searchQuery) {
       filtered = searchStories(searchQuery);
     }
-    
+
     // Level filter
     if (filterLevel !== 'all') {
       filtered = filtered.filter(story => story.level === parseInt(filterLevel));
     }
-    
+
     // Difficulty filter
     if (filterDifficulty !== 'all') {
       filtered = filtered.filter(story => story.difficulty === filterDifficulty);
     }
-    
+
     // Category filter
     if (filterCategory !== 'all') {
       filtered = filtered.filter(story => story.category === filterCategory);
     }
-    
+
     // Favorites first
     filtered.sort((a, b) => {
       const aFav = favorites.includes(a.id) ? -1 : 1;
       const bFav = favorites.includes(b.id) ? -1 : 1;
       return aFav - bFav;
     });
-    
+
     setFilteredStories(filtered);
   }, [searchQuery, filterLevel, filterDifficulty, filterCategory, favorites]);
 
@@ -61,9 +61,9 @@ const StoryLibrary = ({
     const newFavorites = favorites.includes(storyId)
       ? favorites.filter(id => id !== storyId)
       : [...favorites, storyId];
-    
+
     setFavorites(newFavorites);
-    
+
     if (newFavorites.includes(storyId)) {
       readingAnalyticsService.addFavoriteStory(storyId);
     } else {
@@ -85,13 +85,7 @@ const StoryLibrary = ({
     { id: 'hard', label: 'Hard' }
   ];
 
-  const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'adventure', label: 'Adventure' },
-    { id: 'animals', label: 'Animals' },
-    { id: 'fantasy', label: 'Fantasy' },
-    { id: 'family', label: 'Family' }
-  ];
+
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -139,7 +133,7 @@ const StoryLibrary = ({
               </button>
             ))}
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
             <span className="text-sm text-gray-500 dark:text-gray-400 self-center">Difficulty:</span>
             {difficulties.map(diff => (
@@ -200,7 +194,7 @@ const StoryLibrary = ({
             <div>
               <h4 className="font-bold text-gray-800 dark:text-white">Your Reading Progress</h4>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                {readingAnalyticsService.getStats().storiesCompleted} stories completed • 
+                {readingAnalyticsService.getStats().storiesCompleted} stories completed •
                 {readingAnalyticsService.getStats().minutesRead} minutes read
               </p>
             </div>

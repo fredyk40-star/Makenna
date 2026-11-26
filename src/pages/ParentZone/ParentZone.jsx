@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaShieldAlt, FaBookOpen, FaPercentage, FaHourglassHalf, FaStar, FaUserGraduate, FaDownload, FaBell, FaCalendar, FaClock, FaChartBar, FaChartLine, FaRegCalendarAlt, FaFileExport, FaLock, FaUnlock } from 'react-icons/fa';
+import { FaShieldAlt, FaBookOpen, FaPercentage, FaHourglassHalf, FaStar, FaUserGraduate, FaDownload, FaCalendar, FaClock, FaChartLine, FaRegCalendarAlt, FaFileExport, FaLock } from 'react-icons/fa';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import { useMastery } from '../../hooks/useMastery';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { ALPHABET_DATA } from '../../data/alphabetData';
 import { ChildAccountService } from '../../services/ChildAccountService';
-import { ParentZoneService } from '../../services/ParentZoneService';
-import AnalyticsDashboard from '../../components/AnalyticsDashboard/AnalyticsDashboard';
-import ProgressAnalytics from '../../components/ProgressAnalytics/ProgressAnalytics';
+
+
+
 
 const ParentZone = () => {
   const { activeChild: currentChild } = useChildAccount();
   const { progress: alphabetProgress, getCompletionPercentage: getAlphabetCompletion } = useAlphabetProgress();
   const { progress: numbersProgress, getCompletionPercentage: getNumbersCompletion } = useNumbersProgress();
-  const { progressSummary, getLetterMasteryLevel } = useMastery();
-  
+  const { progressSummary } = useMastery();
+
   const [activeTab, setActiveTab] = useState('overview');
   const [timeLimit, setTimeLimit] = useState(30); // minutes
   const [lockedDays, setLockedDays] = useState([]);
@@ -30,10 +30,10 @@ const ParentZone = () => {
     // Load settings from localStorage
     const savedTimeLimit = localStorage.getItem('parent_time_limit');
     const savedLockedDays = JSON.parse(localStorage.getItem('parent_locked_days') || '[]');
-    
+
     if (savedTimeLimit) setTimeLimit(parseInt(savedTimeLimit));
     setLockedDays(savedLockedDays);
-    
+
     // Generate weekly activity data
     generateWeeklyData();
   }, []);
@@ -54,7 +54,7 @@ const ParentZone = () => {
       setPinError('No child account found. Please login first.');
       return;
     }
-    
+
     try {
       const verified = await ChildAccountService.verifyPin(currentChild.childId, pinInput);
       if (verified) {
@@ -99,7 +99,7 @@ const ParentZone = () => {
       },
       generated: new Date().toISOString()
     };
-    
+
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -181,13 +181,13 @@ const ParentZone = () => {
               Enter your child's PIN to access parent dashboard
             </p>
           </div>
-          
+
           {pinError && (
             <div className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg mb-4 text-center">
               {pinError}
             </div>
           )}
-          
+
           <input
             type="password"
             placeholder="Enter 4-digit PIN"
@@ -196,7 +196,7 @@ const ParentZone = () => {
             className="w-full px-4 py-3 mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             maxLength={4}
           />
-          
+
           <div className="flex gap-2">
             <button
               onClick={handlePinVerification}
@@ -249,8 +249,8 @@ const ParentZone = () => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-              activeTab === tab.id 
-                ? 'bg-blue-600 text-white' 
+              activeTab === tab.id
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
           >
@@ -300,8 +300,8 @@ const ParentZone = () => {
                 <div key={idx} className="text-center">
                   <p className="text-xs text-gray-500 mb-1">{day.day}</p>
                   <div className="bg-blue-100 dark:bg-blue-900/30 rounded h-16 flex items-end justify-center p-1">
-                    <div 
-                      className="bg-blue-500 rounded w-full" 
+                    <div
+                      className="bg-blue-500 rounded w-full"
                       style={{ height: `${day.alphabet * 20}%` }}
                       title={`${day.alphabet} activities`}
                     />
@@ -385,8 +385,8 @@ const ParentZone = () => {
                   key={day}
                   onClick={() => toggleLockDay(day)}
                   className={`p-3 rounded-lg transition-all ${
-                    lockedDays.includes(day) 
-                      ? 'bg-red-500 text-white' 
+                    lockedDays.includes(day)
+                      ? 'bg-red-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { FaChartLine, FaChartBar, FaGlobe, FaStar, FaBookOpen, FaGamepad } from 'react-icons/fa';
 import { LearningAnalytics } from '../../services/LearningAnalytics';
 import { ChildAccountService } from '../../services/ChildAccountService';

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaUsers, FaCalendarCheck, FaClipboard, FaPlus, FaTrash, FaBook } from 'react-icons/fa';
+import { FaUsers, FaCalendarCheck, FaClipboard, FaPlus, FaTrash } from 'react-icons/fa';
 import { TeacherModeService } from '../../services/TeacherModeService';
 import { ChildAccountService } from '../../services/ChildAccountService';
 
 const TeacherModeComponent = () => {
   const [classes, setClasses] = useState([]);
-  const [selectedClass, setSelectedClass] = useState(null);
+  const [, setSelectedClass] = useState(null);
   const [activeTab, setActiveTab] = useState('classes');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newClass, setNewClass] = useState({ name: '', grade: '', subject: '' });

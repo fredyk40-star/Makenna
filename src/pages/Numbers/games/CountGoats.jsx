@@ -7,7 +7,7 @@ const CountGoats = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [targetNumber, setTargetNumber] = useState(0);
   const [count, setCount] = useState(0);
   const [goats, setGoats] = useState([]);
-  const [selectedGoats, setSelectedGoats] = useState([]);
+  const [, setSelectedGoats] = useState([]);
   const [isCorrect, setIsCorrect] = useState(null);
   const [attempts, setAttempts] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
@@ -67,7 +67,7 @@ const CountGoats = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const handleGoatClick = (goatId) => {
     if (isCorrect !== null || showResult) return;
 
-    setGoats(prev => prev.map(g => 
+    setGoats(prev => prev.map(g =>
       g.id === goatId ? { ...g, selected: !g.selected } : g
     ));
 
@@ -88,10 +88,10 @@ const CountGoats = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       setCorrectAnswers(prev => prev + 1);
       speak('Excellent! 🎉', { rate: 0.8, pitch: 1.2 });
       announceToScreenReader('Correct! Great job!');
-      
+
       const newScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
       onScoreUpdate(newScore);
-      
+
       setTimeout(() => {
         if (totalQuestions >= 5) {
           const finalScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
@@ -128,12 +128,12 @@ const CountGoats = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
 
       <div className="relative h-64 bg-gradient-to-br from-green-100 to-green-200 dark:from-gray-700 dark:to-gray-800 rounded-2xl overflow-hidden">
         <div className="absolute bottom-0 left-0 right-0 h-8 bg-green-400 dark:bg-green-800/50 rounded-t-full" />
-        
+
         {goats.map((goat) => (
           <motion.button
             key={goat.id}
             initial={{ scale: 0 }}
-            animate={{ 
+            animate={{
               scale: 1,
               x: goat.x + '%',
               y: goat.y + '%'
@@ -145,8 +145,8 @@ const CountGoats = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
             className={`absolute text-4xl transition-all duration-300 ${
               goat.selected ? 'opacity-100 scale-110' : 'opacity-90 hover:scale-110'
             }`}
-            style={{ 
-              left: `${goat.x}%`, 
+            style={{
+              left: `${goat.x}%`,
               top: `${goat.y}%`,
               transform: 'translate(-50%, -50%)'
             }}

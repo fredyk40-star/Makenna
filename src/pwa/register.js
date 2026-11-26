@@ -2,7 +2,7 @@ export const registerServiceWorker = () => {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
-        .then(registration => {
+        .then(__registration => {
           console.log('ServiceWorker registered successfully');
         })
         .catch(err => {

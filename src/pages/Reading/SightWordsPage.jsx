@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaCheck } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
 import SightWordCard from '../../components/reading/SightWordCard';
 import readingEngine from '../../services/ReadingEngine';
 import gameProgressService from '../../services/GameProgressService';
@@ -20,14 +20,14 @@ const SightWordsPage = () => {
     if (!completedWords.includes(word)) {
       const newCompleted = [...completedWords, word];
       setCompletedWords(newCompleted);
-      
+
       // Check if all words are completed
       if (newCompleted.length === sightWords.length) {
         // Advance to next level
         const nextLevel = level + 1;
         setLevel(nextLevel);
         setCompletedWords([]);
-        
+
         // Record achievement
         gameProgressService.recordProgress('sight_words', {
           score: 100,

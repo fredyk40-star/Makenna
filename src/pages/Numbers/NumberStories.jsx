@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  FaArrowLeft, FaSearch, FaStar, FaClock, 
-  FaPlay, FaBookOpen, FaHeadphones
+import {
+  FaArrowLeft, FaSearch, FaPlay, FaBookOpen, FaHeadphones
 } from 'react-icons/fa';
 import { NUMBERS_STORIES, searchStories } from '../../data/numbersStoriesData';
 import readingAnalyticsService from '../../services/ReadingAnalyticsService';
@@ -28,16 +27,16 @@ const NumberStories = () => {
 
   useEffect(() => {
     let results = [...NUMBERS_STORIES];
-    
+
     if (searchQuery.trim()) {
       results = searchStories(searchQuery);
     }
-    
+
     if (readingMode !== 'all') {
       // Filter by reading mode (simplified)
       results = results.filter(story => story.level === 1);
     }
-    
+
     // Sort: favorites first
     results.sort((a, b) => {
       const aFav = favorites.includes(a.id) ? -1 : 1;
@@ -45,7 +44,7 @@ const NumberStories = () => {
       if (aFav !== bFav) return aFav - bFav;
       return a.number - b.number;
     });
-    
+
     setFilteredStories(results);
   }, [searchQuery, readingMode, favorites]);
 
@@ -53,10 +52,10 @@ const NumberStories = () => {
     const newFavorites = favorites.includes(storyId)
       ? favorites.filter(id => id !== storyId)
       : [...favorites, storyId];
-    
+
     setFavorites(newFavorites);
     localStorage.setItem('number_story_favorites', JSON.stringify(newFavorites));
-    
+
     if (newFavorites.includes(storyId)) {
       readingAnalyticsService.addFavoriteStory(storyId);
     } else {
@@ -155,14 +154,14 @@ const NumberStories = () => {
       >
         {filteredStories.map((story, index) => {
           const isFavorite = favorites.includes(story.id);
-          
+
           return (
             <motion.div
               key={story.id}
               variants={{
                 initial: { opacity: 0, scale: 0.9 },
-                animate: { 
-                  opacity: 1, 
+                animate: {
+                  opacity: 1,
                   scale: 1,
                   transition: { delay: index * 0.05 }
                 }
@@ -173,7 +172,7 @@ const NumberStories = () => {
               {/* Cover */}
               <div className="relative h-40 bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center">
                 <div className="text-7xl">{story.coverEmoji}</div>
-                
+
                 {/* Number Badge */}
                 <div className="absolute top-2 left-2 px-3 py-1 bg-white/90 dark:bg-gray-800/90 rounded-xl text-sm font-bold text-gray-800 dark:text-white">
                   #{story.number}

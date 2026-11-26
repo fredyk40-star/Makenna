@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaCheck, FaStar, FaVolumeUp,
-  FaArrowRight
-} from 'react-icons/fa';
+import { FaArrowLeft, FaVolumeUp } from 'react-icons/fa';
 import { generateSubtractionProblem } from '../../data/mathsData';
 import { useAudio } from '../../hooks/useAudio';
 import { useProfiles } from '../../context/ProfileContext';
@@ -85,8 +82,8 @@ const Subtraction = () => {
       });
 
       if (totalQuestions >= 5) {
-        const finalScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
-        const stars = finalScore >= 90 ? 5 : finalScore >= 70 ? 3 : 1;
+        Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
+
         setShowCelebration(true);
         setTimeout(() => {
           setShowCelebration(false);
@@ -99,7 +96,7 @@ const Subtraction = () => {
       setAttempts(prev => prev + 1);
       speak('Try again!', { rate: 0.7, pitch: 1.0 });
       announceToScreenReader('Not quite, try again');
-      
+
       setTimeout(() => {
         setSelectedAnswer(null);
         setIsCorrect(null);
@@ -126,8 +123,8 @@ const Subtraction = () => {
     for (let i = 0; i < count; i++) {
       const isRemoved = i >= count - removeCount;
       items.push(
-        <span 
-          key={i} 
+        <span
+          key={i}
           className={`text-2xl transition-all duration-500 ${isRemoved ? 'opacity-0 scale-50' : 'opacity-100'}`}
         >
           {emoji}
@@ -168,7 +165,7 @@ const Subtraction = () => {
         <div className="text-3xl font-bold text-gray-800 dark:text-white">
           {problem.a} - {problem.b} = ?
         </div>
-        
+
         {/* Visual Counters with removal animation */}
         <div className="mt-4 flex flex-wrap justify-center gap-2 min-h-[60px]">
           {renderObjects(problem.a, problem.b)}

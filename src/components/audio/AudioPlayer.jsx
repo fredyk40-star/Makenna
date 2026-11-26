@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import { motion } from 'framer-motion';
+import {
   FaPlay, FaPause, FaStop, FaVolumeUp, FaVolumeMute,
-  FaUndo, FaForward, FaRedo
+  FaRedo
 } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';
 import audioService from '../../services/AudioService';
@@ -10,7 +10,7 @@ import audioService from '../../services/AudioService';
 const AudioPlayer = ({
   source,
   text,
-  autoPlay = false,
+  _autoPlay: __autoPlay = false,
   showControls = true,
   showWaveform = false,
   className = '',
@@ -24,11 +24,8 @@ const AudioPlayer = ({
     play,
     speak,
     pause,
-    resume,
     stop,
-    togglePlayPause,
     isPlaying,
-    isPaused,
     isLoading,
     error,
     setVolume,
@@ -40,7 +37,7 @@ const AudioPlayer = ({
   });
 
   const [volume, setVolumeState] = useState(1);
-  const [showVolumeControl, setShowVolumeControl] = useState(false);
+  const [, ] = useState(false);
   const [waveformData, setWaveformData] = useState([]);
   const animationFrameRef = useRef(null);
 

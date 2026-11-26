@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaCheck, FaStar, FaVolumeUp,
-  FaArrowRight
-} from 'react-icons/fa';
+import { FaArrowLeft, FaVolumeUp } from 'react-icons/fa';
 import { generateAdditionProblem } from '../../data/mathsData';
 import { useAudio } from '../../hooks/useAudio';
 import { useProfiles } from '../../context/ProfileContext';
@@ -87,11 +84,11 @@ const Addition = () => {
         difficulty: 'easy'
       });
 
-      const newScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
-      
+      Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
+
       if (totalQuestions >= 5) {
-        const finalScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
-        const stars = finalScore >= 90 ? 5 : finalScore >= 70 ? 3 : 1;
+        Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
+
         setShowCelebration(true);
         setTimeout(() => {
           setShowCelebration(false);
@@ -104,7 +101,7 @@ const Addition = () => {
       setAttempts(prev => prev + 1);
       speak('Try again!', { rate: 0.7, pitch: 1.0 });
       announceToScreenReader('Not quite, try again');
-      
+
       setTimeout(() => {
         setSelectedAnswer(null);
         setIsCorrect(null);
@@ -163,7 +160,7 @@ const Addition = () => {
         <div className="text-3xl font-bold text-gray-800 dark:text-white">
           {problem.a} + {problem.b} = ?
         </div>
-        
+
         {/* Visual Counters */}
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           {renderCounters(problem.a)}

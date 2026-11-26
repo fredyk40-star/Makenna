@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaShoppingBag, FaStar, FaCoins, FaLock, FaCheck } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import { FaStar, FaCoins, FaLock, FaCheck } from 'react-icons/fa';
 import { RewardsStore } from '../../services/RewardsStore';
 import { GamificationService } from '../../services/GamificationService';
 import { ChildAccountService } from '../../services/ChildAccountService';
@@ -24,7 +24,7 @@ const RewardsStoreComponent = () => {
 
   const handlePurchase = (itemId) => {
     const result = RewardsStore.purchaseItem(childId, itemId);
-    
+
     if (result.success) {
       setGamState(GamificationService.getState(childId));
       setPurchasedItems(RewardsStore.getPurchasedItems(childId));
@@ -32,7 +32,7 @@ const RewardsStoreComponent = () => {
     } else {
       setMessage(result.message);
     }
-    
+
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -40,7 +40,7 @@ const RewardsStoreComponent = () => {
 
   const RewardCard = ({ item }) => {
     const purchased = isPurchased(item.id);
-    
+
     return (
       <motion.div
         whileHover={{ scale: 1.02 }}
@@ -55,7 +55,7 @@ const RewardsStoreComponent = () => {
           <FaStar className="text-yellow-400" />
           <span>{item.price} stars</span>
         </div>
-        
+
         {purchased ? (
           <div className="flex items-center gap-2 text-green-400">
             <FaCheck />

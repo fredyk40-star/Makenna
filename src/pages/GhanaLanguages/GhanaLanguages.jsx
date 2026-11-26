@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaLanguage, FaBook, FaPlay, FaStar, FaQuoteLeft, FaCalculator, FaFlask, FaPalette, FaHeart, FaLeaf } from 'react-icons/fa';
+import { FaLanguage, FaBook, FaPlay, FaStar, FaQuoteLeft, FaCalculator, FaFlask, FaMap, FaPalette, FaHeart, FaLeaf } from 'react-icons/fa';
 import { GhanaCurriculumService } from '../../services/GhanaCurriculumService';
 import { voiceGuide } from '../../services/VoiceGuideService';
 
@@ -37,21 +37,7 @@ const GhanaLanguages = () => {
   ];
 
   // Icon component mapping
-  const getIcon = (iconName) => {
-    const icons = {
-      twi: FaLanguage,
-      ewe: FaLanguage,
-      ga: FaLanguage,
-      english: FaBook,
-      mathematics: FaCalculator,
-      science: FaFlask,
-      social_studies: FaMap,
-      creative_arts: FaPalette,
-      rme: FaHeart,
-      life_skills: FaLeaf,
-    };
-    return icons[iconName] || FaBook;
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-4">
@@ -140,8 +126,8 @@ const GhanaLanguages = () => {
                 whileHover={{ scale: 1.01 }}
                 onClick={() => setActiveFact(fact)}
                 className={`p-4 rounded-lg cursor-pointer transition-all ${
-                  activeFact?.id === fact.id 
-                    ? 'bg-yellow-100 dark:bg-yellow-900/30' 
+                  activeFact?.id === fact.id
+                    ? 'bg-yellow-100 dark:bg-yellow-900/30'
                     : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100'
                 }`}
               >

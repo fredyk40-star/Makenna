@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { FaPlay, FaStop, FaSpinner } from 'react-icons/fa';
 import { usePhonics } from '../../hooks/usePhonics';
-import VoiceButton from '../audio/VoiceButton';
+
 import Waveform from '../audio/Waveform';
 
 const PhonicsPlayer = ({
@@ -11,7 +11,7 @@ const PhonicsPlayer = ({
   wordIndex = 0,
   className = '',
   showWaveform = true,
-  autoPlay = false
+  autoPlay: _autoPlay = false
 }) => {
   const {
     playLetterName,
@@ -86,8 +86,8 @@ const PhonicsPlayer = ({
           onClick={handlePlay}
           disabled={isLoading || isPlaying}
           className={`relative w-16 h-16 rounded-full flex items-center justify-center text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-            isPlaying 
-              ? 'bg-primary shadow-glow' 
+            isPlaying
+              ? 'bg-primary shadow-glow'
               : 'bg-primary hover:bg-primary-dark shadow-soft hover:shadow-hover'
           }`}
           aria-label={getPlayButtonLabel()}

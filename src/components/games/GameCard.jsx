@@ -1,22 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
+import {
   FaStar, FaPlay, FaClock, FaHeart, FaRegHeart,
-  FaLock, FaTrophy
+  FaLock
 } from 'react-icons/fa';
 import gameProgressService from '../../services/GameProgressService';
 
 const GameCard = ({ game, isFavorite, onFavoriteToggle }) => {
-  const [isHovered, setIsHovered] = useState(false);
+  const [, setIsHovered] = useState(false);
   const progress = gameProgressService.getGameProgress(game.id);
-  
-  const getStarsDisplay = () => {
-    if (progress && progress.bestStars) {
-      return '⭐'.repeat(Math.min(progress.bestStars, 5));
-    }
-    return '☆☆☆☆☆';
-  };
+
+
 
   const getCompletionStatus = () => {
     if (progress && progress.completed > 0) {
@@ -47,7 +42,7 @@ const GameCard = ({ game, isFavorite, onFavoriteToggle }) => {
         initial: { opacity: 0, scale: 0.9 },
         animate: { opacity: 1, scale: 1 }
       }}
-      whileHover={{ 
+      whileHover={{
         scale: 1.03,
         y: -4,
         transition: { type: 'spring', stiffness: 300 }
@@ -59,7 +54,7 @@ const GameCard = ({ game, isFavorite, onFavoriteToggle }) => {
       {/* Header with icon */}
       <div className="relative h-32 bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center">
         <div className="text-6xl">{game.icon}</div>
-        
+
         {/* Favorite Button */}
         <button
           onClick={onFavoriteToggle}
@@ -110,7 +105,7 @@ const GameCard = ({ game, isFavorite, onFavoriteToggle }) => {
         {/* Progress Bar */}
         {progress && progress.completed > 0 && (
           <div className="mt-2 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-green-500 rounded-full transition-all duration-500"
               style={{ width: `${Math.min(progress.completed / 10 * 100, 100)}%` }}
             />
@@ -122,13 +117,13 @@ const GameCard = ({ game, isFavorite, onFavoriteToggle }) => {
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {getCompletionStatus()}
           </div>
-          
+
           <Link to={game.path || '#'}>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-medium transition-all duration-300 ${
-                game.locked 
+                game.locked
                   ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                   : 'bg-primary text-white hover:bg-primary-dark shadow-soft hover:shadow-glow'
               }`}

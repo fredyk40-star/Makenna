@@ -6,7 +6,7 @@ import { announceToScreenReader } from '../../../utils/accessibility';
 const CountAnimals = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [targetNumber, setTargetNumber] = useState(0);
   const [animals, setAnimals] = useState([]);
-  const [selectedAnimals, setSelectedAnimals] = useState([]);
+  const [, setSelectedAnimals] = useState([]);
   const [count, setCount] = useState(0);
   const [isCorrect, setIsCorrect] = useState(null);
   const [attempts, setAttempts] = useState(0);
@@ -53,7 +53,7 @@ const CountAnimals = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const handleAnimalClick = (animalId) => {
     if (isCorrect !== null || showResult) return;
 
-    setAnimals(prev => prev.map(a => 
+    setAnimals(prev => prev.map(a =>
       a.id === animalId ? { ...a, selected: !a.selected } : a
     ));
 
@@ -73,10 +73,10 @@ const CountAnimals = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       setCorrectAnswers(prev => prev + 1);
       speak('Excellent! 🎉', { rate: 0.8, pitch: 1.2 });
       announceToScreenReader('Correct! Great job!');
-      
+
       const newScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
       onScoreUpdate(newScore);
-      
+
       setTimeout(() => {
         if (totalQuestions >= 5) {
           const finalScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);

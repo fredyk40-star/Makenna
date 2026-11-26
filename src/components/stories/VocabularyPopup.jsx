@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FaTimes, FaStar, FaRegStar } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';
 import readingAnalyticsService from '../../services/ReadingAnalyticsService';
 

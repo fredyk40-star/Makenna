@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaBell, FaTimes, FaCheck, FaTrash } from 'react-icons/fa';
+import { FaBell, FaCheck, FaTrash } from 'react-icons/fa';
 import { NotificationBellService } from '../../services/NotificationBellService';
 import { NotificationService } from '../../services/NotificationService';
 
@@ -12,12 +12,12 @@ const NotificationBell = () => {
 
   useEffect(() => {
     loadNotifications();
-    
+
     // Listen for notification updates
     const handleStorageChange = () => {
       loadNotifications();
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);

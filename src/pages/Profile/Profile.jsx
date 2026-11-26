@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
-import { FaUser, FaShieldAlt, FaStar, FaBook, FaSignOutAlt, FaLock, FaChild } from 'react-icons/fa';
+import { FaShieldAlt, FaStar, FaBook, FaSignOutAlt, FaLock, FaChild } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { useChildAccount } from '../../context/ChildAccountContext';
-import { ChildAccountService } from '../../services/ChildAccountService';
+
 import AvatarSelector from '../../components/AvatarSelector/AvatarSelector';
 
 const Profile = () => {
-  const { activeChild, childName, childId, logout } = useChildAccount();
+  const { activeChild, childId, logout } = useChildAccount();
 
   // Get progress from child account directly
   const getProgress = () => {
@@ -38,8 +38,8 @@ const Profile = () => {
           <FaLock className="text-6xl text-gray-300 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-2">No Active Session</h2>
           <p className="text-gray-500 mb-4">Please log in to view your profile</p>
-          <Link 
-            to="/login" 
+          <Link
+            to="/login"
             className="inline-block px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
           >
             Go to Login

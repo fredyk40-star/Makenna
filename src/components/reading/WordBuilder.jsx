@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUndo, FaLightbulb, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaUndo, FaLightbulb } from 'react-icons/fa';
 import { useWordBuilder } from '../../hooks/useWordBuilder';
 import LetterTile from './LetterTile';
-import BlendingPlayer from './BlendingPlayer';
 
-const WordBuilder = ({ 
-  word, 
+
+const WordBuilder = ({
+  word,
   onComplete = null,
-  className = '' 
+  className = ''
 }) => {
   const {
     progress,
@@ -19,12 +19,11 @@ const WordBuilder = ({
     getHint,
     reset,
     getAvailableLetters,
-    getWordLetters,
-    isComplete
+    getWordLetters
   } = useWordBuilder(word);
 
   const [selectedLetter, setSelectedLetter] = useState(null);
-  const [targetPositions, setTargetPositions] = useState([]);
+  const [, ] = useState([]);
 
   useEffect(() => {
     if (completed && onComplete) {
@@ -39,7 +38,7 @@ const WordBuilder = ({
 
   const handlePositionClick = (position) => {
     if (!selectedLetter || completed) return;
-    
+
     const result = placeLetter(selectedLetter.index, position);
     if (result) {
       setSelectedLetter(null);

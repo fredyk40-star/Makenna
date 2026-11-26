@@ -1,21 +1,17 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  FaArrowLeft, FaStar, FaTrophy, FaChartLine, 
-  FaBook, FaGamepad, FaPencilAlt, FaClock,
-  FaFire, FaCheck, FaTimes, FaRocket
-} from 'react-icons/fa';
+import { FaArrowLeft, FaStar, FaTrophy, FaChartLine, FaBook, FaGamepad, FaFire } from 'react-icons/fa';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import { NUMBERS_DATA } from '../../data/numbersData';
 import gameProgressService from '../../services/GameProgressService';
 import readingAnalyticsService from '../../services/ReadingAnalyticsService';
-import adaptiveLearningService from '../../services/AdaptiveLearningService';
+
 import numbersAssessmentService from '../../services/NumbersAssessmentService';
 
 const NumbersMastery = () => {
   const navigate = useNavigate();
-  const { 
+  const {
     progress,
     getCompletionPercentage,
     getMasteryPercentage,
@@ -32,17 +28,17 @@ const NumbersMastery = () => {
 
   const completionPercentage = getCompletionPercentage();
   const masteryPercentage = getMasteryPercentage();
-  const nextNumber = getNextNumber();
+  getNextNumber();
 
   // Calculate stats
   const totalGames = NUMBERS_DATA.length;
-  const completedGames = progress.completed.length;
+
   const masteredNumbers = progress.mastered.length;
   const gamesPlayed = gameProgressService.getTotalPlays();
   const starsEarned = gameProgressService.getTotalStars();
   const minutesRead = readingAnalyticsService.getStats().minutesRead || 0;
   const streak = readingAnalyticsService.getStats().readingStreak || 0;
-  
+
 
   const startAssessment = useCallback(() => {
     // Generate assessment using assessment service
@@ -64,13 +60,13 @@ const NumbersMastery = () => {
 
   const handleAnswer = useCallback((answer) => {
     if (selectedAnswer !== null) return;
-    
+
     setSelectedAnswer(answer);
     const result = numbersAssessmentService.submitAnswer(answer);
-    
+
     if (result) {
       setScore(result.currentScore);
-      
+
       if (result.isComplete) {
         setIsAssessmentComplete(true);
         const results = numbersAssessmentService.getResults();
@@ -107,7 +103,7 @@ const NumbersMastery = () => {
     };
     return map[level] || 'text-gray-300';
   };
-  
+
 
   const stats = useMemo(() => [
   { label: 'Numbers Mastered', value: masteredNumbers, total: totalGames, icon: FaStar, color: 'text-yellow-500' },
@@ -164,7 +160,7 @@ const NumbersMastery = () => {
             </div>
             {stat.total && (
               <div className="mt-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-primary rounded-full"
                   style={{ width: `${(stat.value / stat.total) * 100}%` }}
                 />
@@ -180,7 +176,7 @@ const NumbersMastery = () => {
           <div className="relative w-24 h-24 mx-auto">
             <svg className="w-24 h-24 transform -rotate-90">
               <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="none" className="text-gray-200 dark:text-gray-600" />
-              <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="none" className="text-primary" 
+              <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="none" className="text-primary"
                 strokeDasharray={`${completionPercentage * 2.51} 251.2`} strokeLinecap="round" />
             </svg>
             <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-gray-800 dark:text-white">
@@ -194,7 +190,7 @@ const NumbersMastery = () => {
           <div className="relative w-24 h-24 mx-auto">
             <svg className="w-24 h-24 transform -rotate-90">
               <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="none" className="text-gray-200 dark:text-gray-600" />
-              <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="none" className="text-yellow-500" 
+              <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="none" className="text-yellow-500"
                 strokeDasharray={`${masteryPercentage * 2.51} 251.2`} strokeLinecap="round" />
             </svg>
             <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-gray-800 dark:text-white">

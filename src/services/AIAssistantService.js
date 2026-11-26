@@ -148,9 +148,9 @@ export class AIAssistantService {
     const name = this.getFirstName(fullName);
     const messages = ENCOURAGEMENT_MESSAGES.greeting;
     const message = messages[Math.floor(Math.random() * messages.length)];
-    
+
     this.recordInteraction(childId, 'greeting');
-    
+
     return message.replace('{name}', name);
   }
 
@@ -161,12 +161,12 @@ export class AIAssistantService {
     const state = this.getState(childId);
     state.lastInteraction = new Date().toISOString();
     state.interactionCount++;
-    
+
     // Reset daily suggestion cooldown
     if (type === 'suggestion') {
       state.lastSuggestion = new Date().toISOString();
     }
-    
+
     this.saveState(childId, state);
   }
 
@@ -176,27 +176,27 @@ export class AIAssistantService {
   static getNextLessonSuggestion(childId, fullName) {
     const name = this.getFirstName(fullName);
     const state = this.getState(childId);
-    
+
     // Check for items needing revision first
     const revisionItems = AdaptiveLearningService.getItemsNeedingReview(50);
     if (revisionItems.length > 0) {
       state.revisionNeeded = revisionItems.map(i => i.itemId);
       this.saveState(childId, state);
-      
+
       const revisionMsg = ENCOURAGEMENT_MESSAGES.revision[
         Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.revision.length)
       ];
-      
+
       // Determine subject from itemId
       let subject = 'this topic';
       if (revisionItems[0].itemId.includes('alph')) subject = 'Alphabet';
       else if (revisionItems[0].itemId.includes('num')) subject = 'Numbers';
       else if (revisionItems[0].itemId.includes('read')) subject = 'Reading';
       else if (revisionItems[0].itemId.includes('math')) subject = 'Math';
-      
+
       return revisionMsg.replace('{name}', name).replace('{subject}', subject);
     }
-    
+
     // Suggest based on weakest area
     const weakAreas = this.getWeakAreas(childId);
     if (weakAreas.length > 0) {
@@ -206,7 +206,7 @@ export class AIAssistantService {
       ];
       return msg.replace('{name}', name).replace('{subject}', subject);
     }
-    
+
     // Default suggestion based on gamification favorite
     const gamState = GamificationService.getState(childId);
     if (gamState && gamState.lessonsCompleted > 0) {
@@ -217,7 +217,7 @@ export class AIAssistantService {
       ];
       return msg.replace('{name}', name).replace('{subject}', randomSubject);
     }
-    
+
     return `Let's start learning, ${name}!`;
   }
 
@@ -229,27 +229,27 @@ export class AIAssistantService {
     const name = this.getFirstName(profile?.name);
     const messages = ENCOURAGEMENT_MESSAGES[type] || ENCOURAGEMENT_MESSAGES.praise;
     const message = messages[Math.floor(Math.random() * messages.length)];
-    
+
     this.recordInteraction(childId, type);
-    
+
     let result = message.replace('{name}', name);
     if (customSubject) {
       result = result.replace('{subject}', customSubject);
     }
-    
+
     return result;
   }
 
   /**
    * Detect repeated mistakes and suggest revision
    */
-  static detectMistakes(childId) {
+  static detectMistakes(___childId) {
     const performanceData = AdaptiveLearningService.performanceData;
     const mistakes = [];
-    
+
     for (const [itemId, record] of performanceData) {
       const accuracy = record.correct / Math.max(1, record.attempts);
-      
+
       // Flag if more than 3 attempts with < 50% accuracy
       if (record.attempts >= 3 && accuracy < 0.5) {
         mistakes.push({
@@ -259,7 +259,7 @@ export class AIAssistantService {
         });
       }
     }
-    
+
     return mistakes;
   }
 
@@ -268,34 +268,34 @@ export class AIAssistantService {
    */
   static getRevisionRecommendation(childId, fullName) {
     const mistakes = this.detectMistakes(childId);
-    
+
     if (mistakes.length === 0) {
       return null;
     }
-    
+
     const name = this.getFirstName(fullName);
     const worstMistake = mistakes.sort((a, b) => a.accuracy - b.accuracy)[0];
-    
+
     let subject = 'this area';
     if (worstMistake.itemId.includes('alph')) subject = 'Alphabet';
     else if (worstMistake.itemId.includes('num')) subject = 'Numbers';
     else if (worstMistake.itemId.includes('read')) subject = 'Reading';
     else if (worstMistake.itemId.includes('math')) subject = 'Math';
-    
+
     const msg = ENCOURAGEMENT_MESSAGES.revision[
       Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.revision.length)
     ];
-    
+
     return msg.replace('{name}', name).replace('{subject}', subject);
   }
 
   /**
    * Get weak areas for a child
    */
-  static getWeakAreas(childId) {
+  static getWeakAreas(___childId) {
     // Determine areas with most "needing review" items
     const revisionItems = AdaptiveLearningService.getItemsNeedingReview();
-    
+
     const areaCounts = {
       'Alphabet': 0,
       'Numbers': 0,
@@ -303,7 +303,7 @@ export class AIAssistantService {
       'Maths': 0,
       'Science': 0
     };
-    
+
     revisionItems.forEach(item => {
       const lowerItem = item.itemId.toLowerCase();
       if (lowerItem.includes('alph') || lowerItem.includes('letter')) {
@@ -321,9 +321,9 @@ export class AIAssistantService {
         Object.keys(areaCounts).forEach(key => areaCounts[key]++);
       }
     });
-    
+
     return Object.entries(areaCounts)
-      .filter(([area, count]) => count > 0)
+      .filter(([___area, count]) => count > 0)
       .sort((a, b) => b[1] - a[1])
       .map(([area]) => area);
   }
@@ -335,7 +335,7 @@ export class AIAssistantService {
     const state = this.getState(childId);
     const profile = ProfileService.getActiveProfile();
     const name = this.getFirstName(fullName || profile?.name);
-    
+
     return {
       name,
       greeting: this.getGreeting(childId, fullName),
@@ -433,7 +433,7 @@ export class AIAssistantService {
       'settings': '/settings'
     };
 
-    for (const [key, route] of Object.entries(routes)) {
+    for (const [key, ___route] of Object.entries(routes)) {
       if (query.includes(key)) {
         return `Taking you to ${key}, ${name}! Click the screen or say "go" when you're ready!`;
       }
@@ -445,7 +445,7 @@ export class AIAssistantService {
   /**
    * Handle alphabet queries
    */
-  static handleAlphabetQuery(query, name) {
+  static handleAlphabetQuery(query, ___name) {
     const letterMatch = query.match(/[a-z]/i);
     if (letterMatch) {
       const letter = letterMatch[0].toLowerCase();
@@ -458,7 +458,7 @@ export class AIAssistantService {
   /**
    * Handle number queries
    */
-  static handleNumberQuery(query, name) {
+  static handleNumberQuery(query, ___name) {
     const numberMatch = query.match(/\d+/);
     if (numberMatch) {
       const number = numberMatch[0];
@@ -471,7 +471,7 @@ export class AIAssistantService {
   /**
    * Handle color queries
    */
-  static handleColorQuery(query, name) {
+  static handleColorQuery(query, ___name) {
     const colors = ['red', 'blue', 'yellow', 'green', 'orange', 'purple', 'pink', 'brown', 'black', 'white'];
     for (const color of colors) {
       if (query.includes(color)) {
@@ -484,7 +484,7 @@ export class AIAssistantService {
   /**
    * Handle shape queries
    */
-  static handleShapeQuery(query, name) {
+  static handleShapeQuery(query, ___name) {
     const shapes = ['circle', 'square', 'triangle', 'rectangle', 'oval', 'diamond', 'heart', 'star'];
     for (const shape of shapes) {
       if (query.includes(shape)) {
@@ -497,7 +497,7 @@ export class AIAssistantService {
   /**
    * Handle math queries
    */
-  static handleMathQuery(query, name) {
+  static handleMathQuery(query, ___name) {
     if (query.includes('addition') || query.includes('add')) {
       return KNOWLEDGE_BASE.math.addition;
     }
@@ -628,7 +628,7 @@ export class AIAssistantService {
     interactions.forEach(interaction => {
       // Count by type
       stats.byType[interaction.type] = (stats.byType[interaction.type] || 0) + 1;
-      
+
       // Count by subject if available
       if (interaction.subject) {
         stats.bySubject[interaction.subject] = (stats.bySubject[interaction.subject] || 0) + 1;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaStar, FaCheck } from 'react-icons/fa';
+import { FaArrowLeft, FaCheck } from 'react-icons/fa';
 import { MATHS_TOPICS } from '../../data/mathsData';
 import { useProfiles } from '../../context/ProfileContext';
 import { staggerContainer } from '../../utils/constants';
@@ -59,8 +59,8 @@ const MathsHome = () => {
               key={topic.id}
               variants={{
                 initial: { opacity: 0, scale: 0.9 },
-                animate: { 
-                  opacity: 1, 
+                animate: {
+                  opacity: 1,
                   scale: 1,
                   transition: { delay: index * 0.05 }
                 }

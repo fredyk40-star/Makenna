@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { DeveloperService } from '../../services/DeveloperService';
 import { UpdateService } from '../../services/UpdateService';
-import { FaUser, FaLock, FaTrash, FaUndo, FaDownload, FaUpload, FaArchive, FaUnlock, FaBan, FaStar, FaCertificate, FaChartBar, FaDatabase, FaBell, FaCog, FaSignOutAlt, FaSync, FaRocket, FaHistory, FaUsers, FaFilter, FaCalendarAlt, FaExclamationTriangle, FaRobot, FaVolumeUp, FaComment, FaPlus, FaMinus, FaEye, FaPlay } from 'react-icons/fa';
+import { FaUser, FaTrash, FaUndo, FaDownload, FaStar, FaChartBar, FaDatabase, FaCog, FaSignOutAlt, FaSync, FaRocket, FaRobot, FaPlus } from 'react-icons/fa';
 
 const DeveloperDashboard = () => {
   const [children, setChildren] = useState([]);
@@ -117,11 +117,7 @@ const DeveloperDashboard = () => {
     setAiStatistics(DeveloperService.getAIStatistics());
   };
 
-  const handleUpdateAIConfig = (newConfig) => {
-    DeveloperService.updateAIConfig(newConfig);
-    loadAIData();
-    DeveloperService.logAction('AI_CONFIG_UPDATE', { changes: Object.keys(newConfig) });
-  };
+
 
   const handleAddAICommand = () => {
     if (!newCommand.phrase.trim() || !newCommand.response.trim()) return;
@@ -190,16 +186,16 @@ const DeveloperDashboard = () => {
   };
 
   const handleSelectChild = (childId) => {
-    setSelectedChildren(prev => 
-      prev.includes(childId) 
+    setSelectedChildren(prev =>
+      prev.includes(childId)
         ? prev.filter(id => id !== childId)
         : [...prev, childId]
     );
   };
 
   const handleSelectPreviewChild = (childId) => {
-    setSelectedPreviewChildren(prev => 
-      prev.includes(childId) 
+    setSelectedPreviewChildren(prev =>
+      prev.includes(childId)
         ? prev.filter(id => id !== childId)
         : [...prev, childId]
     );
@@ -315,14 +311,14 @@ const DeveloperDashboard = () => {
   const handleDownloadPreviewConfig = () => {
     const previewUpdate = updates.find(u => u.id === previewUpdateId);
     const childrenList = previewUpdate ? previewUpdate.previewChildren : selectedChildren;
-    
+
     const config = UpdateService.generateDownloadConfig(
       childrenList,
       previewUpdate?.version || updateData.version,
       previewUpdate?.changelog || updateData.changelog,
       ['preview-features']
     );
-    
+
     const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -332,7 +328,7 @@ const DeveloperDashboard = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     setDownloadModal(false);
   };
 
@@ -501,8 +497,8 @@ const DeveloperDashboard = () => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-              activeTab === tab.id 
-                ? 'bg-purple-600 text-white' 
+              activeTab === tab.id
+                ? 'bg-purple-600 text-white'
                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
             }`}
           >
@@ -555,7 +551,7 @@ const DeveloperDashboard = () => {
                 6. Preview children see update on ALL devices!
               </p>
             </div>
-            
+
             <h3 className="font-bold mb-3">Update History ({updates.length})</h3>
             {updates.length === 0 ? (
               <p className="text-gray-400">No updates yet. Create your first update to get started!</p>
@@ -1003,7 +999,7 @@ const DeveloperDashboard = () => {
               Choose which children should test this preview update before it goes live.
               Preview access expires after 7 days.
             </p>
-            
+
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full">
                 <thead className="bg-gray-700">
@@ -1029,7 +1025,7 @@ const DeveloperDashboard = () => {
                 </tbody>
               </table>
             </div>
-            
+
             <div className="flex gap-2 mt-4">
               <button
                 onClick={handleAssignPreviewChildren}

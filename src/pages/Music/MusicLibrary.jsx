@@ -1,21 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  FaArrowLeft, FaSearch, FaStar, FaHeart, FaRegHeart,
-  FaPlay, FaLock, FaClock, FaFilter, FaMusic,
-  FaTrophy, FaFire, FaMicrophone, FaGamepad
-} from 'react-icons/fa';
-import { MUSIC_CATEGORIES, MUSIC_LIBRARY, searchSongs, GAME_CATEGORIES } from '../../data/musicData';
+import { FaArrowLeft, FaSearch, FaStar, FaHeart, FaRegHeart, FaPlay, FaClock, FaFilter, FaMusic, FaGamepad } from 'react-icons/fa';
+import { MUSIC_CATEGORIES, MUSIC_LIBRARY, searchSongs } from '../../data/musicData';
 import { useMusicProgress } from '../../hooks/useMusicProgress';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { voiceGuide } from '../../services/VoiceGuideService';
-import { GamificationService } from '../../services/GamificationService';
+
 import { staggerContainer, fadeInUp } from '../../utils/constants';
 
 const MusicLibrary = () => {
-  const { childName, childId } = useChildAccount();
-  const { progress, toggleFavorite, isFavorited } = useMusicProgress();
+  const { childName } = useChildAccount();
+  const { progress, toggleFavorite } = useMusicProgress();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showFavorites, setShowFavorites] = useState(false);
@@ -50,35 +46,35 @@ const MusicLibrary = () => {
 
   useEffect(() => {
     let results = [...MUSIC_LIBRARY];
-    
+
     // Search filter
     if (searchQuery.trim()) {
       results = searchSongs(searchQuery);
     }
-    
+
     // Category filter
     if (selectedCategory !== 'all') {
       results = results.filter(song => song.category === selectedCategory);
     }
-    
+
     // Favorites filter
     if (showFavorites) {
       results = results.filter(song => progress.favorites.includes(song.id));
     }
-    
+
     // Sort: favorites first, daily song first, then by title
     results.sort((a, b) => {
       const aDaily = dailySong?.id === a.id ? -1 : 0;
       const bDaily = dailySong?.id === b.id ? -1 : 0;
       if (aDaily !== bDaily) return aDaily - bDaily;
-      
+
       const aFav = progress.favorites.includes(a.id) ? -1 : 1;
       const bFav = progress.favorites.includes(b.id) ? -1 : 1;
       if (aFav !== bFav) return aFav - bFav;
-      
+
       return a.title.localeCompare(b.title);
     });
-    
+
     setFilteredSongs(results);
   }, [searchQuery, selectedCategory, showFavorites, progress.favorites, dailySong]);
 
@@ -87,7 +83,7 @@ const MusicLibrary = () => {
     voiceGuide.speak(`Let's play ${song.title}!`);
   };
 
-  const gamificationSummary = childId ? GamificationService.getSummary(childId) : null;
+
 
   return (
     <motion.div
@@ -239,17 +235,17 @@ const MusicLibrary = () => {
       >
         {filteredSongs.map((song, index) => {
           const isFavorite = progress.favorites.includes(song.id);
-          const isPlayed = progress.played.includes(song.id);
+          progress.played.includes(song.id);
           const playCount = progress.timesPlayed[song.id] || 0;
           const isDaily = dailySong?.id === song.id;
-          
+
           return (
             <motion.div
               key={song.id}
               variants={{
                 initial: { opacity: 0, scale: 0.9 },
-                animate: { 
-                  opacity: 1, 
+                animate: {
+                  opacity: 1,
                   scale: 1,
                   transition: { delay: index * 0.05 }
                 }
@@ -260,14 +256,14 @@ const MusicLibrary = () => {
               <div className="relative h-32 bg-gradient-to-br overflow-hidden flex items-center justify-center">
                 <div className={`absolute inset-0 bg-gradient-to-br ${MUSIC_CATEGORIES.find(c => c.id === song.category)?.color || 'from-gray-400 to-gray-500'} opacity-80`} />
                 <div className="relative z-10 text-5xl">{song.icon}</div>
-                
+
                 {/* Daily Song Badge */}
                 {isDaily && (
                   <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-xs font-bold z-20">
                     Song of Day
                   </div>
                 )}
-                
+
                 {/* Favorite Button */}
                 <button
                   onClick={(e) => {
@@ -294,7 +290,7 @@ const MusicLibrary = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-1">
                   {song.description}
                 </p>
-                
+
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <FaClock />

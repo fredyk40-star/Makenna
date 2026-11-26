@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaVolumeUp, FaCheck, FaStar,
-  FaRegStar, FaArrowRight
+import {
+  FaArrowLeft, FaVolumeUp, FaStar,
+  FaRegStar
 } from 'react-icons/fa';
 import { getShapeById, SHAPES_DATA } from '../../data/shapesData';
 import { useAudio } from '../../hooks/useAudio';
@@ -15,27 +15,27 @@ const ShapeLesson = () => {
   const navigate = useNavigate();
   const [shape, setShape] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [showQuiz, setShowQuiz] = useState(false);
+  const [, setIsCompleted] = useState(false);
+  const [, ] = useState(false);
   const [quizSelected, setQuizSelected] = useState(null);
   const [quizCorrect, setQuizCorrect] = useState(null);
   const [showCelebration, setShowCelebration] = useState(false);
 
   const { speak } = useAudio();
-  const { activeChild, childId } = useChildAccount();
+  const { childId } = useChildAccount();
 
   useEffect(() => {
     const found = getShapeById(shapeId);
     if (found) {
       setShape(found);
-      
+
       // Load progress from child account or localStorage
       if (childId) {
         const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
         const account = accounts.find(a => a.childId?.toLowerCase() === childId?.toLowerCase());
         const progress = account?.progress?.shape_progress || {};
         setIsCompleted(progress[shapeId]?.completed || false);
-        
+
         // Load favorites
         const favorites = account?.progress?.shape_favorites || [];
         setIsFavorite(favorites.includes(shapeId));
@@ -46,7 +46,7 @@ const ShapeLesson = () => {
         const favorites = JSON.parse(localStorage.getItem('shape_favorites') || '[]');
         setIsFavorite(favorites.includes(shapeId));
       }
-      
+
       // Speak shape name
       setTimeout(() => {
         speak(`This is a ${found.name}. ${found.description}`, { rate: 0.7, pitch: 1.1 });
@@ -58,7 +58,7 @@ const ShapeLesson = () => {
 
   const toggleFavorite = useCallback(() => {
     const newIsFavorite = !isFavorite;
-    
+
     if (childId) {
       // Save to child account
       const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
@@ -80,7 +80,7 @@ const ShapeLesson = () => {
         : favorites.filter(id => id !== shapeId);
       localStorage.setItem('shape_favorites', JSON.stringify(newFavorites));
     }
-    
+
     setIsFavorite(newIsFavorite);
   }, [isFavorite, shapeId, childId]);
 
@@ -90,15 +90,15 @@ const ShapeLesson = () => {
 
   const handleQuizAnswer = (answer) => {
     if (quizSelected !== null) return;
-    
+
     setQuizSelected(answer);
     const correct = answer === shape.name;
     setQuizCorrect(correct);
-    
+
     if (correct) {
       speak('Correct! 🎉', { rate: 0.8, pitch: 1.2 });
       announceToScreenReader('Correct!');
-      
+
       // Mark as completed
       if (childId) {
         const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
@@ -115,10 +115,10 @@ const ShapeLesson = () => {
         progress[shapeId] = { completed: true };
         localStorage.setItem('shape_progress', JSON.stringify(progress));
       }
-      
+
       setIsCompleted(true);
       setShowCelebration(true);
-      
+
       setTimeout(() => setShowCelebration(false), 3000);
     } else {
       speak('Try again!', { rate: 0.7, pitch: 1.0 });

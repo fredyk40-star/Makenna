@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCheck, FaTimes, FaStar, FaVolumeUp } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaVolumeUp } from 'react-icons/fa';
 import { ALPHABET_DATA } from '../../data/alphabetData';
-import { usePhonics } from '../../hooks/usePhonics';
 import { useAudio } from '../../hooks/useAudio';
 import { announceToScreenReader } from '../../utils/accessibility';
 
@@ -13,7 +12,7 @@ const ListeningActivity = ({
   onIncorrect = null,
   className = ''
 }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [, setCurrentStep] = useState(0);
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
   const [score, setScore] = useState(0);
@@ -22,7 +21,6 @@ const ListeningActivity = ({
   const [feedback, setFeedback] = useState('');
 
   const { speak } = useAudio();
-  const { playLetterSound, playLetterName } = usePhonics();
 
   // Generate random letters for the activity
   const [options, setOptions] = useState([]);
@@ -74,9 +72,9 @@ const ListeningActivity = ({
         pitch: 1.2
       });
       announceToScreenReader('Correct! Great job!');
-      
+
       if (onCorrect) onCorrect();
-      
+
       // Check if activity is complete (3 correct answers)
       if (score + 1 >= 3) {
         setActivityComplete(true);
@@ -100,7 +98,7 @@ const ListeningActivity = ({
       });
       announceToScreenReader('Incorrect. Try again!');
       if (onIncorrect) onIncorrect();
-      
+
       setTimeout(() => {
         setSelectedLetter(null);
         setIsCorrect(null);
@@ -183,8 +181,8 @@ const ListeningActivity = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className={`text-center py-2 mb-4 rounded-xl ${
-              isCorrect 
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+              isCorrect
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                 : isCorrect === false
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
@@ -214,7 +212,7 @@ const ListeningActivity = ({
             aria-label={`Select letter ${letter.letter}`}
           >
             {letter.letter}
-            
+
             {/* Feedback Icon */}
             {selectedLetter?.id === letter.id && (
               <div className="absolute -top-2 -right-2">

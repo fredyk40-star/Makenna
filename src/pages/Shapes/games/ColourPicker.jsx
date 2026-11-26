@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { COLOURS_DATA } from '../../../data/coloursData';
 import { useAudio } from '../../../hooks/useAudio';
-import { StorageService } from '../../../services/StorageService';
+
 import { announceToScreenReader } from '../../../utils/accessibility';
 
-const ColourPicker = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
+const ColourPicker = ({ game: _game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [targetColour, setTargetColour] = useState(null);
   const [options, setOptions] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -52,10 +52,10 @@ const ColourPicker = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       setScore(prev => prev + 10);
       speak('Correct! 🎉', { rate: 0.8, pitch: 1.2 });
       announceToScreenReader('Correct!');
-      
+
       const newScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
       onScoreUpdate(newScore);
-      
+
       setTimeout(() => {
         if (totalQuestions >= 5) {
           const finalScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);

@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaSave, FaTrash, FaUndo, FaRedo, FaBold, FaItalic, FaUnderline, FaListOl, FaListUl, FaHeading, FaImage, FaPalette, FaCode, FaEye, FaEdit, FaTimes } from 'react-icons/fa';
+import { FaSave, FaUndo, FaRedo, FaBold, FaItalic, FaUnderline, FaListOl, FaListUl, FaHeading, FaImage, FaCode, FaEye, FaEdit } from 'react-icons/fa';
 
-const ContentEditorComponent = ({ initialContent = 
+const ContentEditorComponent = ({ initialContent =
   `<h1>Welcome to the Interactive Content Editor!</h1>
 <p>Use this editor to create rich learning content with text, images, and more.</p>
 <p><b>Bold</b>, <i>italic</i>, <u>underline</u>, and lists are all supported.</p>
@@ -150,7 +150,7 @@ const ContentEditorComponent = ({ initialContent =
         </AnimatePresence>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .toolbar-btn {
           padding: 8px 12px;
           border-radius: 8px;

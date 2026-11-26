@@ -7,7 +7,7 @@ const MarketBasket = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [targetNumber, setTargetNumber] = useState(0);
   const [fruits, setFruits] = useState([]);
   const [basket, setBasket] = useState([]);
-  const [score, setScore] = useState(0);
+  const [, ] = useState(0);
   const [attempts, setAttempts] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
@@ -53,7 +53,7 @@ const MarketBasket = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const handleFruitClick = (fruitId) => {
     if (showResult || isComplete) return;
 
-    setFruits(prev => prev.map(f => 
+    setFruits(prev => prev.map(f =>
       f.id === fruitId ? { ...f, inBasket: !f.inBasket } : f
     ));
 
@@ -71,10 +71,10 @@ const MarketBasket = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       setCorrectAnswers(prev => prev + 1);
       speak('Perfect! Basket is full! 🧺', { rate: 0.8, pitch: 1.2 });
       announceToScreenReader('Correct! Great job!');
-      
+
       const newScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
       onScoreUpdate(newScore);
-      
+
       setTimeout(() => {
         if (totalQuestions >= 5) {
           const finalScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
@@ -131,8 +131,8 @@ const MarketBasket = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
           <motion.button
             key={fruit.id}
             initial={{ scale: 0, rotate: -180 }}
-            animate={{ 
-              scale: fruit.inBasket ? 0.8 : 1, 
+            animate={{
+              scale: fruit.inBasket ? 0.8 : 1,
               rotate: fruit.inBasket ? 180 : 0,
               opacity: fruit.inBasket ? 0.5 : 1
             }}
@@ -143,8 +143,8 @@ const MarketBasket = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
             className={`absolute text-3xl transition-all duration-300 ${
               fruit.inBasket ? 'opacity-50' : 'hover:scale-110'
             }`}
-            style={{ 
-              left: `${fruit.x}%`, 
+            style={{
+              left: `${fruit.x}%`,
               top: `${fruit.y}%`,
               transform: `translate(-50%, -50%)`
             }}

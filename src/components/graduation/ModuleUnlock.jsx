@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaArrowRight, FaLock, FaUnlock } from 'react-icons/fa';
+import { FaArrowRight, FaLock } from 'react-icons/fa';
 
-const ModuleUnlock = ({ 
+const ModuleUnlock = ({
   moduleName = 'Numbers Kingdom',
   moduleIcon = '👑',
   isUnlocked = true,
-  className = '' 
+  className = ''
 }) => {
   return (
     <motion.div
@@ -17,13 +17,13 @@ const ModuleUnlock = ({
       <div className="text-6xl mb-4">
         {isUnlocked ? moduleIcon : '🔒'}
       </div>
-      
+
       <h3 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white">
         {isUnlocked ? `Ready for ${moduleName}?` : `${moduleName} Locked`}
       </h3>
-      
+
       <p className="text-gray-600 dark:text-gray-300 mt-2">
-        {isUnlocked 
+        {isUnlocked
           ? 'Complete the Alphabet Adventure to unlock the next module!'
           : 'Keep practicing to unlock this exciting adventure!'
         }

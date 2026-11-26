@@ -1,18 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  FaArrowLeft, FaSearch, FaStar, FaHeart, FaRegHeart,
-  FaPlay, FaLock, FaClock, FaFilter, FaGamepad,
-  FaTrophy, FaFire
-} from 'react-icons/fa';
-import { 
-  NUMBERS_GAMES, 
-  GAME_CATEGORIES, 
-  searchGames,
-  getGamesByCategory,
-  getGamesByDifficulty
-} from '../../data/numbersGamesData';
+import { FaArrowLeft, FaSearch, FaHeart, FaRegHeart, FaPlay, FaClock, FaFilter, FaGamepad } from 'react-icons/fa';
+import { NUMBERS_GAMES, GAME_CATEGORIES, searchGames } from '../../data/numbersGamesData';
 import gameProgressService from '../../services/GameProgressService';
 import { staggerContainer } from '../../utils/constants';
 
@@ -38,27 +28,27 @@ const NumbersGames = () => {
 
   useEffect(() => {
     let results = [...NUMBERS_GAMES];
-    
+
     // Search filter
     if (searchQuery.trim()) {
       results = searchGames(searchQuery);
     }
-    
+
     // Category filter
     if (selectedCategory !== 'all') {
       results = results.filter(game => game.category === selectedCategory);
     }
-    
+
     // Difficulty filter
     if (selectedDifficulty !== 'all') {
       results = results.filter(game => game.difficulty === selectedDifficulty);
     }
-    
+
     // Favorites filter
     if (showFavorites) {
       results = results.filter(game => favorites.includes(game.id));
     }
-    
+
     // Sort: favorites first, then by title
     results.sort((a, b) => {
       const aFav = favorites.includes(a.id) ? -1 : 1;
@@ -66,7 +56,7 @@ const NumbersGames = () => {
       if (aFav !== bFav) return aFav - bFav;
       return a.title.localeCompare(b.title);
     });
-    
+
     setFilteredGames(results);
   }, [searchQuery, selectedCategory, selectedDifficulty, showFavorites, favorites]);
 
@@ -74,7 +64,7 @@ const NumbersGames = () => {
     const newFavorites = favorites.includes(gameId)
       ? favorites.filter(id => id !== gameId)
       : [...favorites, gameId];
-    
+
     setFavorites(newFavorites);
     localStorage.setItem('numbers_game_favorites', JSON.stringify(newFavorites));
   }, [favorites]);
@@ -208,14 +198,14 @@ const NumbersGames = () => {
           const progress = getGameProgress(game.id);
           const stars = getStarsDisplay(game.id);
           const hasPlayed = progress && progress.plays > 0;
-          
+
           return (
             <motion.div
               key={game.id}
               variants={{
                 initial: { opacity: 0, scale: 0.9 },
-                animate: { 
-                  opacity: 1, 
+                animate: {
+                  opacity: 1,
                   scale: 1,
                   transition: { delay: index * 0.05 }
                 }
@@ -226,7 +216,7 @@ const NumbersGames = () => {
               <div className="relative h-32 bg-gradient-to-br overflow-hidden flex items-center justify-center">
                 <div className={`absolute inset-0 bg-gradient-to-br ${game.color} opacity-80`} />
                 <div className="relative z-10 text-5xl">{game.icon}</div>
-                
+
                 {/* Favorite Button */}
                 <button
                   onClick={() => toggleFavorite(game.id)}
@@ -290,7 +280,7 @@ const NumbersGames = () => {
                 {/* Progress Bar */}
                 {hasPlayed && (
                   <div className="mt-2 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full transition-all duration-500"
                       style={{ width: `${Math.min((progress.completed || 0) / 10 * 100, 100)}%` }}
                     />

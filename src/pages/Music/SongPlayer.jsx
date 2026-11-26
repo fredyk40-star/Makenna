@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaPlay, FaPause, FaRedo, FaStop, 
-  FaVolumeUp, FaVolumeMute, FaStar, FaRegStar,
-  FaMicrophone, FaSave, FaShare, FaExpand, FaCompress,
-  FaTachometerAlt, FaHeart, FaMusic
-} from 'react-icons/fa';
+import { FaArrowLeft, FaPlay, FaPause, FaRedo, FaStop, FaVolumeUp, FaVolumeMute, FaStar, FaRegStar, FaMicrophone, FaExpand, FaCompress, FaTachometerAlt, FaHeart, FaMusic } from 'react-icons/fa';
 import { getSongById } from '../../data/musicData';
 import { useMusicProgress } from '../../hooks/useMusicProgress';
 import { useChildAccount } from '../../context/ChildAccountContext';
@@ -19,8 +14,8 @@ const SongPlayer = () => {
   const { songId } = useParams();
   const navigate = useNavigate();
   const { childName, childId } = useChildAccount();
-  const { recordPlay, markCompleted, toggleFavorite, isFavorited, progress, saveRecording } = useMusicProgress();
-  
+  const { markCompleted, toggleFavorite, isFavorited, progress, saveRecording } = useMusicProgress();
+
   const [song, setSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -34,7 +29,7 @@ const SongPlayer = () => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [hasRecorded, setHasRecorded] = useState(false);
   const [showVocabulary, setShowVocabulary] = useState(false);
-  
+
   const audioRef = useRef(null);
   const recordingIntervalRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -44,7 +39,7 @@ const SongPlayer = () => {
     if (found) {
       setSong(found);
       setDuration(found.duration || 30);
-      
+
       // Voice guidance
       if (childName) {
         voiceGuide.speak(`Hello ${childName}! Let's sing ${found.title} together!`);
@@ -72,13 +67,13 @@ const SongPlayer = () => {
         const time = Date.now() - (startTimeRef.current || Date.now());
         const seconds = time / 1000;
         setCurrentTime(seconds);
-        
+
         // Find current lyric based on timing
         const lyricIndex = song.lyrics.findIndex((line, i) => {
           const nextLine = song.lyrics[i + 1];
           return seconds >= (line.timing * 4) && (!nextLine || seconds < (nextLine.timing * 4));
         });
-        
+
         if (lyricIndex !== activeLyricIndex) {
           setActiveLyricIndex(lyricIndex);
         }
@@ -94,10 +89,10 @@ const SongPlayer = () => {
       if (song) {
         voiceGuide.speak(song.title.split('.')[0] || 'Song starting');
         voiceGuide.queue(`Category: ${song.category.replace('-', ' ')}`, {});
-        
+
         // Speak lyrics line by line for basic karaoke effect
         if (song.lyrics) {
-          song.lyrics.forEach((line, i) => {
+          song.lyrics.forEach((line, __i) => {
             setTimeout(() => {
               if (isPlaying) {
                 voiceGuide.speak(line.words, { rate: playbackSpeed * 0.9 });
@@ -107,7 +102,7 @@ const SongPlayer = () => {
         }
       }
     }
-    
+
     setIsPlaying(!isPlaying);
     startTimeRef.current = Date.now();
   }, [song, isPlaying, playbackSpeed]);
@@ -164,12 +159,12 @@ const SongPlayer = () => {
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
     }
-    
+
     // Save mock recording ID
     const recordingId = `recording_${songId}_${Date.now()}`;
     saveRecording(songId, recordingId);
     setHasRecorded(true);
-    
+
     GamificationService.addXP(childId, 15, 'Recorded singing');
     voiceGuide.speak('Great recording! You can listen to it again anytime.');
   };
@@ -212,7 +207,7 @@ const SongPlayer = () => {
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <button
             onClick={() => toggleFavorite(songId)}
@@ -225,7 +220,7 @@ const SongPlayer = () => {
           >
             {isFavorited(songId) ? <FaHeart className="text-xl" /> : <FaRegStar className="text-xl" />}
           </button>
-          
+
           <button
             onClick={() => setIsFullScreen(!isFullScreen)}
             className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -263,12 +258,12 @@ const SongPlayer = () => {
           {/* Bouncing Ball Animation */}
           <div className="flex justify-center mb-6">
             <motion.div
-              animate={{ 
+              animate={{
                 y: isPlaying ? [0, -50, 0] : 0,
                 scale: isPlaying ? [1, 1.2, 1] : 1
               }}
-              transition={{ 
-                duration: 2, 
+              transition={{
+                duration: 2,
                 repeat: isPlaying ? Infinity : 0,
                 ease: 'easeInOut'
               }}
@@ -417,7 +412,7 @@ const SongPlayer = () => {
               </span>
             )}
           </div>
-          
+
           {!showRecording ? (
             <button
               onClick={startRecording}
@@ -439,7 +434,7 @@ const SongPlayer = () => {
               </button>
             </div>
           )}
-          
+
           {hasRecorded && (
             <Link
               to={`/music/record/${songId}`}
@@ -463,7 +458,7 @@ const SongPlayer = () => {
               {showVocabulary ? 'Hide' : 'Show'}
             </button>
           </div>
-          
+
           <AnimatePresence>
             {showVocabulary && song.vocabWords && (
               <motion.div

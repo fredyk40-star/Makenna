@@ -1,13 +1,13 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
 
-const LetterTile = memo(({ 
-  letter, 
-  index, 
+const LetterTile = memo(({
+  letter,
+  index: __index,
   isSelected = false,
   onClick = null,
   disabled = false,
-  className = '' 
+  className = ''
 }) => {
   return (
     <motion.button

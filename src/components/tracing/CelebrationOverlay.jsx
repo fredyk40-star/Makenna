@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const CelebrationOverlay = ({ letter, onComplete }) => {
   const [particles, setParticles] = useState([]);
@@ -8,7 +8,7 @@ const CelebrationOverlay = ({ letter, onComplete }) => {
     // Generate particles for celebration
     const newParticles = [];
     const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#A78BFA', '#F472B6', '#34D399', '#FB923C'];
-    
+
     for (let i = 0; i < 50; i++) {
       newParticles.push({
         id: i,

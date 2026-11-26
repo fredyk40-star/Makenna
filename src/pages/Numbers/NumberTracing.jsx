@@ -1,12 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaUndo, FaRedo, FaEraser, FaPencilAlt,
-  FaCheck, FaStar, FaVolumeUp, FaPalette, FaFlag,
-  FaPlay, FaStop
-} from 'react-icons/fa';
-import { CanvasEngine } from '../../services/CanvasEngine';
+import { FaArrowLeft, FaUndo, FaRedo, FaEraser, FaPencilAlt } from 'react-icons/fa';
+
 import { useDrawing } from '../../hooks/useDrawing';
 import { useAudio } from '../../hooks/useAudio';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
@@ -24,12 +20,12 @@ const NumberTracing = () => {
   const [mode, setMode] = useState('guided'); // 'guided' | 'free'
   const [showGuide, setShowGuide] = useState(true);
   const [currentStroke, setCurrentStroke] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
+  const [, setIsComplete] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [accuracy, setAccuracy] = useState(0);
   const [traceResult, setTraceResult] = useState(null);
-  
-  const { markCompleted, markMastered, isNumberCompleted } = useNumbersProgress();
+
+  const { markCompleted, markMastered } = useNumbersProgress();
   const { speak } = useAudio();
 
   const {
@@ -46,7 +42,6 @@ const NumberTracing = () => {
     clearCanvas,
     undo,
     redo,
-    hasDrawing,
     canvasEngine
   } = useDrawing(canvasRef);
 
@@ -56,7 +51,7 @@ const NumberTracing = () => {
       setNumber(found);
       const tracing = getNumberTracingData(numberId);
       setTracingData(tracing);
-      
+
       // Speak number name
       setTimeout(() => {
         speak(`Trace the number ${found.number}`, { rate: 0.8, pitch: 1.1 });
@@ -70,10 +65,10 @@ const NumberTracing = () => {
   const getCoordinates = useCallback((e) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
-    
+
     const clientX = e.clientX || e.touches?.[0]?.clientX || e.changedTouches?.[0]?.clientX || 0;
     const clientY = e.clientY || e.touches?.[0]?.clientY || e.changedTouches?.[0]?.clientY || 0;
-    
+
     return {
       x: (clientX - rect.left) * (canvasRef.current.width / rect.width),
       y: (clientY - rect.top) * (canvasRef.current.height / rect.height)
@@ -96,7 +91,7 @@ const NumberTracing = () => {
   const handlePointerUp = useCallback((e) => {
     e.preventDefault();
     endDrawing();
-    
+
     // Validate trace in guided mode
     if (mode === 'guided' && tracingData) {
       validateTrace();
@@ -106,15 +101,15 @@ const NumberTracing = () => {
   // Validate the trace against the guide
   const validateTrace = useCallback(() => {
     if (!canvasEngine || !tracingData) return;
-    
+
     // Get the drawn strokes
     const strokes = canvasEngine.strokes;
     if (strokes.length === 0) return;
-    
+
     // Simple validation - check if trace covers the guide path
     let matchedPoints = 0;
     let totalPoints = 0;
-    
+
     for (const stroke of tracingData.strokes) {
       for (const point of stroke.points) {
         totalPoints++;
@@ -122,7 +117,7 @@ const NumberTracing = () => {
         for (const drawnStroke of strokes) {
           for (const drawnPoint of drawnStroke.points) {
             const distance = Math.sqrt(
-              Math.pow(drawnPoint.x - point.x, 2) + 
+              Math.pow(drawnPoint.x - point.x, 2) +
               Math.pow(drawnPoint.y - point.y, 2)
             );
             if (distance < 20) {
@@ -135,17 +130,17 @@ const NumberTracing = () => {
         if (foundMatch) matchedPoints++;
       }
     }
-    
+
     const accuracyScore = totalPoints > 0 ? Math.round((matchedPoints / totalPoints) * 100) : 0;
     setAccuracy(accuracyScore);
-    
+
     const isAccurate = accuracyScore > 60;
     setTraceResult({ accuracy: accuracyScore, isAccurate });
-    
+
     if (isAccurate) {
       announceToScreenReader(`Great job! ${accuracyScore}% accuracy`);
       speak('Great job!', { rate: 0.9, pitch: 1.2 });
-      
+
       if (currentStroke < tracingData.strokes.length - 1) {
         setCurrentStroke(prev => prev + 1);
       } else {
@@ -173,10 +168,10 @@ const NumberTracing = () => {
   // Render guide overlay
   const renderGuide = useCallback(() => {
     if (!showGuide || !tracingData || mode !== 'guided') return null;
-    
+
     const stroke = tracingData.strokes[currentStroke] || tracingData.strokes[0];
     const { points, startPoint, endPoint } = stroke;
-    
+
     return (
       <svg
         className="absolute inset-0 pointer-events-none"
@@ -195,7 +190,7 @@ const NumberTracing = () => {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        
+
         {/* Start point */}
         <circle
           cx={startPoint.x}
@@ -214,7 +209,7 @@ const NumberTracing = () => {
         >
           Start
         </text>
-        
+
         {/* End point */}
         <circle
           cx={endPoint.x}
@@ -233,13 +228,13 @@ const NumberTracing = () => {
         >
           End
         </text>
-        
+
         {/* Direction arrows */}
         {points.map((p, i) => {
           if (i % 3 !== 0 || i === points.length - 1) return null;
           const next = points[Math.min(i + 1, points.length - 1)];
           const angle = Math.atan2(next.y - p.y, next.x - p.x) * (180 / Math.PI);
-          
+
           return (
             <polygon
               key={i}
@@ -250,7 +245,7 @@ const NumberTracing = () => {
             />
           );
         })}
-        
+
         {/* Stroke number indicator */}
         {tracingData.strokes.length > 1 && (
           <rect
@@ -319,7 +314,7 @@ const NumberTracing = () => {
               Free
             </button>
           </div>
-          
+
           {/* Guide toggle */}
           {mode === 'guided' && (
             <button
@@ -348,10 +343,10 @@ const NumberTracing = () => {
           onPointerLeave={handlePointerUp}
           style={{ touchAction: 'none' }}
         />
-        
+
         {/* Guide overlay */}
         {renderGuide()}
-        
+
         {/* Accuracy display */}
         {traceResult && (
           <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-soft">
@@ -365,7 +360,7 @@ const NumberTracing = () => {
             </div>
           </div>
         )}
-        
+
         {/* Stroke indicator */}
         {mode === 'guided' && tracingData && (
           <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-soft">
@@ -392,9 +387,9 @@ const NumberTracing = () => {
             />
           ))}
         </div>
-        
+
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
-        
+
         {/* Line width */}
         <select
           value={lineWidth}
@@ -407,9 +402,9 @@ const NumberTracing = () => {
           <option value={8}>Thick</option>
           <option value={12}>Extra Thick</option>
         </select>
-        
+
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
-        
+
         {/* Eraser */}
         <button
           onClick={toggleEraser}
@@ -422,9 +417,9 @@ const NumberTracing = () => {
         >
           {isEraser ? <FaPencilAlt /> : <FaEraser />}
         </button>
-        
+
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
-        
+
         {/* Undo/Redo */}
         <button
           onClick={undo}
@@ -440,9 +435,9 @@ const NumberTracing = () => {
         >
           <FaRedo />
         </button>
-        
+
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
-        
+
         {/* Clear */}
         <button
           onClick={handleReset}
@@ -505,8 +500,8 @@ const NumberTracing = () => {
                 You traced Number {number?.number}!
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mt-2">
-                {accuracy > 80 
-                  ? 'Perfect tracing! You\'re a star! 🌟' 
+                {accuracy > 80
+                  ? 'Perfect tracing! You\'re a star! 🌟'
                   : 'Great effort! Keep practicing! 💪'}
               </p>
               <div className="flex justify-center gap-2 mt-4">

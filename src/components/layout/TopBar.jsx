@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaBell, FaStar, FaMoon, FaSun, FaUserCircle } from 'react-icons/fa';
+import { FaStar, FaMoon, FaSun } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useChildAccount } from '../../context/ChildAccountContext';
@@ -14,8 +14,8 @@ const TopBar = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
-  const toggleNotifications = () => setShowNotifications(prev => !prev);
-  const closeNotifications = () => setShowNotifications(false);
+
+
 
   // Close notifications when clicking outside
   useEffect(() => {
@@ -44,7 +44,7 @@ const TopBar = () => {
             transition={{ type: 'spring', stiffness: 300 }}
             className="text-3xl md:text-4xl"
           >
-            
+
           </motion.div>
           <div className="hidden xs:block">
             <h1 className="font-baloo text-xl md:text-2xl font-bold text-primary dark:text-blue-400">

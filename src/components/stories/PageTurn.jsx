@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
-const PageTurn = ({ 
-  children, 
-  pageNumber, 
-  totalPages, 
+
+const PageTurn = ({
+  children,
+  pageNumber,
+  totalPages,
   onPageTurn,
-  className = '' 
+  className = ''
 }) => {
   const [direction, setDirection] = useState('next');
 
@@ -68,14 +68,16 @@ const PageTurn = ({
 
       {/* Click zones for page turning on desktop */}
       {pageNumber > 0 && (
-        <div
+        <button
+          type="button"
           className="hidden md:block absolute left-0 top-0 w-20 h-full cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
           onClick={handlePrev}
           aria-label="Previous page"
         />
       )}
       {pageNumber < totalPages - 1 && (
-        <div
+        <button
+          type="button"
           className="hidden md:block absolute right-0 top-0 w-20 h-full cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
           onClick={handleNext}
           aria-label="Next page"

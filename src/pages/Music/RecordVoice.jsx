@@ -1,23 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FaArrowLeft, FaPlay, FaPause, FaStop, FaMicrophone, FaSave, FaTrash } from 'react-icons/fa';
+
+import { FaArrowLeft, FaPlay, FaStop, FaMicrophone, FaTrash } from 'react-icons/fa';
 import { getSongById } from '../../data/musicData';
 import { useMusicProgress } from '../../hooks/useMusicProgress';
-import { useChildAccount } from '../../context/ChildAccountContext';
 import { voiceGuide } from '../../services/VoiceGuideService';
 
 const RecordVoice = () => {
   const { songId } = useParams();
-  const { childName, childId } = useChildAccount();
   const { progress } = useMusicProgress();
-  
+
   const [song, setSong] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [, setIsPlaying] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [hasRecording, setHasRecording] = useState(false);
-  
+
   const recordingRef = useRef(null);
   const recordingIntervalRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -28,7 +26,7 @@ const RecordVoice = () => {
     if (found) {
       setSong(found);
     }
-    
+
     // Check if recording exists
     if (progress.recordedSongs?.[songId]) {
       setHasRecording(true);
@@ -61,7 +59,7 @@ const RecordVoice = () => {
       mediaRecorderRef.current.start();
       setIsRecording(true);
       setRecordingTime(0);
-      
+
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
@@ -159,11 +157,11 @@ const RecordVoice = () => {
             <div className="text-6xl mb-4">
               <FaMicrophone className={isRecording ? 'text-red-500 animate-pulse' : 'text-purple-500'} />
             </div>
-            
+
             <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white mb-2">
               {isRecording ? 'Recording...' : hasRecording ? 'Your Recording' : 'No Recording Yet'}
             </h3>
-            
+
             {isRecording && (
               <div className="text-3xl font-bold text-red-500 mb-4">
                 {recordingTime}s
@@ -177,8 +175,8 @@ const RecordVoice = () => {
               <button
                 onClick={isRecording ? stopRecording : startRecording}
                 className={`px-8 py-4 rounded-xl font-bold text-white flex items-center gap-3 ${
-                  isRecording 
-                    ? 'bg-red-600 hover:bg-red-700' 
+                  isRecording
+                    ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-purple-600 hover:bg-purple-700'
                 }`}
               >

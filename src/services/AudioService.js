@@ -18,7 +18,7 @@ class AudioService {
     this.dataArray = null;
     this.audioCache = new Map();
     this.eventListeners = new Map();
-    
+
     // Initialize audio context on user interaction
     this.initAudioContext();
   }
@@ -68,7 +68,7 @@ class AudioService {
       const response = await fetch(source);
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-      
+
       // Cache for offline use
       this.audioCache.set(source, audioBuffer);
       return audioBuffer;
@@ -85,7 +85,7 @@ class AudioService {
   /**
    * Create speech audio using Web Speech API
    */
-  createSpeechAudio(text, voice = null) {
+  createSpeechAudio(text, ___voice = null) {
     return new Promise((resolve, reject) => {
       if (!('speechSynthesis' in window)) {
         reject(new Error('Speech synthesis not supported'));
@@ -116,7 +116,7 @@ class AudioService {
    */
   async play(audioBuffer, options = {}) {
     await this.resumeContext();
-    
+
     const {
       volume = this.volume,
       playbackRate = this.playbackRate,
@@ -184,7 +184,6 @@ class AudioService {
       rate = 0.9,
       pitch = 1.1,
       volume = this.volume,
-      voice = null,
       onEnd = null,
       onStart = null,
       onError = null
@@ -206,8 +205,8 @@ class AudioService {
 
     // Try to find a kid-friendly voice
     const voices = window.speechSynthesis.getVoices();
-    const kidFriendlyVoice = voices.find(v => 
-      v.name.includes('Female') || 
+    const kidFriendlyVoice = voices.find(v =>
+      v.name.includes('Female') ||
       v.name.includes('Samantha') ||
       v.name.includes('Google UK English Female') ||
       v.name.includes('Microsoft Zira')
@@ -220,12 +219,12 @@ class AudioService {
       this.isPlaying = true;
       if (onStart) onStart();
     };
-    
+
     utterance.onend = () => {
       this.isPlaying = false;
       if (onEnd) onEnd();
     };
-    
+
     utterance.onerror = (error) => {
       this.isPlaying = false;
       if (onError) onError(error);
@@ -294,7 +293,7 @@ class AudioService {
    */
   processQueue() {
     if (this.audioQueue.length === 0) return;
-    
+
     const item = this.audioQueue.shift();
     this.play(item.audioBuffer, {
       ...item.options,

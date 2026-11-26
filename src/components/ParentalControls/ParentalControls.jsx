@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaLock, FaUnlock, FaClock, FaGamepad, FaBookOpen, FaChartLine, FaMoon, FaSun, FaShieldAlt, FaBan, FaSave } from 'react-icons/fa';
-import { SafeModeService } from '../../services/SafeModeService';
+import { motion } from 'framer-motion';
+import { FaClock, FaMoon, FaSun, FaShieldAlt, FaBan, FaSave } from 'react-icons/fa';
+
 import { ParentZoneService } from '../../services/ParentZoneService';
 import { ChildAccountService } from '../../services/ChildAccountService';
 

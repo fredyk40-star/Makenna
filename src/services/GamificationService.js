@@ -145,7 +145,7 @@ export class GamificationService {
   /**
    * Add XP to a child
    */
-  static addXP(childId, amount, reason = '') {
+  static addXP(childId, amount, _reason = '') {
     const state = this.getState(childId);
     state.xp += amount;
     const newLevel = this.getLevel(state.xp);
@@ -291,7 +291,7 @@ export class GamificationService {
     if (state.currentStreak >= 7) this.addBadge(childId, 'streak_7');
     if (state.currentStreak >= 30) this.addBadge(childId, 'streak_30');
 
-    const xpGained = this.addXP(childId, reward.xp + state.currentStreak * 5, 'Daily reward');
+    this.addXP(childId, reward.xp + state.currentStreak * 5, 'Daily reward');
     this.saveState(childId, state);
 
     return { day: state.dailyRewardDay, coins: reward.coins, xp: reward.xp + state.currentStreak * 5, streak: state.currentStreak };

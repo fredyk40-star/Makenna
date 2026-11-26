@@ -3,7 +3,7 @@
  * Creates personalized daily/weekly learning schedules
  */
 import { StorageService } from './StorageService';
-import { AdaptiveLearningService } from './AdaptiveLearningService';
+
 import { RevisionPlanner } from './RevisionPlanner';
 
 const SCHEDULE_KEY = 'makenna_lesson_schedule';
@@ -87,7 +87,7 @@ export class LessonScheduler {
     });
 
     // Then add balanced learning
-    const remainingSlots = Math.max(3 - lessons.length, 0);
+    Math.max(3 - lessons.length, 0);
     for (const subject of subjects) {
       if (lessons.length >= 4) break;
       if (!addedSubjects.has(subject)) {
@@ -108,7 +108,7 @@ export class LessonScheduler {
   /**
    * Get suggested content for a subject
    */
-  static getSuggestedContent(subject, childId) {
+  static getSuggestedContent(subject, _childId) {
     // Return placeholder content IDs based on subject
     const suggestions = {
       Alphabet: ['a', 'b', 'c'],

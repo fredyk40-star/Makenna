@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { COLOURS_DATA } from '../../data/coloursData';
-import { ROUTES } from '../../routes';
+
 
 const ColoursHome = () => {
   return (

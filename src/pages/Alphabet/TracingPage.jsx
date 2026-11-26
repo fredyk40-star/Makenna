@@ -13,6 +13,7 @@ const TracingPage = () => {
   const [letter, setLetter] = useState(null);
   const [selectedCase, setSelectedCase] = useState('uppercase');
   const [selectedMode, setSelectedMode] = useState(mode);
+  const [traceProgress, setTraceProgress] = useState(0);
   const { markOpened, addTimeSpent } = useAlphabetProgress();
   const { getProfileData, setProfileData } = useProfiles();
 
@@ -71,7 +72,7 @@ const TracingPage = () => {
   };
 
   const handleProgress = (progress) => {
-    // Update progress in state if needed
+    setTraceProgress(Math.min(100, Math.max(0, Math.round((progress || 0) * 100))));
   };
 
   return (
@@ -174,6 +175,9 @@ const TracingPage = () => {
           <p>👆 Follow the guide arrows to trace the letter correctly</p>
         ) : (
           <p>✏️ Practice writing the letter freely. Try different colors!</p>
+        )}
+        {selectedMode === 'trace' && (
+          <p className="mt-1 text-xs" aria-live="polite">Trace progress: {traceProgress}%</p>
         )}
       </div>
 

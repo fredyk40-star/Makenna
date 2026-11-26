@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  FaPlay, FaClock, FaStar, FaRegStar, 
-  FaBookOpen, FaHeart, FaRegHeart 
+import {
+  FaPlay, FaClock, FaHeart, FaRegHeart
 } from 'react-icons/fa';
 
 const StoryCard = ({ story, isFavorite, onFavoriteToggle }) => {
-  const [isHovered, setIsHovered] = useState(false);
+  const [, setIsHovered] = useState(false);
 
   const getLevelBadge = (level) => {
     const colors = {
@@ -37,7 +36,7 @@ const StoryCard = ({ story, isFavorite, onFavoriteToggle }) => {
       {/* Cover */}
       <div className="relative h-48 bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center">
         <div className="text-7xl">{story.coverEmoji}</div>
-        
+
         {/* Letter Badge */}
         <div className="absolute top-2 left-2 px-2 py-1 bg-white/90 dark:bg-gray-800/90 rounded-lg text-sm font-bold text-gray-800 dark:text-white">
           {story.letter}
@@ -92,7 +91,7 @@ const StoryCard = ({ story, isFavorite, onFavoriteToggle }) => {
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {story.pages.length} pages
           </div>
-          
+
           <Link to={`/story/${story.id}`}>
             <motion.button
               whileHover={{ scale: 1.05 }}

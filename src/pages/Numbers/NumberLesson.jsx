@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaArrowRight, FaStar, FaRegStar, 
-  FaCheck, FaVolumeUp, FaPlay, FaHeart, FaRegHeart,
-  FaFlag, FaRocket, FaPencilAlt
+import {
+  FaArrowLeft, FaStar, FaCheck, FaVolumeUp, FaPlay, FaHeart, FaRegHeart,
+  FaFlag, FaPencilAlt
 } from 'react-icons/fa';
 import { NUMBERS_DATA, getNumberById } from '../../data/numbersData';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
@@ -31,8 +30,8 @@ const NumberLesson = () => {
   const [startTime, setStartTime] = useState(Date.now());
   const [isCounting, setIsCounting] = useState(false);
   const [countIndex, setCountIndex] = useState(0);
-  
-  const { speak, isPlaying } = useAudio();
+
+  const { speak } = useAudio();
   const countIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -41,7 +40,7 @@ const NumberLesson = () => {
       setNumber(found);
       markOpened(numberId);
       setStartTime(Date.now());
-      
+
       // Speak the number name on load
       setTimeout(() => {
         speak(found.word, { rate: 0.8, pitch: 1.1 });
@@ -93,7 +92,7 @@ const NumberLesson = () => {
     setIsCounting(true);
     setCountIndex(0);
     const objects = number.objects || [];
-    
+
     countIntervalRef.current = setInterval(() => {
       setCountIndex(prev => {
         const next = prev + 1;
@@ -116,7 +115,7 @@ const NumberLesson = () => {
       markCompleted(numberId);
       setShowCelebration(true);
       announceToScreenReader(`Completed number ${number.number}!`);
-      
+
       // Check if all numbers are mastered
       setTimeout(() => {
         markMastered(numberId);
@@ -255,7 +254,7 @@ const NumberLesson = () => {
             {isCounting ? 'Stop' : 'Count'}
           </button>
         </div>
-        
+
         <div className="flex flex-wrap justify-center gap-2 min-h-[80px] p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
           {getObjectsToShow().map((obj, index) => (
             <motion.span

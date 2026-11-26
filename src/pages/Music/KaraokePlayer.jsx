@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaArrowLeft, FaPlay, FaPause, FaRedo, FaStop,
-  FaExpand, FaCompress, FaStar, FaMusic, FaMicrophone
-} from 'react-icons/fa';
+import { FaArrowLeft, FaPlay, FaPause, FaRedo, FaStar, FaMicrophone } from 'react-icons/fa';
 import { getSongById } from '../../data/musicData';
 import { useMusicProgress } from '../../hooks/useMusicProgress';
 import { useChildAccount } from '../../context/ChildAccountContext';
@@ -15,8 +12,8 @@ const KaraokePlayer = () => {
   const { songId } = useParams();
   const navigate = useNavigate();
   const { childName, childId } = useChildAccount();
-  const { recordPlay, markCompleted, saveRecording } = useMusicProgress();
-  
+  const { markCompleted, saveRecording } = useMusicProgress();
+
   const [song, setSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -26,7 +23,7 @@ const KaraokePlayer = () => {
   const [showRecording, setShowRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [completedSections, setCompletedSections] = useState([]);
-  
+
   const recordingIntervalRef = useRef(null);
   const startTimeRef = useRef(null);
 
@@ -35,7 +32,7 @@ const KaraokePlayer = () => {
     if (found) {
       setSong(found);
       setDuration(found.duration || 30);
-      
+
       if (childName) {
         voiceGuide.speak(`Hello ${childName}! Let's sing ${found.title} in karaoke mode!`);
       }
@@ -58,13 +55,13 @@ const KaraokePlayer = () => {
       interval = setInterval(() => {
         const elapsed = (Date.now() - startTimeRef.current) / 1000;
         setCurrentTime(elapsed);
-        
+
         const lyricIndex = song.lyrics.findIndex((line, i) => {
           const nextLine = song.lyrics[i + 1];
-          return elapsed >= line.timing * 4 / playbackSpeed && 
+          return elapsed >= line.timing * 4 / playbackSpeed &&
                  (!nextLine || elapsed < nextLine.timing * 4 / playbackSpeed);
         });
-        
+
         setActiveLyricIndex(lyricIndex);
       }, 100);
     }
@@ -76,7 +73,7 @@ const KaraokePlayer = () => {
       voiceGuide.cancel();
     } else {
       if (song?.lyrics) {
-        song.lyrics.forEach((line, i) => {
+        song.lyrics.forEach((line, __i) => {
           setTimeout(() => {
             if (isPlaying) return;
             voiceGuide.speak(line.words, { rate: playbackSpeed * 0.8 });
@@ -99,16 +96,7 @@ const KaraokePlayer = () => {
     }, 100);
   }, [handlePlayPause]);
 
-  const markSectionComplete = (index) => {
-    if (!completedSections.includes(index)) {
-      const newCompleted = [...completedSections, index];
-      setCompletedSections(newCompleted);
-      
-      if (newCompleted.length === song?.lyrics?.length) {
-        handleSongComplete();
-      }
-    }
-  };
+
 
   const handleSongComplete = () => {
     markCompleted(songId);
@@ -207,12 +195,12 @@ const KaraokePlayer = () => {
               <motion.div
                 key={i}
                 initial={{ y: '100%', x: `${Math.random() * 100}%`, opacity: 0 }}
-                animate={{ 
-                  y: '-100%', 
+                animate={{
+                  y: '-100%',
                   opacity: [0, 1, 0],
                   rotate: [0, 360, 0]
                 }}
-                transition={{ 
+                transition={{
                   duration: 3 + Math.random() * 2,
                   repeat: Infinity,
                   delay: Math.random() * 2
@@ -228,12 +216,12 @@ const KaraokePlayer = () => {
         {/* Bouncing Ball */}
         <div className="relative w-full max-w-2xl h-20 mb-8">
           <motion.div
-            animate={{ 
+            animate={{
               x: isPlaying ? ['0%', '100%', '0%'] : '50%',
               y: isPlaying ? [0, -80, 0] : 0
             }}
-            transition={{ 
-              duration: 2, 
+            transition={{
+              duration: 2,
               repeat: isPlaying ? Infinity : 0,
               ease: 'easeInOut'
             }}

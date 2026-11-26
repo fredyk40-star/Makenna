@@ -1,23 +1,22 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { 
-  FaSearch, FaStar, FaLock, FaPlay, FaClock, 
-  FaHeart, FaRegHeart, FaFilter, FaTrophy
+import { motion } from 'framer-motion';
+
+import {
+  FaSearch, FaFilter, FaTrophy
 } from 'react-icons/fa';
 import GameCard from './GameCard';
 import gameProgressService from '../../services/GameProgressService';
-import { staggerContainer, fadeInUp } from '../../utils/constants';
+import { staggerContainer } from '../../utils/constants';
 
-const GameHub = ({ 
-  games, 
+const GameHub = ({
+  games,
   title = 'Game Hub',
   subtitle = 'Choose your adventure!',
-  className = '' 
+  className = ''
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterCategory, ] = useState('all');
   const [favorites, setFavorites] = useState([]);
   const [filteredGames, setFilteredGames] = useState(games);
 
@@ -35,32 +34,32 @@ const GameHub = ({
 
   useEffect(() => {
     let filtered = [...games];
-    
+
     // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(game => 
+      filtered = filtered.filter(game =>
         game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         game.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     // Difficulty filter
     if (filterDifficulty !== 'all') {
       filtered = filtered.filter(game => game.difficulty === filterDifficulty);
     }
-    
+
     // Category filter
     if (filterCategory !== 'all') {
       filtered = filtered.filter(game => game.category === filterCategory);
     }
-    
+
     // Favorites first
     filtered.sort((a, b) => {
       const aFav = favorites.includes(a.id) ? -1 : 1;
       const bFav = favorites.includes(b.id) ? -1 : 1;
       return aFav - bFav;
     });
-    
+
     setFilteredGames(filtered);
   }, [games, searchQuery, filterDifficulty, filterCategory, favorites]);
 
@@ -68,7 +67,7 @@ const GameHub = ({
     const newFavorites = favorites.includes(gameId)
       ? favorites.filter(id => id !== gameId)
       : [...favorites, gameId];
-    
+
     setFavorites(newFavorites);
     localStorage.setItem('game_favorites', JSON.stringify(newFavorites));
   };
@@ -80,13 +79,7 @@ const GameHub = ({
     { id: 'hard', label: 'Hard' }
   ];
 
-  const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'letters', label: 'Letters' },
-    { id: 'sounds', label: 'Sounds' },
-    { id: 'words', label: 'Words' },
-    { id: 'memory', label: 'Memory' }
-  ];
+
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -180,7 +173,7 @@ const GameHub = ({
             <div>
               <h4 className="font-bold text-gray-800 dark:text-white">Your Progress</h4>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                {gameProgressService.getCompletedGames()} games completed • 
+                {gameProgressService.getCompletedGames()} games completed •
                 {gameProgressService.getTotalStars()} stars earned
               </p>
             </div>

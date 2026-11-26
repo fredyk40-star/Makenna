@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   FaArrowLeft, FaArrowRight, FaPlay, FaPause,
-  FaVolumeUp, FaVolumeMute, FaBook, FaHeadphones,
-  FaStar, FaRegStar, FaList, FaTimes, FaCheck
+  FaBook, FaHeadphones,
+  FaList, FaTimes
 } from 'react-icons/fa';
 import { getStoryById } from '../../data/numbersStoriesData';
 import { useAudio } from '../../hooks/useAudio';
@@ -22,12 +22,12 @@ const NumberStoryReader = () => {
   const [highlightedWord, setHighlightedWord] = useState('');
   const [showVocabulary, setShowVocabulary] = useState(false);
   const [selectedWord, setSelectedWord] = useState(null);
-  const [isComplete, setIsComplete] = useState(false);
+  const [, setIsComplete] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
 
-  const { speak, stop, isPlaying: isAudioPlaying } = useAudio();
+  const { speak, stop } = useAudio();
   const { markCompleted, markMastered } = useNumbersProgress();
 
   useEffect(() => {
@@ -35,7 +35,7 @@ const NumberStoryReader = () => {
     if (found) {
       setStory(found);
       setStartTime(Date.now());
-      
+
       // Load favorite status
       try {
         const favorites = JSON.parse(localStorage.getItem('number_story_favorites') || '[]');
@@ -74,7 +74,7 @@ const NumberStoryReader = () => {
 
   const handlePageTurn = useCallback(async (direction) => {
     if (!story) return;
-    
+
     const newPage = direction === 'next' ? currentPage + 1 : currentPage - 1;
     if (newPage < 0 || newPage >= story.pages.length) {
       if (direction === 'next' && newPage === story.pages.length) {
@@ -88,10 +88,10 @@ const NumberStoryReader = () => {
       }
       return;
     }
-    
+
     setCurrentPage(newPage);
     setHighlightedWord('');
-    
+
     if (readingMode === 'read-to-me') {
       await readPage(newPage);
     }
@@ -99,14 +99,14 @@ const NumberStoryReader = () => {
 
   const readPage = useCallback(async (pageIndex) => {
     if (!story) return;
-    
+
     const page = story.pages[pageIndex];
     if (!page) return;
-    
+
     setIsPlaying(true);
     const text = page.text;
     const words = text.split(' ');
-    
+
     for (const word of words) {
       setHighlightedWord(word);
       await speak(word, {
@@ -115,7 +115,7 @@ const NumberStoryReader = () => {
       });
       await new Promise(resolve => setTimeout(resolve, 200));
     }
-    
+
     setHighlightedWord('');
     setIsPlaying(false);
   }, [story, speak]);
@@ -126,7 +126,7 @@ const NumberStoryReader = () => {
         rate: 0.7,
         pitch: 1.1
       });
-      
+
       // Check if word is in vocabulary
       if (story?.vocabulary) {
         const vocabWord = story.vocabulary.find(v => v.word.toLowerCase() === word.toLowerCase());

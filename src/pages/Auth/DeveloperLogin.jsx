@@ -50,7 +50,7 @@ const DeveloperLogin = () => {
         navigate('/developer', { replace: true });
       } else {
         DeveloperService.recordFailedAttempt();
-        const attempts = 5; // max before lockout
+         // max before lockout
         setError('Invalid PIN. Please try again.');
         playError();
       }
@@ -64,7 +64,7 @@ const DeveloperLogin = () => {
 
   const handleSetPin = async (e) => {
     e.preventDefault();
-    
+
     if (!/^\d{4}$/.test(pin) && !/^\d{8}$/.test(pin)) {
       setError('PIN must be 4 or 8 digits');
       return;
@@ -104,7 +104,7 @@ const DeveloperLogin = () => {
               {isSettingPin ? 'Set Developer PIN' : 'Developer Portal'}
             </h1>
             <p className="text-gray-400 mt-2">
-              {isSettingPin 
+              {isSettingPin
                 ? 'Create a secure PIN for developer access'
                 : 'Enter your developer PIN to continue'
               }

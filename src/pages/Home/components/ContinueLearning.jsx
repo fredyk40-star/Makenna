@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowRight, FaBookOpen, FaCalculator, FaStar } from 'react-icons/fa';
+import { FaArrowRight, FaStar } from 'react-icons/fa';
 import { useChildAccount } from '../../../context/ChildAccountContext';
 import { RecommendationService } from '../../../services/RecommendationService';
 import { ChildAccountService } from '../../../services/ChildAccountService';
@@ -59,7 +59,7 @@ const ContinueLearning = () => {
             Continue Learning
           </h2>
         </div>
-        
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

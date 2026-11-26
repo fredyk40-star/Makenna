@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
-import { FaWifi, FaExclamationTriangle } from 'react-icons/fa';
+import { FaExclamationTriangle } from 'react-icons/fa';
 
 const OfflineDetector = () => {
   const isOffline = useOfflineStatus();

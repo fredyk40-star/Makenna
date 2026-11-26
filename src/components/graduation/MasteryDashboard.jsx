@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FaStar, FaTrophy, FaChartLine, FaBook, FaGamepad, FaPencilAlt } from 'react-icons/fa';
+import { FaStar, FaChartLine, FaBook, FaPencilAlt } from 'react-icons/fa';
 import { useMastery } from '../../hooks/useMastery';
 
 const MasteryDashboard = ({ className = '' }) => {

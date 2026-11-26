@@ -7,7 +7,7 @@ const CountPlantains = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [targetNumber, setTargetNumber] = useState(0);
   const [count, setCount] = useState(0);
   const [plantains, setPlantains] = useState([]);
-  const [selectedPlantains, setSelectedPlantains] = useState([]);
+  const [, setSelectedPlantains] = useState([]);
   const [isCorrect, setIsCorrect] = useState(null);
   const [attempts, setAttempts] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
@@ -46,7 +46,7 @@ const CountPlantains = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const handlePlantainClick = (plantainId) => {
     if (isCorrect !== null || showResult) return;
 
-    setPlantains(prev => prev.map(p => 
+    setPlantains(prev => prev.map(p =>
       p.id === plantainId ? { ...p, selected: !p.selected } : p
     ));
 
@@ -66,10 +66,10 @@ const CountPlantains = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       setCorrectAnswers(prev => prev + 1);
       speak('Excellent! 🎉', { rate: 0.8, pitch: 1.2 });
       announceToScreenReader('Correct! Great job!');
-      
+
       const newScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
       onScoreUpdate(newScore);
-      
+
       setTimeout(() => {
         if (totalQuestions >= 5) {
           const finalScore = Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);

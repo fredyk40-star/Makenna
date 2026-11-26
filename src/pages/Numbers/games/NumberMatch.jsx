@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAudio } from '../../../hooks/useAudio';
 import { announceToScreenReader } from '../../../utils/accessibility';
 
@@ -10,7 +10,7 @@ const NumberMatch = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
   const [attempts, setAttempts] = useState(0);
   const [correctMatches, setCorrectMatches] = useState(0);
   const [totalPairs, setTotalPairs] = useState(0);
-  const [score, setScore] = useState(0);
+  const [, setScore] = useState(0);
 
   const { speak } = useAudio();
 
@@ -25,7 +25,7 @@ const NumberMatch = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
     for (let i = 1; i <= numPairs; i++) {
       numbers.push(Math.floor(Math.random() * max) + 1);
     }
-    
+
     // Create pairs: one numeral, one emoji count
     const newPairs = [];
     numbers.forEach((num, index) => {
@@ -73,7 +73,7 @@ const NumberMatch = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
     // Check match
     if (selectedPair.pairId === pair.pairId && selectedPair.id !== pair.id) {
       // Match found!
-      setPairs(prev => prev.map(p => 
+      setPairs(prev => prev.map(p =>
         p.pairId === pair.pairId ? { ...p, matched: true } : p
       ));
       setMatchedPairs(prev => [...prev, pair.pairId]);
@@ -99,7 +99,7 @@ const NumberMatch = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
       setAttempts(prev => prev + 1);
       speak('Try again!', { rate: 0.7, pitch: 1.0 });
       announceToScreenReader('Not a match, try again');
-      
+
       // Reset selection after delay
       setTimeout(() => {
         setSelectedPair(null);

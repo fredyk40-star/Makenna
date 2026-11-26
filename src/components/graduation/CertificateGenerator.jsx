@@ -1,14 +1,14 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaDownload, FaPrint, FaShare } from 'react-icons/fa';
+import { FaDownload, FaPrint } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 
-const CertificateGenerator = ({ 
+const CertificateGenerator = ({
   childName = 'Makenna',
   date = new Date(),
   stars = 0,
   readingLevel = 'Emerging Reader',
-  className = '' 
+  className = ''
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const certificateRef = useRef(null);
@@ -73,7 +73,7 @@ const CertificateGenerator = ({
             <h1 className="font-baloo text-4xl font-bold text-primary dark:text-blue-400">
               Alphabet Adventure Graduate!
             </h1>
-            
+
             <div className="my-6">
               <p className="text-lg text-gray-600 dark:text-gray-300">
                 This certificate is proudly presented to
