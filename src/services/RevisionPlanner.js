@@ -41,7 +41,6 @@ export class RevisionPlanner {
    * Detect forgotten lessons (items with low mastery and old last attempt)
    */
   static detectForgottenLessons(childId, thresholdDays = 7) {
-    StorageService.get(REVISION_KEY, {});
     const items = [];
 
     // Check adaptive learning data

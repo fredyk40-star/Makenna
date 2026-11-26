@@ -19,9 +19,9 @@ const Card = memo(({ card, index }) => {
       }}
       whileTap={{ scale: isComingSoon ? 1 : 0.95 }}
       className={`relative bg-gradient-to-br ${card.color} rounded-2xl p-4 md:p-5 shadow-soft transition-all duration-300 group ${isComingSoon ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-      role={isComingSoon ? 'none' : 'button'}
-      tabIndex={isComingSoon ? -1 : 0}
-      aria-label={isComingSoon ? `${card.title} (Coming Soon)` : `Navigate to ${card.title}`}
+      role={isComingSoon ? 'note' : undefined}
+      aria-label={isComingSoon ? `${card.title} (Coming Soon)` : undefined}
+      aria-disabled={isComingSoon || undefined}
     >
       <div className="flex flex-col items-center text-center">
         <div className="text-3xl md:text-4xl mb-2 group-hover:rotate-6 transition-transform duration-300" aria-hidden="true">
@@ -44,7 +44,11 @@ const Card = memo(({ card, index }) => {
   }
 
   return (
-    <Link to={card.path} aria-hidden="true" tabIndex={-1}>
+    <Link
+      to={card.path}
+      aria-label={`Navigate to ${card.title}`}
+      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+    >
       {cardContent}
     </Link>
   );

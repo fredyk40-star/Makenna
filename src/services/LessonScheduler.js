@@ -87,7 +87,6 @@ export class LessonScheduler {
     });
 
     // Then add balanced learning
-    Math.max(3 - lessons.length, 0);
     for (const subject of subjects) {
       if (lessons.length >= 4) break;
       if (!addedSubjects.has(subject)) {

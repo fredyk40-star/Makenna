@@ -82,8 +82,6 @@ const Subtraction = () => {
       });
 
       if (totalQuestions >= 5) {
-        Math.round((correctAnswers + 1) / (totalQuestions + 1) * 100);
-
         setShowCelebration(true);
         setTimeout(() => {
           setShowCelebration(false);

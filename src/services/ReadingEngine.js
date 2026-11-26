@@ -288,7 +288,6 @@ export class ReadingEngine {
    */
   generateReadingPractice(level = 1) {
     const sentences = [];
-    this.getSightWords(level);
     const families = Object.values(this.wordFamilies);
 
     // Simple sentences with sight words and CVC words

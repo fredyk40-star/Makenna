@@ -50,7 +50,6 @@ const DeveloperLogin = () => {
         navigate('/developer', { replace: true });
       } else {
         DeveloperService.recordFailedAttempt();
-         // max before lockout
         setError('Invalid PIN. Please try again.');
         playError();
       }

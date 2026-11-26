@@ -2,6 +2,7 @@
  * Audio Service - Core audio engine for Makenna Learning Lab
  * Supports: Play, Pause, Replay, Queue, Preload, Offline Caching
  */
+import { isBenignSpeechError } from '../utils/speech';
 
 class AudioService {
   constructor() {
@@ -227,6 +228,7 @@ class AudioService {
 
     utterance.onerror = (error) => {
       this.isPlaying = false;
+      if (isBenignSpeechError(error)) return;
       if (onError) onError(error);
     };
 

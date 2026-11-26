@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import { BIBLE_STORIES_DATA } from '../../data/bibleStoriesData';
+import { reportSpeechError } from '../../utils/speech';
 
 const BibleStoryReader = () => {
   const { storyId } = useParams();
@@ -101,7 +102,7 @@ const BibleStoryReader = () => {
     };
 
     utterance.onerror = (event) => {
-      console.warn('Speech error:', event);
+      reportSpeechError(event);
       setHighlightRange({ start: 0, end: 0 });
       setIsPlaying(false);
       utteranceRef.current = null;

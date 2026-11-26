@@ -2,6 +2,8 @@
  * VoiceGuideService - Text-to-speech wrapper with full control
  * Provides a reusable voice guidance system for the learning app
  */
+import { isBenignSpeechError, reportSpeechError } from '../utils/speech';
+
 export class VoiceGuideService {
   /**
    * Check if speech synthesis is supported in this browser
@@ -94,14 +96,11 @@ export class VoiceGuideService {
 
      this.utterance.onerror = (e) => {
        this._speaking = false;
-       // Handle autoplay policy blocked error gracefully
-       if (e.error === 'not-allowed') {
-         console.warn('Speech synthesis blocked by browser - requires user interaction');
-       } else {
-         console.warn('Speech error:', e);
+       reportSpeechError(e);
+       if (!isBenignSpeechError(e)) {
+         if (onError) onError(e);
+         if (this._onError) this._onError(e);
        }
-       if (onError) onError(e);
-       if (this._onError) this._onError(e);
        this._processQueue();
      };
 

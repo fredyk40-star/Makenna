@@ -10,7 +10,7 @@ import audioService from '../../services/AudioService';
 const AudioPlayer = ({
   source,
   text,
-  _autoPlay: __autoPlay = false,
+  autoPlay: _autoPlay = false,
   showControls = true,
   showWaveform = false,
   className = '',

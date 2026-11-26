@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import storyEngine from '../services/StoryEngine';
 import readingAnalyticsService from '../services/ReadingAnalyticsService';
+import { reportSpeechError } from '../utils/speech';
 
 export const useStory = (storyId = null) => {
   const [story, setStory] = useState(null);
@@ -208,7 +209,7 @@ export const useStory = (storyId = null) => {
     };
 
     utterance.onerror = (event) => {
-      console.warn('Speech error:', event);
+      reportSpeechError(event);
       setHighlightedWord('');
       setIsPlaying(false);
       storyEngine.stopReading();
