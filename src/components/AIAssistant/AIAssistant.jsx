@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaMicrophone, FaMicrophoneSlash, FaRobot, FaTimes, FaComment, FaPaperPlane, FaMinus, FaPlus } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { FaMicrophone, FaMicrophoneSlash, FaRobot, FaTimes, FaComment, FaPaperPlane, FaMinus, FaPlus, FaBookOpen, FaVolumeUp } from 'react-icons/fa';
 import { AIAssistantService } from '../../services/AIAssistantService';
 import { CurriculumTutorService } from '../../services/CurriculumTutorService';
 import { GeminiTutorService } from '../../services/GeminiTutorService';
 import { useChildAccount } from '../../context/ChildAccountContext';
 
 const AIAssistant = () => {
+  const navigate = useNavigate();
   const { activeChild } = useChildAccount();
   const child = activeChild;
   const [isOpen, setIsOpen] = useState(false);
@@ -155,7 +157,7 @@ const AIAssistant = () => {
       if (child?.childId && tutorEnabled) {
         const suggestion = CurriculumTutorService.getSuggestion(child.childId, child.fullName);
         const greeting = suggestion?.text || AIAssistantService.getGreeting(child.childId, child.fullName);
-        setMessages([{ id: Date.now(), text: greeting, sender: 'assistant' }]);
+        setMessages([{ id: Date.now(), text: greeting, sender: 'assistant', unit: suggestion?.unit || null }]);
         setShowBubble(true);
         setIsActive(true);
       }
@@ -223,7 +225,7 @@ const AIAssistant = () => {
       if (messages.length === 0) {
         const suggestion = CurriculumTutorService.getSuggestion(child.childId, child.fullName);
         if (suggestion) {
-          setMessages([{ id: Date.now(), text: suggestion.text, sender: 'assistant' }]);
+          setMessages([{ id: Date.now(), text: suggestion.text, sender: 'assistant', unit: suggestion.unit }]);
         }
       }
     }
@@ -284,7 +286,7 @@ const AIAssistant = () => {
       allowOnlineAI,
     );
     const response = result?.text || 'I can only answer curriculum questions right now.';
-    const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant' };
+    const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant', unit: result?.unit || null };
     setMessages(prev => [...prev, assistantMessage]);
     
     // Speak the response
@@ -317,7 +319,7 @@ const AIAssistant = () => {
       allowOnlineAI,
     );
     const response = result?.text || 'I can only answer curriculum questions right now.';
-    const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant' };
+    const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant', unit: result?.unit || null };
     setMessages(prev => [...prev, assistantMessage]);
     
     speak(response);
@@ -391,7 +393,27 @@ const AIAssistant = () => {
                         : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow'
                     }`}
                   >
-                    <p className="text-sm">{msg.text}</p>
+                     <p className="text-sm">{msg.text}</p>
+                     {msg.sender === 'assistant' && (
+                       <div className="mt-2 flex flex-wrap gap-1">
+                         <button
+                           type="button"
+                           onClick={() => speak(msg.text)}
+                           className="text-xs px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200"
+                         >
+                           <FaVolumeUp className="inline mr-1" /> Read
+                         </button>
+                         {msg.unit?.path && (
+                           <button
+                             type="button"
+                             onClick={() => navigate(msg.unit.path)}
+                             className="text-xs px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200"
+                           >
+                             <FaBookOpen className="inline mr-1" /> Open lesson
+                           </button>
+                         )}
+                       </div>
+                     )}
                   </div>
                 </div>
               ))}
