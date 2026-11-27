@@ -12,6 +12,7 @@ const RegisterPage = () => {
   const { playError } = useVoiceGuide();
 
   const [fullName, setFullName] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +31,12 @@ const RegisterPage = () => {
       errors.name = 'Name must be 50 characters or less.';
     } else if (trimmedName.length < 2) {
       errors.name = 'Name must be at least 2 characters.';
+    }
+
+    if (!parentEmail.trim()) {
+      errors.parentEmail = 'A parent email is required for account recovery.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(parentEmail.trim())) {
+      errors.parentEmail = 'Please enter a valid parent email address.';
     }
 
     if (!pin) {
@@ -58,7 +65,7 @@ const RegisterPage = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await register(fullName.trim(), pin);
+      const result = await register(fullName.trim(), pin, parentEmail.trim());
       setRegisteredChild({ name: result.fullName, childId: result.childId });
       setShowCelebration(true);
     } catch (err) {
@@ -87,7 +94,11 @@ const RegisterPage = () => {
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-5xl mb-4" aria-hidden="true">🎉</div>
+            <img
+              src="/brand-logo.png"
+              alt="Makenna Lab emblem"
+              className="mx-auto h-16 w-auto object-contain mb-4"
+            />
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
               Create Your Account!
             </h1>
@@ -139,6 +150,41 @@ const RegisterPage = () => {
               {validationErrors.name && (
                 <p id="name-error" className="text-red-500 text-xs mt-1" role="alert">
                   {validationErrors.name}
+                </p>
+              )}
+            </div>
+
+            {/* Parent email - required for recovery */}
+            <div>
+              <label htmlFor="parentEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Parent Email 📧
+              </label>
+              <input
+                id="parentEmail"
+                type="email"
+                value={parentEmail}
+                onChange={(e) => {
+                  setParentEmail(e.target.value);
+                  setLocalError('');
+                  setValidationErrors(prev => ({ ...prev, parentEmail: '' }));
+                }}
+                placeholder="parent@example.com"
+                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all ${
+                  validationErrors.parentEmail ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'
+                }`}
+                autoComplete="email"
+                disabled={isSubmitting}
+                aria-label="Parent email"
+                aria-invalid={!!validationErrors.parentEmail}
+                required
+              />
+              {validationErrors.parentEmail ? (
+                <p className="text-red-500 text-xs mt-1" role="alert">
+                  {validationErrors.parentEmail}
+                </p>
+              ) : (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                  Required: without a parent email, this account cannot be recovered and will be lost forever.
                 </p>
               )}
             </div>
@@ -265,6 +311,7 @@ const RegisterPage = () => {
         onClose={handleCelebrationClose}
         childName={registeredChild.name}
         childId={registeredChild.childId}
+        requireAcknowledgement
       />
     </div>
   );

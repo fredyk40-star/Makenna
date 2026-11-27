@@ -14,28 +14,36 @@
       "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-192x192.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/maskable-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
       "purpose": "any"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/splash-screen.png",
+      "sizes": "1536x1024",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Makenna Learning Lab"
+    }
+  ],
   "related_applications": [],
   "prefer_related_applications": false,
   "shortcuts": [
@@ -44,14 +52,14 @@
       "short_name": "Learn",
       "description": "Start learning today",
       "url": "/learn",
-      "icons": [{ "src": "/icon-192x192.svg", "sizes": "any" }]
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Games",
       "short_name": "Games",
       "description": "Play fun games",
       "url": "/games",
-      "icons": [{ "src": "/icon-192x192.svg", "sizes": "any" }]
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

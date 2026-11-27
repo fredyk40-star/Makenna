@@ -13,9 +13,13 @@ const Welcome = () => {
       <motion.div
         animate={{ y: ['0px', '-20px', '0px'] }}
         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-        className="text-8xl md:text-9xl mb-6"
+        className="mb-6"
       >
-        
+        <img
+          src="/brand-badge.png"
+          alt="Makenna Learning Lab badge"
+          className="mx-auto h-40 md:h-56 w-auto object-contain drop-shadow-lg"
+        />
       </motion.div>
       <h1 className="font-baloo text-4xl md:text-5xl font-bold text-primary dark:text-blue-400 mb-4">
         Welcome to Makenna Learning Lab!

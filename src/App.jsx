@@ -113,6 +113,10 @@ const CompareNumbers = lazyWithErrorHandler(() => import('./pages/Maths/CompareN
 const LoginPage = lazyWithErrorHandler(() => import('./pages/Auth/LoginPage'));
 const RegisterPage = lazyWithErrorHandler(() => import('./pages/Auth/RegisterPage'));
 const DeveloperLogin = lazyWithErrorHandler(() => import('./pages/Auth/DeveloperLogin'));
+const DeveloperForgotPassword = lazyWithErrorHandler(() => import('./pages/Auth/DeveloperForgotPassword'));
+const DeveloperResetPassword = lazyWithErrorHandler(() => import('./pages/Auth/DeveloperResetPassword'));
+const SupportPage = lazyWithErrorHandler(() => import('./pages/Auth/SupportPage'));
+const ResetCredentialPage = lazyWithErrorHandler(() => import('./pages/Auth/ResetCredentialPage'));
 const DeveloperDashboard = lazyWithErrorHandler(() => import('./pages/Developer/DeveloperDashboard'));
 const DataDebug = lazyWithErrorHandler(() => import('./components/DataDebug/DataDebug'));
 const TestSupabase = lazyWithErrorHandler(() => import('./pages/Developer/TestSupabase'));
@@ -120,7 +124,10 @@ const TestSupabase = lazyWithErrorHandler(() => import('./pages/Developer/TestSu
 // Developer protected route helper
 import { DeveloperService } from './services/DeveloperService';
 const DeveloperProtectedRoute = ({ children }) => {
-  const isDeveloperAuthenticated = DeveloperService.validateSession();
+  // A legacy local PIN session is no longer enough: the signed API token is
+  // only issued after the restricted email/password login succeeds.
+  const isDeveloperAuthenticated = DeveloperService.validateSession()
+    && !!DeveloperService.getSessionToken();
   return isDeveloperAuthenticated ? children : <Navigate to="/developer-login" replace />;
 };
 
@@ -160,9 +167,13 @@ const AppContent = () => {
               {/* Public Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/support" element={<SupportPage />} />
+              <Route path="/reset-credential" element={<ResetCredentialPage />} />
               
               {/* Hidden Developer Routes (not in navigation) */}
               <Route path="/developer-login" element={<DeveloperLogin />} />
+              <Route path="/developer-forgot-password" element={<DeveloperForgotPassword />} />
+              <Route path="/developer-reset-password" element={<DeveloperResetPassword />} />
               <Route 
                 path="/developer" 
                 element={
@@ -170,6 +181,22 @@ const AppContent = () => {
                     <DeveloperDashboard />
                   </DeveloperProtectedRoute>
                 } 
+              />
+              <Route
+                path="/developer/test-supabase"
+                element={
+                  <DeveloperProtectedRoute>
+                    <TestSupabase />
+                  </DeveloperProtectedRoute>
+                }
+              />
+              <Route
+                path="/debug"
+                element={
+                  <DeveloperProtectedRoute>
+                    <DataDebug />
+                  </DeveloperProtectedRoute>
+                }
               />
               
               {isAuthenticated ? (
@@ -267,8 +294,6 @@ const AppContent = () => {
                   <Route path="maths/subtraction" element={<Subtraction />} />
                   <Route path="maths/counting" element={<Counting />} />
                   <Route path="maths/compare" element={<CompareNumbers />} />
-<Route path="debug" element={<DataDebug />} />
-                  <Route path="developer/test-supabase" element={<TestSupabase />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
               ) : (

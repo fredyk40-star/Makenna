@@ -4,8 +4,8 @@ import { BiometricService } from '../../services/BiometricService';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 
-const BiometricLoginButton = () => {
-  const { childId, childName } = useChildAccount();
+const BiometricLoginButton = ({ onSuccess }) => {
+  const { activeChild, childId, childName } = useChildAccount();
   const { speak } = useVoiceGuide();
   const [isSupported, setIsSupported] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
@@ -32,7 +32,7 @@ const BiometricLoginButton = () => {
   }, [childId]);
 
   const handleEnable = async () => {
-    if (!childId) return;
+    if (!childId || activeChild?.requiresCredentialReset) return;
     
     setIsLoading(true);
     setError('');
@@ -59,7 +59,7 @@ const BiometricLoginButton = () => {
   };
 
   const handleLogin = async () => {
-    if (!childId) return;
+    if (!childId || activeChild?.requiresCredentialReset) return;
     
     setIsLoading(true);
     setError('');
@@ -68,7 +68,8 @@ const BiometricLoginButton = () => {
       const result = await BiometricService.authenticate(childId);
       if (result.success) {
         speak(`Welcome back, ${childName}!`);
-        window.location.href = '/';
+        if (onSuccess) onSuccess(result);
+        else window.location.href = '/';
       }
     } catch (err) {
       setError(err.message);
@@ -97,6 +98,16 @@ const BiometricLoginButton = () => {
     );
   }
 
+  if (activeChild?.requiresCredentialReset) {
+    return (
+      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-xl">
+        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+          🔑 Set a new PIN or password before using biometric login.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl">
       <div className="flex items-center justify-between mb-3">
@@ -117,7 +128,7 @@ const BiometricLoginButton = () => {
           <p className="text-sm text-green-600 dark:text-green-400">✅ Enabled for {childName}</p>
           <button
             onClick={handleLogin}
-            disabled={isLoading}
+            disabled={isLoading || activeChild?.requiresCredentialReset}
             className="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50"
           >
             {isLoading ? 'Logging in...' : 'Login with Biometrics'}

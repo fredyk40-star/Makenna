@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DeveloperService } from '../../services/DeveloperService';
 import { UpdateService } from '../../services/UpdateService';
-import { FaUser, FaTrash, FaUndo, FaDownload, FaStar, FaChartBar, FaDatabase, FaCog, FaSignOutAlt, FaSync, FaRocket, FaRobot, FaPlus } from 'react-icons/fa';
+import { ChildAccountService } from '../../services/ChildAccountService';
+import { SupportService } from '../../services/SupportService';
+import { FaUser, FaTrash, FaUndo, FaDownload, FaStar, FaChartBar, FaDatabase, FaCog, FaSignOutAlt, FaSync, FaRocket, FaRobot, FaPlus, FaEnvelope, FaKey, FaCheck } from 'react-icons/fa';
 
 const DeveloperDashboard = () => {
   const [children, setChildren] = useState([]);
@@ -17,9 +19,8 @@ const DeveloperDashboard = () => {
   const [logs, setLogs] = useState([]);
   const [logFilters, setLogFilters] = useState({ action: '', startDate: '', endDate: '' });
   const [selectedLogAction, setSelectedLogAction] = useState('');
-  const [pinModal, setPinModal] = useState(false);
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
+  const [passwordModal, setPasswordModal] = useState(false);
+  const [passwordResetSent, setPasswordResetSent] = useState(false);
   const [error, setError] = useState('');
   const [updateModal, setUpdateModal] = useState(false);
   const [previewModal, setPreviewModal] = useState(false);
@@ -43,6 +44,13 @@ const DeveloperDashboard = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
   const [lastSync, setLastSync] = useState(DeveloperService.getLastSyncTime());
+
+  // Support inbox state
+  const [supportRequests, setSupportRequests] = useState([]);
+  const [supportSyncing, setSupportSyncing] = useState(false);
+  const [tempRequest, setTempRequest] = useState(null);
+  const [tempPasswordResult, setTempPasswordResult] = useState('');
+  const [tempSending, setTempSending] = useState(false);
 
   useEffect(() => {
     loadChildren();
@@ -111,6 +119,12 @@ const DeveloperDashboard = () => {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (activeTab === 'support') {
+      loadSupportRequests();
+    }
+  }, [activeTab]);
+
   const loadAIData = () => {
     setAiConfig(DeveloperService.getAIConfig());
     setAiVoiceCommands(DeveloperService.getAIVoiceCommands());
@@ -156,6 +170,20 @@ const DeveloperDashboard = () => {
 
   const loadLogs = () => {
     setLogs(DeveloperService.getLogs(logFilters));
+  };
+
+  const loadSupportRequests = async () => {
+    setSupportRequests(SupportService.getRequests());
+    setSupportSyncing(true);
+    try {
+      // A developer reviewing on another device needs the child accounts before
+      // the ID/email match can be confirmed.
+      await ChildAccountService.syncAccountsFromCloud();
+      const result = await SupportService.syncFromCloud();
+      if (result.success) setSupportRequests(result.requests);
+    } finally {
+      setSupportSyncing(false);
+    }
   };
 
   const applyLogFilters = () => {
@@ -332,26 +360,51 @@ const DeveloperDashboard = () => {
     setDownloadModal(false);
   };
 
-  const handleChangePin = async () => {
-    if (!/^\d{4}$/.test(newPin) && !/^\d{8}$/.test(newPin)) {
-      setError('PIN must be 4 or 8 digits');
-      return;
-    }
-    if (newPin !== confirmPin) {
-      setError('PINs do not match');
-      return;
-    }
-
+  const handleRequestPasswordReset = async () => {
+    setError('');
     try {
-      await DeveloperService.changeDeveloperPin(newPin);
-      DeveloperService.logAction('PIN_CHANGE', { status: 'success' });
-      setPinModal(false);
-      setNewPin('');
-      setConfirmPin('');
-      setError('');
+      await DeveloperService.requestPasswordReset(DeveloperService.getDeveloperEmail());
+      setPasswordResetSent(true);
+      DeveloperService.logAction('DEV_PASSWORD_RESET_REQUESTED', { status: 'sent' });
     } catch (err) {
-      DeveloperService.logAction('PIN_CHANGE', { status: 'failed', error: err.message });
+      DeveloperService.logAction('DEV_PASSWORD_RESET_REQUESTED', { status: 'failed', error: err.message });
       setError(err.message);
+    }
+  };
+
+  const handleSupportStatus = (request, status) => {
+    try {
+      const updated = SupportService.markStatus(request.id, status);
+      setSupportRequests(SupportService.getRequests());
+      DeveloperService.logAction('SUPPORT_REQUEST_UPDATED', { id: request.id, status: updated.status });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleSendTempPassword = async () => {
+    if (!tempRequest) return;
+    setTempSending(true);
+    setError('');
+    try {
+      await ChildAccountService.syncAccountsFromCloud();
+      const credential = await ChildAccountService.issueTemporaryPassword(
+        tempRequest.childId,
+        tempRequest.parentEmail
+      );
+      const result = await DeveloperService.sendTemporaryPassword(credential);
+      setTempPasswordResult(result?.success ? '' : credential.tempPassword);
+      SupportService.markStatus(tempRequest.id, 'reviewing', 'One-time password issued.');
+      loadSupportRequests();
+      DeveloperService.logAction('TEMP_PASSWORD_SENT', { childId: credential.childId, success: true });
+      if (!result?.success) {
+        setError(result?.error || 'Email is not configured. Copy the one-time password below.');
+      }
+    } catch (err) {
+      DeveloperService.logAction('TEMP_PASSWORD_SENT', { status: 'failed', error: err.message });
+      setError(err.message);
+    } finally {
+      setTempSending(false);
     }
   };
 
@@ -474,9 +527,9 @@ const DeveloperDashboard = () => {
           <p className="text-gray-400">System Management Dashboard</p>
         </div>
         <button
-          onClick={() => setPinModal(true)}
+          onClick={() => { setPasswordModal(true); setPasswordResetSent(false); setError(''); }}
           className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700"
-          title="Change PIN"
+          title="Reset developer password"
         >
           <FaCog />
         </button>
@@ -486,6 +539,7 @@ const DeveloperDashboard = () => {
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {[
           { id: 'children', label: 'Children', icon: FaUser },
+          { id: 'support', label: 'Support', icon: FaEnvelope },
           { id: 'trash', label: 'Trash', icon: FaTrash },
           { id: 'backup', label: 'Backup', icon: FaDatabase },
           { id: 'updates', label: 'Updates', icon: FaSync },
@@ -507,6 +561,97 @@ const DeveloperDashboard = () => {
           </button>
         ))}
       </div>
+
+      {/* Support Tab */}
+      {activeTab === 'support' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h3 className="font-bold text-lg">Support Messages ({supportRequests.length})</h3>
+            <span className="text-sm text-yellow-400">
+              {SupportService.getOpenCount()} open
+            </span>
+            <button
+              onClick={loadSupportRequests}
+              disabled={supportSyncing}
+              className="px-3 py-1 bg-blue-600 rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+            >
+              <FaSync className={supportSyncing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          {supportRequests.length === 0 ? (
+            <div className="bg-gray-800 rounded-xl p-6 text-center text-gray-400">
+              No support requests yet. Parent messages will appear here for review.
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {supportRequests.map(request => {
+                const matched = !!ChildAccountService.validateSupportIdentity(request.childId, request.parentEmail);
+                return (
+                  <div key={request.id} className="bg-gray-800 rounded-xl p-4">
+                    <div className="flex justify-between items-start gap-3 flex-wrap">
+                      <div>
+                        <p className="font-bold flex items-center gap-2">
+                          <FaEnvelope className="text-purple-400" />
+                          {request.childId}
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            request.status === 'open' ? 'bg-yellow-600' :
+                              request.status === 'reviewing' ? 'bg-blue-600' : 'bg-green-600'
+                          }`}>
+                            {request.status}
+                          </span>
+                          {matched && (
+                            <span className="text-xs text-green-400 flex items-center gap-1">
+                              <FaCheck /> ID + email matched
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {request.fullName || 'Child'} • {request.parentEmail}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(request.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => handleSupportStatus(request, 'reviewing')}
+                          className="px-2 py-1 bg-blue-600 rounded text-xs"
+                        >
+                          Mark Reviewing
+                        </button>
+                        <button
+                          onClick={() => handleSupportStatus(request, 'resolved')}
+                          className="px-2 py-1 bg-green-600 rounded text-xs"
+                        >
+                          Resolve
+                        </button>
+                        <button
+                          onClick={() => { setTempRequest(request); setTempPasswordResult(''); setError(''); }}
+                          disabled={!matched}
+                          className="px-2 py-1 bg-purple-600 rounded text-xs flex items-center gap-1 disabled:opacity-50"
+                          title={matched ? 'Send a one-time password' : 'Child ID and email do not match an account'}
+                        >
+                          <FaKey /> Send Temp Password
+                        </button>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-sm text-gray-300 bg-gray-700 rounded-lg p-3">
+                      {request.message}
+                    </p>
+                    {request.developerNote && (
+                      <p className="mt-2 text-xs text-purple-300">Note: {request.developerNote}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Updates Tab - Enhanced with Preview Workflow and GitHub Deploy */}
       {activeTab === 'updates' && (
@@ -1079,38 +1224,70 @@ const DeveloperDashboard = () => {
         </div>
       )}
 
-      {/* PIN Change Modal */}
-      {pinModal && (
+      {/* Developer Password Reset Modal */}
+      {passwordModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-xl p-6 w-full max-w-sm">
-            <h3 className="text-xl font-bold mb-4">Change Developer PIN</h3>
-            {error && <p className="text-red-400 mb-2">{error}</p>}
-            <input
-              type="password"
-              placeholder="New PIN (4 or 8 digits)"
-              value={newPin}
-              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              className="w-full px-4 py-2 mb-3 bg-gray-700 rounded"
-            />
-            <input
-              type="password"
-              placeholder="Confirm PIN"
-              value={confirmPin}
-              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              className="w-full px-4 py-2 mb-4 bg-gray-700 rounded"
-            />
+            <h3 className="text-xl font-bold mb-2">Developer Password</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              A reset link will only be sent to {DeveloperService.getDeveloperEmail()}.
+            </p>
+            {error && <p className="text-red-400 mb-2 text-sm">{error}</p>}
+            {passwordResetSent && (
+              <p className="text-green-400 mb-2 text-sm">Reset link sent. Check your inbox.</p>
+            )}
             <div className="flex gap-2">
               <button
-                onClick={handleChangePin}
+                onClick={handleRequestPasswordReset}
                 className="flex-1 py-2 bg-purple-600 rounded hover:bg-purple-700"
               >
-                Save
+                Email Reset Link
               </button>
               <button
-                onClick={() => setPinModal(false)}
+                onClick={() => setPasswordModal(false)}
                 className="flex-1 py-2 bg-gray-600 rounded hover:bg-gray-700"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Temporary Password Modal */}
+      {tempRequest && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-2">Send One-Time Password</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              {tempRequest.childId} • {tempRequest.parentEmail}
+            </p>
+            {error && <p className="text-red-400 mb-2 text-sm">{error}</p>}
+            {tempPasswordResult ? (
+              <div className="bg-yellow-900/50 border border-yellow-700 rounded-lg p-3 mb-4">
+                <p className="text-sm text-yellow-200 mb-2">
+                  Email was not configured. Copy this one-time password and give it to the parent:
+                </p>
+                <code className="block text-lg font-mono text-white break-all">{tempPasswordResult}</code>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-300 mb-4">
+                A random password will be saved to the account and emailed to the parent. It expires in 30 minutes.
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleSendTempPassword}
+                disabled={tempSending}
+                className="flex-1 py-2 bg-purple-600 rounded hover:bg-purple-700 disabled:opacity-50"
+              >
+                {tempSending ? 'Sending...' : 'Generate & Send'}
+              </button>
+              <button
+                onClick={() => { setTempRequest(null); setTempPasswordResult(''); }}
+                className="flex-1 py-2 bg-gray-600 rounded hover:bg-gray-700"
+              >
+                Close
               </button>
             </div>
           </div>

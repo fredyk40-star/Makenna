@@ -5,7 +5,6 @@ import { ROUTES, NAV_ITEMS, isActiveRoute } from '../../routes';
 
 const BottomNav = () => {
   const location = useLocation();
-  const isDeveloperAuthenticated = localStorage.getItem('makenna_developer_authenticated') === 'true';
 
   return (
     <nav
@@ -98,23 +97,6 @@ const BottomNav = () => {
               )}
             </motion.div>
           </NavLink>
-
-          {/* Developer Portal - Hidden Dot Button (only shows when authenticated) */}
-          {isDeveloperAuthenticated && (
-            <NavLink
-              to={ROUTES.DEVELOPER}
-              className="relative flex flex-col items-center justify-center w-10 h-10 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2"
-              aria-label="Developer Portal"
-            >
-              <motion.div
-                whileTap={{ scale: 0.8 }}
-                whileHover={{ scale: 1.1 }}
-                className="relative flex items-center justify-center"
-              >
-                <div className="w-3 h-3 bg-yellow-400 rounded-full shadow-lg animate-pulse" />
-              </motion.div>
-            </NavLink>
-          )}
         </div>
       </div>
     </nav>

@@ -13,9 +13,14 @@ const FAILED_ATTEMPTS_KEY = 'makenna_dev_failed_attempts_v1';
 const LOCKOUT_UNTIL_KEY = 'makenna_dev_lockout_until_v1';
 const SESSION_TOKEN_KEY = 'makenna_dev_session_v1';
 const SESSION_EXPIRY_KEY = 'makenna_dev_session_expiry_v1';
+const SESSION_TOKEN_KEY_V2 = 'makenna_dev_session_token_v1';
+const DEVELOPER_EMAIL_KEY = 'makenna_developer_email_v1';
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+
+/** Developer sign-in is restricted to this mailbox. */
+export const DEVELOPER_EMAIL = import.meta.env?.VITE_DEVELOPER_EMAIL || 'addaifrederick72@gmail.com';
 
 export class DeveloperService {
   /**
@@ -57,6 +62,114 @@ export class DeveloperService {
    */
   static isDeveloperPinSet() {
     return !!StorageService.get(DEVELOPER_KEY);
+  }
+
+  // =====================
+  // Email + Password Access (restricted developer)
+  // =====================
+
+  static getDeveloperEmail() {
+    return DEVELOPER_EMAIL;
+  }
+
+  static validateStrongPassword(password) {
+    return typeof password === 'string'
+      && password.length >= 12
+      && /[a-z]/.test(password)
+      && /[A-Z]/.test(password)
+      && /\d/.test(password)
+      && /[^A-Za-z0-9]/.test(password);
+  }
+
+  static getSessionToken() {
+    return StorageService.get(SESSION_TOKEN_KEY_V2) || null;
+  }
+
+  static async _postApi(endpoint, body) {
+    const response = await fetch(`/api/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    let data;
+    try {
+      data = await response.json();
+    } catch (error) {
+      throw new Error('The server returned an invalid response.');
+    }
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Request failed. Please try again.');
+    }
+    return data;
+  }
+
+  /** Exchange the developer email/password for a short-lived signed session. */
+  static async loginWithPassword(email, password) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (normalizedEmail !== DEVELOPER_EMAIL.toLowerCase()) {
+      throw new Error(`Developer access is restricted to ${DEVELOPER_EMAIL}.`);
+    }
+    if (!password) throw new Error('Please enter your developer password.');
+
+    const result = await this._postApi('developer-auth', {
+      action: 'login',
+      email: normalizedEmail,
+      password,
+    });
+
+    StorageService.set(DEVELOPER_EMAIL_KEY, normalizedEmail);
+    StorageService.set(SESSION_TOKEN_KEY_V2, result.token);
+    this.createSession(result.token, normalizedEmail);
+    return result;
+  }
+
+  /** Reset links are only ever sent to the configured developer mailbox. */
+  static async requestPasswordReset(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (normalizedEmail !== DEVELOPER_EMAIL.toLowerCase()) {
+      // Same generic response as a valid request; no mail is sent.
+      return { success: true };
+    }
+    return this._postApi('developer-auth', { action: 'request-reset', email: normalizedEmail });
+  }
+
+  static async resetPassword(token, newPassword) {
+    if (!this.validateStrongPassword(newPassword)) {
+      throw new Error('Use at least 12 characters with upper case, lower case, a number and a symbol.');
+    }
+    return this._postApi('developer-auth', {
+      action: 'reset',
+      token,
+      newPassword,
+    });
+  }
+
+  static async verifySessionToken() {
+    const token = this.getSessionToken();
+    if (!token) return false;
+    try {
+      const result = await this._postApi('developer-auth', { action: 'verify', token });
+      return !!result.valid;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /** Send a one-time password to a parent's verified recovery email. */
+  static async sendTemporaryPassword({ childId, parentEmail, tempPassword }) {
+    try {
+      return await this._postApi('mail', {
+        action: 'send_temp_password',
+        childId,
+        parentEmail,
+        tempPassword,
+        sessionToken: this.getSessionToken(),
+        email: StorageService.get(DEVELOPER_EMAIL_KEY),
+      });
+    } catch (error) {
+      // The portal can show the generated password as a manual fallback.
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -133,13 +246,15 @@ export class DeveloperService {
   /**
    * Create a secure developer session
    */
-  static createSession() {
+  static createSession(apiToken = null, email = null) {
     const token = this._generateSessionToken();
     const expiry = Date.now() + SESSION_DURATION_MS;
     StorageService.set(SESSION_TOKEN_KEY, token);
     StorageService.set(SESSION_EXPIRY_KEY, expiry);
+    if (apiToken) StorageService.set(SESSION_TOKEN_KEY_V2, apiToken);
+    if (email) StorageService.set(DEVELOPER_EMAIL_KEY, email);
     this.clearFailedAttempts();
-    this.logAction('DEV_LOGIN', { tokenPrefix: token.substring(0, 8) });
+    this.logAction('DEV_LOGIN', { tokenPrefix: token.substring(0, 8), email: email || DEVELOPER_EMAIL });
     return token;
   }
 
@@ -163,6 +278,8 @@ export class DeveloperService {
   static clearSession() {
     StorageService.remove(SESSION_TOKEN_KEY);
     StorageService.remove(SESSION_EXPIRY_KEY);
+    StorageService.remove(SESSION_TOKEN_KEY_V2);
+    StorageService.remove(DEVELOPER_EMAIL_KEY);
     this.logAction('DEV_LOGOUT', {});
   }
 

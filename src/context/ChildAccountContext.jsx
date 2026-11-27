@@ -66,10 +66,10 @@ export const ChildAccountProvider = ({ children }) => {
     init();
   }, []);
 
-  const register = useCallback(async (fullName, pin) => {
+  const register = useCallback(async (fullName, pin, parentEmail) => {
     setError(null);
     try {
-      const result = await ChildAccountService.registerChild(fullName, pin);
+      const result = await ChildAccountService.registerChild(fullName, pin, parentEmail);
       // Auto-login after registration
       await ChildAccountService.loginChild(result.childId, pin);
       const child = ChildAccountService.getActiveChild();
@@ -92,10 +92,10 @@ export const ChildAccountProvider = ({ children }) => {
     }
   }, []);
 
-  const login = useCallback(async (childId, pin) => {
+  const login = useCallback(async (childId, credential) => {
     setError(null);
     try {
-      const result = await ChildAccountService.loginChild(childId, pin);
+      const result = await ChildAccountService.loginChild(childId, credential);
       const child = ChildAccountService.getActiveChild();
       setActiveChild(child);
       AnalyticsService.trackLogin();
@@ -128,6 +128,22 @@ export const ChildAccountProvider = ({ children }) => {
   }, [activeChild]);
 
   const clearError = useCallback(() => setError(null), []);
+
+  /** Required after a one-time temporary-password login. */
+  const resetCredential = useCallback(async (newCredential, type = 'pin') => {
+    setError(null);
+    try {
+      const childId = activeChild?.childId || ChildAccountService.getActiveChildId();
+      if (!childId) throw new Error('Please log in again before resetting your credential.');
+      const result = await ChildAccountService.resetCredential(childId, newCredential, type);
+      const child = ChildAccountService.getActiveChild();
+      setActiveChild(child);
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, [activeChild]);
 
   // Cloud sync functions
   const refreshAfterSync = useCallback((result) => {
@@ -167,6 +183,7 @@ export const ChildAccountProvider = ({ children }) => {
     login,
     logout,
     updateChild,
+    resetCredential,
     clearError,
     isAuthenticated: !!activeChild,
     childName: activeChild?.fullName || '',

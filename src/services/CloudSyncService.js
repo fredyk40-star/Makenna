@@ -112,6 +112,12 @@ export class CloudSyncService {
       fullName: account.fullName,
       pinHash: account.pinHash,
       pinSet: account.pinSet,
+      passwordHash: account.passwordHash || null,
+      passwordSet: account.passwordSet || false,
+      parentEmail: account.parentEmail || null,
+      tempPasswordHash: account.tempPasswordHash || null,
+      tempPasswordExpiresAt: account.tempPasswordExpiresAt || null,
+      requiresCredentialReset: account.requiresCredentialReset || false,
       avatar: account.avatar,
       createdAt: account.createdAt,
       lastLogin: account.lastLogin,
@@ -122,10 +128,11 @@ export class CloudSyncService {
     };
   }
 
-  /** Record a local change. It will be replayed when connectivity returns. */
+  /**
+   * Record a local change. Account writes are always queued so every created
+   * account is persisted to the cloud as soon as Supabase is configured.
+   */
   static queueAccountChange(type, account, childId = null) {
-    if (!this.isEnabled()) return this.getSyncStatus();
-
     if (type === 'DELETE_ACCOUNT') {
       const id = childId || account?.childId;
       SyncQueueService.recordDeletion(id);
@@ -153,6 +160,12 @@ export class CloudSyncService {
           full_name: payload.fullName,
           pin_hash: payload.pinHash,
           pin_set: payload.pinSet,
+          password_hash: payload.passwordHash,
+          password_set: payload.passwordSet,
+          parent_email: payload.parentEmail,
+          temp_password_hash: payload.tempPasswordHash,
+          temp_password_expires_at: payload.tempPasswordExpiresAt,
+          requires_credential_reset: payload.requiresCredentialReset,
           avatar: payload.avatar,
           created_at: payload.createdAt,
           last_login: payload.lastLogin,
@@ -187,6 +200,12 @@ export class CloudSyncService {
         fullName: item.full_name,
         pinHash: item.pin_hash,
         pinSet: item.pin_set,
+        passwordHash: item.password_hash || null,
+        passwordSet: item.password_set || false,
+        parentEmail: item.parent_email || null,
+        tempPasswordHash: item.temp_password_hash || null,
+        tempPasswordExpiresAt: item.temp_password_expires_at || null,
+        requiresCredentialReset: item.requires_credential_reset || false,
         avatar: item.avatar,
         createdAt: item.created_at,
         lastLogin: item.last_login,

@@ -17,8 +17,12 @@ export const ROUTES = {
   PARENT_ZONE: '/parent-zone',
   LOGIN: '/login',
   REGISTER: '/register',
+  SUPPORT: '/support',
+  RESET_CREDENTIAL: '/reset-credential',
   // Developer Portal (Hidden - not in navigation)
   DEVELOPER_LOGIN: '/developer-login',
+  DEVELOPER_FORGOT_PASSWORD: '/developer-forgot-password',
+  DEVELOPER_RESET_PASSWORD: '/developer-reset-password',
   DEVELOPER: '/developer',
   // Teacher Portal
   TEACHER: '/teacher',

@@ -48,6 +48,36 @@ VITE_SUPABASE_ANON_KEY=YOUR-ANON-KEY-HERE
 VITE_ENABLE_CLOUD_SYNC=true
 ```
 
+## 🔐 Accounts, Recovery, and Developer Access
+
+- New accounts get a `kid########` Child ID, require a parent email, and are always queued for cloud persistence.
+- Account creation requires the user to copy/acknowledge the generated Child ID.
+- `/support` lets a parent submit a forgot-PIN request with the Child ID + parent email.
+- The developer portal has a **Support** tab. When an ID/email pair matches an account, the developer can email a one-time password. The child must then choose a new PIN or password before continuing.
+- Developer login is restricted to `addaifrederick72@gmail.com` and a strong password. Reset links are only sent to that mailbox.
+
+Production setup in Vercel:
+
+1. Run `src/data/supabase-migration.sql`, `supabase-phase5-sync.sql`, then `supabase-auth-recovery.sql` in the Supabase SQL editor.
+2. Generate the password hash:
+
+   ```bash
+   node scripts/hash-developer-password.js "your-strong-password"
+   ```
+
+3. Add the printed `DEVELOPER_PASSWORD_HASH` / `DEVELOPER_PASSWORD_SALT`, plus `DEVELOPER_JWT_SECRET`, `DEVELOPER_EMAIL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` as **server-only** Vercel env vars.
+4. Add `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Google App Password), `GMAIL_FROM`, and `APP_URL`. Gmail SMTP is handled by `api/mail.js`; browser code never sees these secrets.
+5. Add the client-side `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_DEVELOPER_EMAIL` values.
+6. If Gmail is not configured locally, the developer portal shows the one-time password on screen so the flow can still be tested.
+
+## 🎨 Branding Assets
+
+The two root source PNGs are intentionally not committed. To regenerate PWA icons, splash screens, favicon and in-app logos from them:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/prepare-brand-assets.ps1
+```
+
 ## 📁 Project Structure
 src/
 ├── assets/ # Images, videos, audio, animations

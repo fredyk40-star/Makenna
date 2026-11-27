@@ -1,5 +1,5 @@
 /**
- * ChildAccountService - Manages child accounts with secure PIN storage
+ * ChildAccountService - Manages child accounts with secure PIN/password storage
  * Stores accounts in localStorage with Supabase cloud sync for cross-device access
  */
 import { StorageService } from './StorageService';
@@ -7,6 +7,15 @@ import { StorageService } from './StorageService';
 const CHILD_ACCOUNTS_KEY = 'makenna_child_accounts_v2';
 const ACTIVE_CHILD_KEY = 'makenna_active_child_id';
 const STORAGE_VERSION_KEY = 'makenna_storage_version';
+
+// New IDs look like "kid20345635". The prefix is case-insensitive at login.
+// Legacy "kid-1" accounts continue to work.
+export const CHILD_ID_PATTERN = /^kid\d{8}$/i;
+export const LEGACY_CHILD_ID_PATTERN = /^kid-\d+$/i;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+const TEMP_PASSWORD_MINUTES = 30;
+const TEMP_PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';
 
 // Dynamic import avoids a circular dependency (CloudSyncService reads accounts).
 const stampForSync = account => ({
@@ -53,6 +62,7 @@ export class ChildAccountService {
             fullName: oldProfile.name.trim(),
             pinHash: null, // No PIN in old system - will need to be set
             pinSet: false,
+            parentEmail: null,
             avatar: oldProfile.avatar || 'default',
             createdAt: oldProfile.createdAt || new Date().toISOString(),
             lastLogin: null,
@@ -67,20 +77,32 @@ export class ChildAccountService {
     }
   }
 
+  static _randomInt(max) {
+    if (globalThis.crypto?.getRandomValues) {
+      const values = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(values);
+      return values[0] % max;
+    }
+    return Math.floor(Math.random() * max);
+  }
+
   /**
-   * Generate a unique child ID
+   * Generate a unique child ID in the form kid20345635.
+   * Legacy kid-N accounts are left untouched by migration.
    */
   static generateChildId(existingAccounts = null) {
     const accounts = existingAccounts || this.getAllAccounts();
-    let maxNum = 0;
-    accounts.forEach(account => {
-      const match = account.childId && account.childId.match(/^kid-(\d+)$/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxNum) maxNum = num;
-      }
-    });
-    return `kid-${maxNum + 1}`;
+    const used = new Set(accounts.map(a => String(a.childId || '').toLowerCase()));
+
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const digits = String(this._randomInt(100000000)).padStart(8, '0');
+      const childId = `kid${digits}`;
+      if (!used.has(childId.toLowerCase())) return childId;
+    }
+
+    // Extremely unlikely collision fallback: still keep the documented shape.
+    const digits = String(Date.now()).slice(-8).padStart(8, '0');
+    return `kid${digits}`;
   }
 
   /**
@@ -94,11 +116,26 @@ export class ChildAccountService {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  /** PINs and chosen passwords use the same one-way digest. */
+  static hashCredential(credential) {
+    return this.hashPin(credential);
+  }
+
   /**
    * Validate PIN format (4 or 8 digits)
    */
   static validatePin(pin) {
     return /^\d{4}$/.test(pin) || /^\d{8}$/.test(pin);
+  }
+
+  /** A parent email is mandatory so recovery is possible. */
+  static validateEmail(email) {
+    return typeof email === 'string' && EMAIL_PATTERN.test(email.trim());
+  }
+
+  /** Password option after a temporary-password login. */
+  static validatePassword(password) {
+    return typeof password === 'string' && password.length >= 8 && password.length <= 128;
   }
 
   /**
@@ -123,15 +160,20 @@ export class ChildAccountService {
   }
 
   /**
-   * Register a new child account
+   * Register a new child account. Every account is queued for cloud persistence.
    */
-  static async registerChild(fullName, pin) {
+  static async registerChild(fullName, pin, parentEmail) {
     // Validate inputs
     if (!this.validateName(fullName)) {
       throw new Error('Please enter a valid name (1-50 characters).');
     }
     if (!this.validatePin(pin)) {
       throw new Error('PIN must be 4 or 8 digits.');
+    }
+    if (!this.validateEmail(parentEmail)) {
+      throw new Error(
+        'A parent email is required. Without it, this account cannot be recovered and will be lost forever.'
+      );
     }
 
     const accounts = this.getAllAccounts();
@@ -154,6 +196,12 @@ export class ChildAccountService {
       fullName: fullName.trim(),
       pinHash,
       pinSet: true,
+      passwordHash: null,
+      passwordSet: false,
+      parentEmail: parentEmail.trim().toLowerCase(),
+      tempPasswordHash: null,
+      tempPasswordExpiresAt: null,
+      requiresCredentialReset: false,
       avatar: 'default',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -167,11 +215,15 @@ export class ChildAccountService {
     accounts.push(newAccount);
     this.saveAllAccounts(accounts);
     queueCloudChange('UPSERT_ACCOUNT', newAccount);
-    return { childId, fullName: newAccount.fullName };
+    return {
+      childId,
+      fullName: newAccount.fullName,
+      parentEmail: newAccount.parentEmail,
+    };
   }
 
   /**
-   * Normalize child ID to lowercase format (e.g., KID-30 -> kid-30)
+   * Normalize child ID to lowercase (e.g., KID20345635 -> kid20345635)
    */
   static normalizeChildId(childId) {
     if (!childId) return null;
@@ -197,12 +249,72 @@ export class ChildAccountService {
     }
   }
 
+  /** Public alias used by support and recovery screens. */
+  static syncAccountsFromCloud() {
+    return this._syncFromCloudIfAvailable();
+  }
+
+  static _findAccount(childId) {
+    const normalizedId = this.normalizeChildId(childId);
+    if (!normalizedId) return null;
+    return this.getAllAccounts().find(a => a.childId?.toLowerCase() === normalizedId) || null;
+  }
+
+  /** Child ID + parent email pair used by the support/recovery flow. */
+  static _findBySupportIdentity(childId, parentEmail) {
+    const account = this._findAccount(childId);
+    if (!account) return null;
+    if (!account.parentEmail || !this.validateEmail(parentEmail)) return null;
+    if (account.parentEmail.toLowerCase() !== parentEmail.trim().toLowerCase()) return null;
+    return account;
+  }
+
+  static validateSupportIdentity(childId, parentEmail) {
+    return this._findBySupportIdentity(childId, parentEmail);
+  }
+
+  static _newTemporaryPassword() {
+    let value = '';
+    for (let i = 0; i < 14; i += 1) {
+      value += TEMP_PASSWORD_CHARS[this._randomInt(TEMP_PASSWORD_CHARS.length)];
+    }
+    return value;
+  }
+
   /**
-   * Login a child with ID and PIN (case-insensitive).
-   * Checks localStorage first. If account not found, pulls from Supabase
-   * and retries — enabling cross-device login.
+   * Issue a single-use temporary password after the developer verifies a
+   * support request. The plain value is returned only to the mailer UI.
    */
-  static async loginChild(childId, pin) {
+  static async issueTemporaryPassword(childId, parentEmail) {
+    const account = this._findBySupportIdentity(childId, parentEmail);
+    if (!account) {
+      throw new Error('No account was found for that Child ID and parent email.');
+    }
+
+    const tempPassword = this._newTemporaryPassword();
+    const tempPasswordHash = await this.hashCredential(tempPassword);
+    const expiresAt = new Date(Date.now() + TEMP_PASSWORD_MINUTES * 60 * 1000).toISOString();
+
+    const updated = this.updateChild(account.childId, {
+      tempPasswordHash,
+      tempPasswordExpiresAt: expiresAt,
+      requiresCredentialReset: true,
+    });
+
+    return {
+      childId: updated.childId,
+      fullName: updated.fullName,
+      parentEmail: updated.parentEmail,
+      tempPassword,
+      expiresAt,
+    };
+  }
+
+  /**
+   * Login a child with ID and credential (case-insensitive ID). A temporary
+   * password forces a PIN reset or password choice before normal use.
+   */
+  static async loginChild(childId, credential) {
     const normalizedId = this.normalizeChildId(childId);
 
     // First attempt: check localStorage
@@ -220,27 +332,95 @@ export class ChildAccountService {
     }
 
     if (!account) {
-      throw new Error('Invalid Child ID or PIN. Please try again.');
+      throw new Error('Invalid Child ID or password. Please try again.');
     }
 
-    if (!account.pinSet) {
-      throw new Error('This account has no PIN set. Please contact a parent.');
+    if (!account.pinSet && !account.passwordSet && !account.tempPasswordHash) {
+      throw new Error('This account has no credential set. Please contact a parent.');
     }
 
-    const pinHash = await this.hashPin(pin);
-    if (account.pinHash !== pinHash) {
-      throw new Error('Invalid Child ID or PIN. Please try again.');
+    const credentialHash = await this.hashCredential(credential);
+
+    const tempValid = !!(
+      account.tempPasswordHash
+      && account.tempPasswordHash === credentialHash
+      && account.tempPasswordExpiresAt
+      && new Date(account.tempPasswordExpiresAt).getTime() > Date.now()
+    );
+
+    if (account.requiresCredentialReset && !tempValid) {
+      throw new Error('A temporary password is active. Ask your parent to use it to set a new PIN or password.');
+    }
+
+    const regularValid = (
+      (account.passwordSet && account.passwordHash === credentialHash)
+      || (account.pinSet && account.pinHash === credentialHash)
+    );
+
+    if (!tempValid && !regularValid) {
+      throw new Error('Invalid Child ID or password. Please try again.');
     }
 
     // Update last login
     const updated = stampForSync({ ...account, lastLogin: new Date().toISOString() });
-    accounts[accounts.findIndex(item => item.childId === account.childId)] = updated;
+    const accountIndex = accounts.findIndex(item => item.childId === account.childId);
+    if (accountIndex !== -1) accounts[accountIndex] = updated;
     this.saveAllAccounts(accounts);
     queueCloudChange('UPSERT_ACCOUNT', updated);
 
     // Set as active
     this.setActiveChild(account.childId);
-    return { childId: account.childId, fullName: account.fullName };
+    return {
+      childId: account.childId,
+      fullName: account.fullName,
+      requiresCredentialReset: tempValid || !!account.requiresCredentialReset,
+    };
+  }
+
+  /**
+   * Replace a temporary password with a chosen PIN or password.
+   */
+  static async resetCredential(childId, newCredential, type = 'pin') {
+    const account = this._findAccount(childId);
+    if (!account) throw new Error('Account not found. Please log in again.');
+
+    let updates;
+    if (type === 'password') {
+      if (!this.validatePassword(newCredential)) {
+        throw new Error('Password must be between 8 and 128 characters.');
+      }
+      const passwordHash = await this.hashCredential(newCredential);
+      updates = {
+        passwordHash,
+        passwordSet: true,
+        pinHash: null,
+        pinSet: false,
+      };
+    } else {
+      if (!this.validatePin(newCredential)) {
+        throw new Error('PIN must be 4 or 8 digits.');
+      }
+      const pinHash = await this.hashCredential(newCredential);
+      updates = {
+        pinHash,
+        pinSet: true,
+        passwordHash: null,
+        passwordSet: false,
+      };
+    }
+
+    const updated = this.updateChild(account.childId, {
+      ...updates,
+      tempPasswordHash: null,
+      tempPasswordExpiresAt: null,
+      requiresCredentialReset: false,
+    });
+
+    return { childId: updated.childId, fullName: updated.fullName, credentialType: type };
+  }
+
+  static hasPendingCredentialReset(childId) {
+    return !!this._findAccount(childId)?.requiresCredentialReset;
   }
 
   /**
@@ -278,9 +458,7 @@ export class ChildAccountService {
    * Get child by ID (case-insensitive)
    */
   static getChild(childId) {
-    const accounts = this.getAllAccounts();
-    const normalizedId = this.normalizeChildId(childId);
-    return accounts.find(a => a.childId?.toLowerCase() === normalizedId) || null;
+    return this._findAccount(childId);
   }
 
   /**
@@ -315,13 +493,14 @@ export class ChildAccountService {
   }
 
   /**
-   * Verify PIN for parent zone access (case-insensitive)
+   * Verify PIN/password for parent zone access (case-insensitive)
    */
   static async verifyPin(childId, pin) {
-    const account = this.getChild(childId);
-    if (!account || !account.pinSet) return false;
-    const pinHash = await this.hashPin(pin);
-    return account.pinHash === pinHash;
+    const account = this._findAccount(childId);
+    if (!account || (!account.pinSet && !account.passwordSet)) return false;
+    const hash = await this.hashCredential(pin);
+    return (account.pinSet && account.pinHash === hash)
+      || (account.passwordSet && account.passwordHash === hash);
   }
 
   /**
@@ -359,6 +538,7 @@ export class ChildAccountService {
     return this.getAllAccounts().map(a => ({
       childId: a.childId,
       fullName: a.fullName,
+      parentEmail: a.parentEmail || null,
       createdAt: a.createdAt,
       lastLogin: a.lastLogin,
     }));

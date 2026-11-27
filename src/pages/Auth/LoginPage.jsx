@@ -32,7 +32,7 @@ const LoginPage = () => {
     }
 
     if (!pin.trim()) {
-      setLocalError('Please enter your PIN.');
+      setLocalError('Please enter your PIN or password.');
       setShakeForm(true);
       setTimeout(() => setShakeForm(false), 500);
       playError();
@@ -41,9 +41,13 @@ const LoginPage = () => {
 
     setIsSubmitting(true);
     try {
-      await login(childId.trim(), pin.trim());
+      const result = await login(childId.trim(), pin.trim());
       playSuccess();
-      navigate('/', { replace: true });
+      if (result?.requiresCredentialReset) {
+        navigate('/reset-credential', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       setLocalError(err.message || 'Login failed. Please try again.');
       setShakeForm(true);
@@ -67,12 +71,16 @@ const LoginPage = () => {
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-5xl mb-4" aria-hidden="true">🔐</div>
+            <img
+              src="/brand-logo.png"
+              alt="Makenna Lab emblem"
+              className="mx-auto h-16 w-auto object-contain mb-4"
+            />
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
               Welcome Back!
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Enter your Child ID and PIN to continue
+              Enter your Child ID and PIN or password to continue
             </p>
           </div>
 
@@ -110,7 +118,7 @@ const LoginPage = () => {
                   setChildId(e.target.value.toLowerCase());
                   setLocalError('');
                 }}
-                placeholder="e.g., kid-20"
+                placeholder="e.g., kid20345635"
                 className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
                 autoComplete="username"
                 autoCapitalize="none"
@@ -122,7 +130,7 @@ const LoginPage = () => {
             {/* PIN input */}
             <div>
               <label htmlFor="pin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                PIN
+                PIN or Password
               </label>
               <div className="relative">
                 <input
@@ -130,19 +138,15 @@ const LoginPage = () => {
                   type={showPin ? 'text' : 'password'}
                   value={pin}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    if (val.length <= 8) {
-                      setPin(val);
-                      setLocalError('');
-                    }
+                    const val = e.target.value.slice(0, 128);
+                    setPin(val);
+                    setLocalError('');
                   }}
-                  placeholder="Enter your 4 or 8 digit PIN"
+                  placeholder="Enter your PIN or password"
                   className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
                   autoComplete="current-password"
                   disabled={isSubmitting}
-                  aria-label="PIN"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
+                  aria-label="PIN or password"
                 />
                 <button
                   type="button"
@@ -154,8 +158,16 @@ const LoginPage = () => {
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                PIN must be 4 or 8 digits
+                4 or 8 digit PIN, or the password you chose after recovery
               </p>
+              <div className="mt-2 text-right">
+                <Link
+                  to="/support"
+                  className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
+                >
+                  Need help / Forgot PIN?
+                </Link>
+              </div>
             </div>
 
             {/* Submit button */}
@@ -205,16 +217,6 @@ const LoginPage = () => {
             />
           </div>
 
-          {/* Developer Portal Link - Small and discreet */}
-          <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <Link
-              to="/developer-login"
-              className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-              aria-label="Developer Portal"
-            >
-              Developer Portal 🔧
-            </Link>
-          </div>
         </div>
       </motion.div>
     </div>

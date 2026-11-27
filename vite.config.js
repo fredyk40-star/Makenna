@@ -16,11 +16,15 @@ export default defineConfig({
         'favicon.ico',
         'apple-touch-icon.png',
         'maskable-icon.png',
-        'splash-screen.png'
+        'splash-screen.png',
+        'brand-logo.png',
+        'brand-badge.png'
       ],
       manifest: false, 
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Device startup images are large and only used by iOS at launch.
+        globIgnores: ['**/*landscape.png', '**/*portrait.png'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

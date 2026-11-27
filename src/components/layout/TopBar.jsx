@@ -44,7 +44,11 @@ const TopBar = () => {
             transition={{ type: 'spring', stiffness: 300 }}
             className="text-3xl md:text-4xl"
           >
-
+            <img
+              src="/brand-logo.png"
+              alt="Makenna Lab"
+              className="h-9 w-9 md:h-11 md:w-11 object-contain rounded-lg"
+            />
           </motion.div>
           <div className="hidden xs:block">
             <h1 className="font-baloo text-xl md:text-2xl font-bold text-primary dark:text-blue-400">
