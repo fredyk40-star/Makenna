@@ -22,7 +22,7 @@ import { ROUTES } from './routes';
 import UpdatePreviewBanner from './components/UpdatePreview/UpdatePreviewBanner';
 import CaptionDisplay from './components/accessibility/CaptionDisplay';
 import SessionTimeoutOverlay from './components/session/SessionTimeoutOverlay';
-import ArcadeGamePage from './pages/Games/ArcadeGamePage';
+import { DeveloperService } from './services/DeveloperService';
 import {
   ALPHABET_ARCADE_GAMES,
   SHAPES_ARCADE_GAMES,
@@ -83,7 +83,11 @@ const LessonPage = lazyWithErrorHandler(() => import('./pages/Alphabet/LessonPag
 const TracingPage = lazyWithErrorHandler(() => import('./pages/Alphabet/TracingPage'));
 
 const AlphabetGames = lazyWithErrorHandler(() => import('./pages/Games/AlphabetGames'));
+const ArcadeGamePage = lazyWithErrorHandler(() => import('./pages/Games/ArcadeGamePage'));
 const ShapesGames = lazyWithErrorHandler(() => import('./pages/Shapes/ShapesGames'));
+
+// Arcade game metadata stays eager: the route elements need it before the
+// lazily loaded game page resolves, and the data set is intentionally small.
 
 const NumbersHome = lazyWithErrorHandler(() => import('./pages/Numbers/NumbersHome'));
 const NumberLesson = lazyWithErrorHandler(() => import('./pages/Numbers/NumberLesson'));
@@ -124,7 +128,6 @@ const DataDebug = lazyWithErrorHandler(() => import('./components/DataDebug/Data
 const TestSupabase = lazyWithErrorHandler(() => import('./pages/Developer/TestSupabase'));
 
 // Developer protected route helper
-import { DeveloperService } from './services/DeveloperService';
 const DeveloperProtectedRoute = ({ children }) => {
   // A legacy local PIN session is no longer enough: the signed API token is
   // only issued after the restricted email/password login succeeds.
