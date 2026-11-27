@@ -7,6 +7,10 @@ import { useMastery } from '../../hooks/useMastery';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { ALPHABET_DATA } from '../../data/alphabetData';
 import { ChildAccountService } from '../../services/ChildAccountService';
+import { LearningAnalytics } from '../../services/LearningAnalytics';
+import { GamificationService } from '../../services/GamificationService';
+import { SafeModeService } from '../../services/SafeModeService';
+import ParentReportService from '../../services/ParentReportService';
 
 
 
@@ -21,32 +25,41 @@ const ParentZone = () => {
   const [timeLimit, setTimeLimit] = useState(30); // minutes
   const [lockedDays, setLockedDays] = useState([]);
   const [weeklyData, setWeeklyData] = useState([]);
+  const [weeklySummary, setWeeklySummary] = useState(null);
+  const [safeSettings, setSafeSettings] = useState(SafeModeService.getSettings(currentChild?.childId || ''));
   const [pinVerified, setPinVerified] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [showPinModal, setShowPinModal] = useState(true);
 
   useEffect(() => {
-    // Load settings from localStorage
+    if (!currentChild?.childId) return;
+
+    const childId = currentChild.childId;
     const savedTimeLimit = localStorage.getItem('parent_time_limit');
     const savedLockedDays = JSON.parse(localStorage.getItem('parent_locked_days') || '[]');
 
-    if (savedTimeLimit) setTimeLimit(parseInt(savedTimeLimit));
+    if (savedTimeLimit) setTimeLimit(parseInt(savedTimeLimit, 10));
     setLockedDays(savedLockedDays);
+    setSafeSettings(SafeModeService.getSettings(childId));
 
-    // Generate weekly activity data
-    generateWeeklyData();
-  }, []);
+    // Real activity, not fabricated numbers.
+    const daily = LearningAnalytics.getDailyGraph(childId, 7);
+    setWeeklyData(daily.map(day => ({
+      day: day.day,
+      alphabet: day.lessons,
+      numbers: day.answers,
+      accuracy: day.accuracy,
+      time: Math.round(day.xp / 10),
+    })));
+    const child = ChildAccountService.getChild(childId) || { childId };
+    setWeeklySummary(ParentReportService.getReport(child).summary);
+  }, [currentChild?.childId]);
 
-  const generateWeeklyData = () => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const data = days.map(day => ({
-      day,
-      alphabet: Math.floor(Math.random() * 5),
-      numbers: Math.floor(Math.random() * 5),
-      time: Math.floor(Math.random() * 60)
-    }));
-    setWeeklyData(data);
+  const handleSafeSettingChange = (key, value) => {
+    if (!currentChild?.childId) return;
+    const next = SafeModeService.updateSettings(currentChild.childId, { ...safeSettings, [key]: value });
+    setSafeSettings(next);
   };
 
   const handlePinVerification = async () => {
@@ -71,9 +84,10 @@ const ParentZone = () => {
   };
 
   const handleTimeLimitChange = (e) => {
-    const value = parseInt(e.target.value);
+    const value = parseInt(e.target.value, 10);
     setTimeLimit(value);
     localStorage.setItem('parent_time_limit', value.toString());
+    handleSafeSettingChange('dailyLimit', value);
   };
 
   const toggleLockDay = (day) => {
@@ -84,29 +98,28 @@ const ParentZone = () => {
     localStorage.setItem('parent_locked_days', JSON.stringify(newLockedDays));
   };
 
-  const handleExportReport = () => {
-    const report = {
-      child: currentChild,
-      progress: {
-        alphabet: {
-          completion: getAlphabetCompletion(),
-          time: alphabetProgress.totalTime,
-        },
-        numbers: {
-          completion: getNumbersCompletion(),
-          time: numbersProgress.totalTime,
-        }
-      },
-      generated: new Date().toISOString()
-    };
+  const report = currentChild ? ParentReportService.getReport(currentChild) : null;
 
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+  const handleExportReport = () => {
+    if (!report) return;
+
+    const blob = new Blob([ParentReportService.toJson(report)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `progress-report-${currentChild?.childId || 'child'}.json`;
-    a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `progress-report-${currentChild.childId}-${report.generatedAt.slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const handleToggleGamification = (key) => {
+    if (!currentChild?.childId) return;
+    const state = GamificationService.getState(currentChild.childId);
+    state[key] = !state[key];
+    GamificationService.saveState(currentChild.childId, state);
+    setWeeklySummary(ParentReportService.getReport(currentChild).summary);
   };
 
   const handleLogout = () => {
@@ -285,7 +298,7 @@ const ParentZone = () => {
             <StatCard
               icon={<FaHourglassHalf />}
               label="Total Play Time"
-              value={`${((alphabetProgress.totalTime || 0) + (numbersProgress.totalTime || 0) / 60).toFixed(1)} min`}
+              value={`${Math.round(((alphabetProgress.totalTime || 0) + (numbersProgress.totalTime || 0)) / 60)} min`}
               color="bg-yellow-500"
             />
           </div>
@@ -302,10 +315,31 @@ const ParentZone = () => {
                   <div className="bg-blue-100 dark:bg-blue-900/30 rounded h-16 flex items-end justify-center p-1">
                     <div
                       className="bg-blue-500 rounded w-full"
-                      style={{ height: `${day.alphabet * 20}%` }}
-                      title={`${day.alphabet} activities`}
+                      style={{ height: `${Math.min(100, day.alphabet * 20)}%` }}
+                      title={`${day.alphabet} lessons · ${day.accuracy}% accuracy`}
                     />
                   </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* What Makenna learned this week */}
+          <motion.div variants={itemVariants} className="p-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl shadow-soft text-white">
+            <h3 className="font-baloo text-xl font-bold mb-2 flex items-center gap-2">
+              <FaBookOpen /> What {currentChild?.fullName?.split(' ')[0] || 'Makenna'} learned this week
+            </h3>
+            <p className="text-white/90">{weeklySummary?.learnedText || 'No completed lessons yet.'}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+              {[
+                ['Lessons', weeklySummary?.weeklyLessons || 0],
+                ['Minutes', weeklySummary?.weeklyMinutes || 0],
+                ['Average score', `${weeklySummary?.averageScore || 0}%`],
+                ['Mission streak', `${weeklySummary?.missionStreak || 0} days`],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-white/20 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold">{value}</p>
+                  <p className="text-xs opacity-90">{label}</p>
                 </div>
               ))}
             </div>
@@ -395,6 +429,49 @@ const ParentZone = () => {
               ))}
             </div>
           </motion.div>
+
+          <motion.div variants={itemVariants} className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft space-y-4">
+            <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <FaShieldAlt /> Safety &amp; Content
+            </h3>
+            {[
+              { key: 'enabled', label: 'Safe mode' },
+              { key: 'safeSearch', label: 'Safe search' },
+              { key: 'parentalLock', label: 'Parental lock' },
+            ].map(option => (
+              <div key={option.key} className="flex items-center justify-between">
+                <span className="text-gray-700 dark:text-gray-300">{option.label}</span>
+                <button
+                  type="button"
+                  onClick={() => handleSafeSettingChange(option.key, !safeSettings[option.key])}
+                  className={`px-4 py-1 rounded-full text-sm font-semibold ${
+                    safeSettings[option.key] ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {safeSettings[option.key] ? 'On' : 'Off'}
+                </button>
+              </div>
+            ))}
+            {[
+              { key: 'soundEffectsEnabled', label: 'Sound effects' },
+              { key: 'confettiEnabled', label: 'Celebration animations' },
+            ].map(option => (
+              <div key={option.key} className="flex items-center justify-between">
+                <span className="text-gray-700 dark:text-gray-300">{option.label}</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleGamification(option.key)}
+                  className={`px-4 py-1 rounded-full text-sm font-semibold ${
+                    GamificationService.getState(currentChild?.childId || '')[option.key] !== false
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {GamificationService.getState(currentChild?.childId || '')[option.key] !== false ? 'On' : 'Off'}
+                </button>
+              </div>
+            ))}
+          </motion.div>
         </div>
       )}
 
@@ -407,12 +484,54 @@ const ParentZone = () => {
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             Download a detailed report of your child's learning progress.
           </p>
-          <button
-            onClick={handleExportReport}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
-          >
-            <FaDownload /> Export Report
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleExportReport}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
+            >
+              <FaDownload /> Export JSON
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-2"
+            >
+              <FaFileExport /> Print / Save PDF
+            </button>
+          </div>
+
+          <div className="print-report mt-6 border-t pt-6 text-gray-900">
+            <h2 className="text-2xl font-bold mb-2">Makenna Learning Lab — Progress Report</h2>
+            <p className="mb-4">Generated {report?.generatedAt}</p>
+            <p className="font-semibold mb-4">{report?.summary.learnedText}</p>
+            <table className="w-full text-left border-collapse text-sm">
+              <tbody>
+                {[
+                  ['Child', report?.child.name],
+                  ['Level', report?.child.level],
+                  ['Stars earned', report?.child.stars],
+                  ['Lessons completed', report?.summary.totalLessons],
+                  ['Average score', `${report?.summary.averageScore}%`],
+                  ['Active days', report?.summary.daysActive],
+                  ['Mission streak', `${report?.summary.missionStreak} days`],
+                  ['Letters mastered', report?.mastery.alphabet],
+                  ['Numbers mastered', report?.mastery.numbers],
+                ].map(([label, value]) => (
+                  <tr key={label} className="border-b border-gray-300">
+                    <th className="py-1 pr-4 font-semibold">{label}</th>
+                    <td className="py-1">{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <h3 className="text-lg font-bold mt-6 mb-2">Last 7 days</h3>
+            <ul className="text-sm">
+              {report?.charts.daily.map(day => (
+                <li key={day.date}>
+                  {day.day} {day.date}: {day.lessons} lessons, {day.answers} answers, {day.accuracy}% accuracy
+                </li>
+              ))}
+            </ul>
+          </div>
         </motion.div>
       )}
     </motion.div>

@@ -232,3 +232,29 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Parent report: visible only when printing/saving as PDF */
+.print-report {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-report,
+  .print-report * {
+    visibility: visible;
+  }
+
+  .print-report {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    padding: 24px;
+  }
+}
