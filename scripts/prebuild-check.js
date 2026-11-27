@@ -41,19 +41,38 @@ if (existsSync(pkgPath)) {
 const srcDir = join(root, 'src');
 if (existsSync(srcDir)) {
   const strayTempFiles = [];
+  const clientSupabaseImports = [];
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(fullPath);
-      } else if (entry.name.endsWith('.tmp') || entry.name.endsWith('.bak')) {
-        strayTempFiles.push(fullPath.replace(root + '\\', '').replace(root + '/', ''));
+        continue;
+      }
+
+      const relativePath = fullPath.replace(root + '\\', '').replace(root + '/', '');
+      if (entry.name.endsWith('.tmp') || entry.name.endsWith('.bak')) {
+        strayTempFiles.push(relativePath);
+      }
+
+      if (entry.name.endsWith('.js') || entry.name.endsWith('.jsx')) {
+        const source = readFileSync(fullPath, 'utf8');
+        // Credential hashes and child rows must never be read by browser code.
+        // All cloud access goes through the serverless /api/* functions.
+        if (/@supabase\/supabase-js|VITE_SUPABASE_(?:URL|ANON_KEY)/.test(source)) {
+          clientSupabaseImports.push(relativePath);
+        }
       }
     }
   };
   walk(srcDir);
   if (strayTempFiles.length) {
     console.warn(`Warning: stray temporary source files found: ${strayTempFiles.join(', ')}`);
+  }
+  if (clientSupabaseImports.length) {
+    failures.push(
+      `Browser code must use /api/* instead of Supabase: ${clientSupabaseImports.join(', ')}`,
+    );
   }
 }
 

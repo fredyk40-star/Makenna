@@ -1,15 +1,75 @@
+let reloadingForUpdate = false;
+
+const reloadOnce = (hadController) => {
+  if (reloadingForUpdate || !hadController) return;
+  reloadingForUpdate = true;
+  console.info('A newer app version is available. Reloading...');
+  window.location.reload();
+};
+
 export const registerServiceWorker = () => {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(__registration => {
-          console.log('ServiceWorker registered successfully');
+  if (!('serviceWorker' in navigator)) return undefined;
+
+  window.addEventListener('load', () => {
+    // Only reload clients that were already running an older app. A first-time
+    // install should not interrupt the current session.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+
+    const watchWorker = (worker) => {
+      if (!worker || !hadController) return;
+
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed') {
+          worker.postMessage({ type: 'SKIP_WAITING' });
+        } else if (worker.state === 'activated') {
+          reloadOnce(hadController);
+        }
+      });
+
+      if (worker.state === 'installed') {
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      }
+    };
+
+    const checkForUpdate = async (registration) => {
+      try {
+        watchWorker(registration.waiting);
+        await registration.update();
+      } catch {
+        // The app still works offline; updates retry on the next visit/focus.
+      }
+    };
+
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      .then((registration) => {
+        console.log('ServiceWorker registered successfully');
+
+        registration.addEventListener('updatefound', () => {
+          watchWorker(registration.installing);
+        });
+
+        checkForUpdate(registration);
+      })
+      .catch((error) => {
+        console.warn('ServiceWorker registration failed (app will still work):', error);
+      });
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      reloadOnce(hadController);
+    });
+
+    window.addEventListener('focus', () => {
+      navigator.serviceWorker.getRegistration()
+        .then((registration) => {
+          if (registration) checkForUpdate(registration);
         })
-        .catch(err => {
-          console.warn('ServiceWorker registration failed (app will still work):', err);
+        .catch(() => {
+          // Ignore transient registration lookup failures.
         });
     });
-  }
+  });
+
+  return undefined;
 };
 
 export const showUpdateNotification = () => {

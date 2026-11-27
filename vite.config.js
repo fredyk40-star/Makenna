@@ -11,7 +11,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt', 
+      // Activate new builds immediately so clients never keep running an old
+      // bundle that still contains client-side database access.
+      registerType: 'autoUpdate',
+      // App registration is handled in src/pwa/register.js; avoid registering
+      // the worker twice from the generated script.
+      injectRegister: null,
       includeAssets: [
         'favicon.ico',
         'apple-touch-icon.png',
@@ -22,6 +27,9 @@ export default defineConfig({
       ],
       manifest: false, 
       workbox: {
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Device startup images are large and only used by iOS at launch.
         globIgnores: ['**/*landscape.png', '**/*portrait.png'],
