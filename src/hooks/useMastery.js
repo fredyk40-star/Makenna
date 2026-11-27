@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RecommendationService } from '../services/RecommendationService';
+import { ChildAccountService } from '../services/ChildAccountService';
 import { ALPHABET_DATA } from '../data/alphabetData';
+import {
+  isLetterMastered,
+  normalizeAlphabetProgress,
+} from '../services/AlphabetProgressService';
 import { useProfiles } from '../context/ProfileContext';
+import { useChildAccount } from '../context/ChildAccountContext';
 
 export const useMastery = () => {
   const { getProfileData, activeProfile } = useProfiles();
+  const { activeChild } = useChildAccount();
   const [letterData, setLetterData] = useState({});
   const [recommendations, setRecommendations] = useState([]);
   const [progressSummary, setProgressSummary] = useState({
@@ -42,23 +49,27 @@ export const useMastery = () => {
     // Load all letter data from localStorage
     const loadLetterData = () => {
       const data = {};
-      const alphabetProgress = getProfileData('alphabet_progress', {});
+      const childId = activeProfile?.childId || ChildAccountService.getActiveChildId();
+      const canonicalProgress = normalizeAlphabetProgress(
+        childId ? ChildAccountService.getChild(childId)?.progress?.alphabet_progress : null
+      );
+      const legacyProgress = getProfileData('alphabet_progress', {});
       const tracingProgress = getProfileData('tracing_progress', {});
 
       for (const letter of ALPHABET_DATA) {
         const id = letter.id;
-        
+
         const progress = {
-          opened: alphabetProgress.opened?.includes(id),
-          completed: alphabetProgress.completed?.includes(id),
+          opened: canonicalProgress.opened.includes(id) || legacyProgress.opened?.includes(id),
+          completed: canonicalProgress.completed.includes(id) || legacyProgress.completed?.includes(id),
         };
-        
+
         const tracing = tracingProgress[id] || {};
-        
+
         // TODO: Migrate game and reading progress to be profile-specific
         const games = JSON.parse(localStorage.getItem(`game_progress_${id}`) || '{}');
         const reading = JSON.parse(localStorage.getItem(`reading_progress_${id}`) || '{}');
-        
+
         data[id] = {
           letter: letter.letter,
           id: id,
@@ -66,7 +77,10 @@ export const useMastery = () => {
           tracing: tracing,
           games: games,
           reading: reading,
-          mastery: calculateMastery(progress, tracing, games, reading)
+          // Core alphabet skills are the source of truth for mastery.
+          mastery: isLetterMastered(canonicalProgress, id)
+            ? 100
+            : calculateMastery(progress, tracing, games, reading),
         };
       }
       return data;
@@ -93,7 +107,7 @@ export const useMastery = () => {
       total: totalLetters,
       progress: totalLetters > 0 ? Math.round((masteredCount / totalLetters) * 100) : 0,
     });
-  }, [activeProfile, getProfileData]);
+  }, [activeProfile, activeChild?.progress?.alphabet_progress, getProfileData]);
 
   const getLetterMastery = useCallback((letterId) => {
     return letterData[letterId]?.mastery || 0;

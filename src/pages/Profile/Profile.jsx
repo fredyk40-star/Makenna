@@ -2,11 +2,14 @@ import { motion } from 'framer-motion';
 import { FaShieldAlt, FaStar, FaBook, FaSignOutAlt, FaLock, FaChild, FaFolderOpen, FaPuzzlePiece, FaGift } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { useChildAccount } from '../../context/ChildAccountContext';
+import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
+import { ALPHABET_DATA } from '../../data/alphabetData';
 
 import AvatarSelector from '../../components/AvatarSelector/AvatarSelector';
 
 const Profile = () => {
   const { activeChild, childId, logout } = useChildAccount();
+  const { progress: alphabetState, getSkillCompletionPercentage } = useAlphabetProgress();
 
   // Get progress from child account directly
   const getProgress = () => {
@@ -14,9 +17,15 @@ const Profile = () => {
     return activeChild.progress || {};
   };
 
-  const alphabetProgress = getProgress().alphabet || 0;
+  const alphabetProgress = getSkillCompletionPercentage();
+  const lettersMastered = alphabetState.completed.length;
   const numbersProgress = getProgress().numbers || 0;
-  const favoriteLetters = getProgress().favoriteLetters || [];
+  const favoriteLetters = [
+    ...new Set([
+      ...alphabetState.favorites.letters,
+      ...(getProgress().favoriteLetters || []),
+    ]),
+  ];
   const favoriteNumbers = getProgress().favoriteNumbers || [];
 
   const handleLogout = () => {
@@ -88,6 +97,9 @@ const Profile = () => {
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
               <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${alphabetProgress}%` }}></div>
             </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {lettersMastered} of {ALPHABET_DATA.length} letters mastered · letter, sound, word, sentence and more
+            </p>
           </div>
           {/* Numbers Progress */}
           <div>
@@ -112,7 +124,7 @@ const Profile = () => {
               <div className="flex flex-wrap gap-2">
                 {favoriteLetters.map(letterId => (
                   <span key={letterId} className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-3 py-1 rounded-full font-mono text-lg font-bold">
-                    {letterId}
+                    {ALPHABET_DATA.find(letter => letter.id === letterId)?.letter || letterId}
                   </span>
                 ))}
               </div>

@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight, FaBook, FaPen } from 'react-icons/fa';
+import { FaArrowLeft, FaArrowRight, FaBook, FaPen, FaCheck } from 'react-icons/fa';
 import TracingCanvas from '../../components/tracing/TracingCanvas';
+import VoiceButton from '../../components/alphabet/VoiceButton';
 import { ALPHABET_DATA } from '../../data/alphabetData';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useProfiles } from '../../context/ProfileContext';
@@ -17,28 +18,41 @@ const TracingPage = () => {
   const [selectedCase, setSelectedCase] = useState('uppercase');
   const [selectedMode, setSelectedMode] = useState(mode);
   const [traceProgress, setTraceProgress] = useState(0);
-  const { markOpened, addTimeSpent } = useAlphabetProgress();
+  const {
+    markOpened,
+    markSkill,
+    addTimeSpent,
+    isSkillComplete,
+  } = useAlphabetProgress();
   const { getProfileData, setProfileData } = useProfiles();
   const { childId } = useChildAccount();
+  const markOpenedRef = useRef(markOpened);
+  const addTimeSpentRef = useRef(addTimeSpent);
 
   useEffect(() => {
-    const foundLetter = ALPHABET_DATA.find(l => l.id === letterId);
+    markOpenedRef.current = markOpened;
+    addTimeSpentRef.current = addTimeSpent;
+  }, [markOpened, addTimeSpent]);
+
+  useEffect(() => {
+    const foundLetter = ALPHABET_DATA.find(item => item.id === letterId);
     if (foundLetter) {
       setLetter(foundLetter);
-      markOpened(letterId);
+      setSelectedMode(mode);
+      setTraceProgress(0);
+      markOpenedRef.current(letterId);
     } else {
-      navigate('/alphabet');
+      navigate('/alphabet', { replace: true });
     }
+  }, [letterId, mode, navigate]);
 
-    const startTime = Date.now();
+  useEffect(() => {
+    const startedAt = Date.now();
     return () => {
-      if (letter) {
-        const endTime = Date.now();
-        const secondsSpent = Math.round((endTime - startTime) / 1000);
-        addTimeSpent(letterId, secondsSpent);
-      }
+      const seconds = Math.round((Date.now() - startedAt) / 1000);
+      if (seconds > 0) addTimeSpentRef.current(letterId, seconds);
     };
-  }, [letterId, navigate, markOpened, addTimeSpent]);
+  }, [letterId]);
 
   const handleSave = useCallback(async ({ image, guide, letter: tracedLetter, caseType, accuracy }) => {
     if (!childId || !image) return;
@@ -66,24 +80,24 @@ const TracingPage = () => {
   }
 
   const handleComplete = (result) => {
+    const accuracy = Math.max(0, Math.min(100, Math.round(Number(result?.accuracy) || 0)));
     const currentProgress = getProfileData('tracing_progress', {});
-
     const letterProgress = currentProgress[letter.id] || { attempts: 0 };
 
-    const newProgress = {
+    setProfileData('tracing_progress', {
       ...currentProgress,
       [letter.id]: {
         ...letterProgress,
         completed: true,
         lastTraced: new Date().toISOString(),
-        attempts: letterProgress.attempts + 1,
-        accuracy: Math.max(result.accuracy || 0, letterProgress.accuracy || 0),
+        attempts: (letterProgress.attempts || 0) + 1,
+        accuracy: Math.max(accuracy, letterProgress.accuracy || 0),
       },
-    };
+    });
 
-    setProfileData('tracing_progress', newProgress);
+    // The same completion event updates the cloud-synced alphabet progress.
+    markSkill(letter.id, 'trace', { accuracy });
 
-    // Navigate back
     setTimeout(() => {
       navigate(`/alphabet/lesson/${letter.id}`);
     }, 3000);
@@ -92,6 +106,8 @@ const TracingPage = () => {
   const handleProgress = (progress) => {
     setTraceProgress(Math.min(100, Math.max(0, Math.round((progress || 0) * 100))));
   };
+
+  const traceComplete = isSkillComplete(letter.id, 'trace');
 
   return (
     <motion.div
@@ -109,19 +125,28 @@ const TracingPage = () => {
           >
             <FaArrowLeft className="text-xl" />
           </Link>
-          <div>
+          <div className="min-w-0">
             <h1 className="font-baloo text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
               Trace Letter {letter.letter}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               {selectedMode === 'trace' ? 'Follow the guide to trace' : 'Practice freehand'}
             </p>
           </div>
+          <VoiceButton
+            text={`${letter.letter} says ${letter.phonetic || letter.sound}`}
+            label={`Hear letter ${letter.letter}`}
+          />
+          {traceComplete && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">
+              <FaCheck /> Practiced
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Case toggle */}
-          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1" role="group" aria-label="Letter case">
             <button
               onClick={() => setSelectedCase('uppercase')}
               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
@@ -129,7 +154,8 @@ const TracingPage = () => {
                   ? 'bg-white dark:bg-gray-600 text-primary dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
               }`}
-              aria-label="Uppercase"
+              aria-pressed={selectedCase === 'uppercase'}
+              type="button"
             >
               A
             </button>
@@ -140,14 +166,15 @@ const TracingPage = () => {
                   ? 'bg-white dark:bg-gray-600 text-primary dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
               }`}
-              aria-label="Lowercase"
+              aria-pressed={selectedCase === 'lowercase'}
+              type="button"
             >
               a
             </button>
           </div>
 
           {/* Mode toggle */}
-          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1" role="group" aria-label="Tracing mode">
             <button
               onClick={() => setSelectedMode('trace')}
               className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
@@ -155,7 +182,8 @@ const TracingPage = () => {
                   ? 'bg-white dark:bg-gray-600 text-primary dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
               }`}
-              aria-label="Trace mode"
+              aria-pressed={selectedMode === 'trace'}
+              type="button"
             >
               <FaBook className="text-xs" />
               Trace
@@ -167,7 +195,8 @@ const TracingPage = () => {
                   ? 'bg-white dark:bg-gray-600 text-primary dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
               }`}
-              aria-label="Practice mode"
+              aria-pressed={selectedMode === 'practice'}
+              type="button"
             >
               <FaPen className="text-xs" />
               Practice
@@ -177,7 +206,7 @@ const TracingPage = () => {
       </div>
 
       {/* Tracing Canvas */}
-      <div className="relative rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-soft" style={{ height: '500px' }}>
+      <div className="relative rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-soft h-[420px] sm:h-[500px] lg:h-[560px]">
         <TracingCanvas
           letter={selectedCase === 'uppercase' ? letter.letter : letter.lowercase}
           caseType={selectedCase}
@@ -189,38 +218,40 @@ const TracingPage = () => {
       </div>
 
       {/* Instructions */}
-      <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+      <div className="text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
         {selectedMode === 'trace' ? (
           <p>👆 Follow the guide arrows to trace the letter correctly</p>
         ) : (
           <p>✏️ Practice writing the letter freely. Try different colors!</p>
         )}
         {selectedMode === 'trace' && (
-          <p className="mt-1 text-xs" aria-live="polite">Trace progress: {traceProgress}%</p>
+          <p className="mt-1" aria-live="polite">Trace progress: {traceProgress}%</p>
         )}
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between items-center pt-4">
+      <div className="flex justify-between items-center gap-2 pt-4">
         <button
           onClick={() => navigate(`/alphabet/lesson/${letter.id}`)}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
+          className="flex items-center gap-2 text-sm sm:text-base text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
+          type="button"
         >
           <FaArrowLeft className="text-sm" />
-          Back to Lesson
+          <span className="hidden sm:inline">Back to Lesson</span>
         </button>
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {letter.letter} • {selectedCase}
         </div>
         <button
           onClick={() => {
-            const currentIndex = ALPHABET_DATA.findIndex(l => l.id === letterId);
+            const currentIndex = ALPHABET_DATA.findIndex(item => item.id === letterId);
             const nextIndex = (currentIndex + 1) % ALPHABET_DATA.length;
             navigate(`/alphabet/trace/${ALPHABET_DATA[nextIndex].id}/${selectedMode}`);
           }}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
+          className="flex items-center gap-2 text-sm sm:text-base text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
+          type="button"
         >
-          Next Letter
+          <span className="hidden sm:inline">Next Letter</span>
           <FaArrowRight className="text-sm" />
         </button>
       </div>

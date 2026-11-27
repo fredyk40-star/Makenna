@@ -1,16 +1,9 @@
-import { memo, useRef, useEffect } from 'react';
+import { memo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 
 const SearchBar = memo(({ query, setQuery, placeholder = 'Search...' }) => {
   const inputRef = useRef(null);
-
-  useEffect(() => {
-    // Focus input on mount
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, []);
 
   const handleClear = () => {
     setQuery('');
@@ -40,6 +33,7 @@ const SearchBar = memo(({ query, setQuery, placeholder = 'Search...' }) => {
           onClick={handleClear}
           className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
           aria-label="Clear search"
+          type="button"
         >
           <FaTimes className="text-lg" />
         </button>

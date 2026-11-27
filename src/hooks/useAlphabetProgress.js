@@ -1,209 +1,169 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChildAccount } from '../context/ChildAccountContext';
+import { ChildAccountService } from '../services/ChildAccountService';
+import { ALPHABET_DATA } from '../data/alphabetData';
+import {
+  ALPHABET_PROGRESS_KEY,
+  getLetterSkillCount,
+  getLetterSkillPercent,
+  getSkillCompletionPercentage,
+  isLetterMastered,
+  isSkillComplete,
+  markSkillInProgress,
+  normalizeAlphabetProgress,
+  withCoreCompletion,
+} from '../services/AlphabetProgressService';
 
-const STORAGE_KEY = 'alphabet_progress';
+const emptyProgress = () => normalizeAlphabetProgress();
+
+const readCurrentProgress = (childId) => {
+  const source = childId
+    ? ChildAccountService.getChild(childId)?.progress?.[ALPHABET_PROGRESS_KEY]
+    : null;
+  return normalizeAlphabetProgress(source);
+};
 
 export const useAlphabetProgress = () => {
-  const { activeChild, childId } = useChildAccount();
-  const [progress, setProgress] = useState(null);
+  const { activeChild, childId, updateChild } = useChildAccount();
+  const [progress, setProgress] = useState(() => readCurrentProgress(childId));
+  const progressRef = useRef(progress);
+  const childIdRef = useRef(childId);
+  const updateChildRef = useRef(updateChild);
 
-  // Load progress from child account or localStorage
   useEffect(() => {
-    if (activeChild) {
-      // Get progress from child's progress data
-      const saved = activeChild.progress?.[STORAGE_KEY];
-      if (saved) {
-        setProgress(saved);
-      } else {
-        // Initialize default progress
-        setProgress({
-          opened: [],
-          completed: [],
-          favorites: {
-            letters: [],
-            words: []
-          },
-          timeSpent: {},
-          lastVisited: null,
-          totalTime: 0,
-          recentLessons: []
-        });
-      }
+    childIdRef.current = childId;
+    updateChildRef.current = updateChild;
+  }, [childId, updateChild]);
+
+  const applyProgress = useCallback((next) => {
+    const normalized = normalizeAlphabetProgress(next);
+    progressRef.current = normalized;
+    setProgress(normalized);
+
+    const targetId = childIdRef.current || ChildAccountService.getActiveChildId();
+    if (!targetId) return normalized;
+
+    const account = ChildAccountService.getChild(targetId);
+    const updates = {
+      progress: {
+        ...(account?.progress || {}),
+        [ALPHABET_PROGRESS_KEY]: normalized,
+      },
+    };
+
+    // Context keeps the UI in sync; the service queues the serverless sync.
+    if (updateChildRef.current) {
+      updateChildRef.current(updates);
     } else {
-      // No child - use default empty state
-      setProgress({
-        opened: [],
-        completed: [],
-        favorites: {
-          letters: [],
-          words: []
-        },
-        timeSpent: {},
-        lastVisited: null,
-        totalTime: 0,
-        recentLessons: []
-      });
+      ChildAccountService.updateChild(targetId, updates);
     }
-  }, [activeChild]);
+    return normalized;
+  }, []);
 
-  // Save progress to child account
+  // Reload when another component (or a cloud sync) changes the active child.
   useEffect(() => {
-    if (progress && childId) {
-      const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
-      const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
-      if (accountIndex !== -1) {
-        if (!accounts[accountIndex].progress) {
-          accounts[accountIndex].progress = {};
-        }
-        accounts[accountIndex].progress[STORAGE_KEY] = progress;
-        localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
-      }
-    }
-  }, [progress, childId]);
+    const stored = readCurrentProgress(childId);
+    progressRef.current = stored;
+    setProgress(stored);
+  }, [childId, activeChild?.progress?.[ALPHABET_PROGRESS_KEY]]);
 
-  const markOpened = useCallback((letterId) => {
-    setProgress(prev => {
-      if (!prev.opened.includes(letterId)) {
-        return {
-          ...prev,
-          opened: [...prev.opened, letterId],
-          lastVisited: new Date().toISOString()
-        };
-      }
-      return prev;
-    });
-  }, []);
+  const update = useCallback((updater) => {
+    const base = readCurrentProgress(childIdRef.current || ChildAccountService.getActiveChildId());
+    const next = typeof updater === 'function' ? updater(base) : updater;
+    return applyProgress(next);
+  }, [applyProgress]);
 
-  const markCompleted = useCallback((letterId) => {
-    setProgress(prev => {
-      if (!prev.completed.includes(letterId)) {
-        return {
-          ...prev,
-          completed: [...prev.completed, letterId],
-          recentLessons: [
-            letterId,
-            ...prev.recentLessons.filter(id => id !== letterId)
-          ].slice(0, 10)
-        };
-      }
-      return prev;
-    });
-  }, []);
+  const markOpened = useCallback((id) => {
+    if (progressRef.current.opened.includes(id)) return;
+    update(prev => ({
+      ...prev,
+      opened: [...prev.opened, id],
+      lastVisited: new Date().toISOString(),
+    }));
+  }, [update]);
 
-  const toggleFavoriteLetter = useCallback((letterId) => {
-    setProgress(prev => {
-      const favorites = prev.favorites.letters.includes(letterId)
-        ? prev.favorites.letters.filter(id => id !== letterId)
-        : [...prev.favorites.letters, letterId];
-      
-      return {
+  const markCompleted = useCallback((id) => {
+    update(prev => {
+      const completed = prev.completed.includes(id)
+        ? prev.completed
+        : [...prev.completed, id];
+      const next = withCoreCompletion({
         ...prev,
-        favorites: {
-          ...prev.favorites,
-          letters: favorites
-        }
-      };
+        completed,
+        recentLessons: [id, ...prev.recentLessons.filter(item => item !== id)].slice(0, 10),
+      }, id);
+      return next;
     });
-  }, []);
+  }, [update]);
 
-  const toggleFavoriteWord = useCallback((wordId, letterId) => {
-    setProgress(prev => {
-      const wordKey = `${letterId}:${wordId}`;
-      const favorites = prev.favorites.words.includes(wordKey)
-        ? prev.favorites.words.filter(key => key !== wordKey)
-        : [...prev.favorites.words, wordKey];
-      
-      return {
-        ...prev,
-        favorites: {
-          ...prev.favorites,
-          words: favorites
-        }
-      };
+  /** Record a practiced skill. Core skills also unlock lesson completion. */
+  const markSkill = useCallback((id, skill, options = true) => {
+    update(prev => withCoreCompletion(
+      markSkillInProgress(prev, id, skill, options),
+      id,
+    ));
+  }, [update]);
+
+  const toggleFavoriteLetter = useCallback((id) => {
+    update(prev => {
+      const favorites = prev.favorites.letters.includes(id)
+        ? prev.favorites.letters.filter(item => item !== id)
+        : [...prev.favorites.letters, id];
+      return { ...prev, favorites: { ...prev.favorites, letters: favorites } };
     });
-  }, []);
+  }, [update]);
 
-  const addTimeSpent = useCallback((letterId, seconds) => {
-    setProgress(prev => ({
+  const toggleFavoriteWord = useCallback((wordId, id) => {
+    update(prev => {
+      const key = `${id}:${wordId}`;
+      const favorites = prev.favorites.words.includes(key)
+        ? prev.favorites.words.filter(item => item !== key)
+        : [...prev.favorites.words, key];
+      return { ...prev, favorites: { ...prev.favorites, words: favorites } };
+    });
+  }, [update]);
+
+  const addTimeSpent = useCallback((id, seconds) => {
+    const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+    if (!safeSeconds) return;
+    update(prev => ({
       ...prev,
       timeSpent: {
         ...prev.timeSpent,
-        [letterId]: (prev.timeSpent[letterId] || 0) + seconds
+        [id]: (prev.timeSpent[id] || 0) + safeSeconds,
       },
-      totalTime: prev.totalTime + seconds
+      totalTime: prev.totalTime + safeSeconds,
     }));
-  }, []);
+  }, [update]);
 
-  const isLetterOpened = useCallback((letterId) => {
-    return progress?.opened.includes(letterId) || false;
-  }, [progress]);
-
-  const isLetterCompleted = useCallback((letterId) => {
-    return progress?.completed.includes(letterId) || false;
-  }, [progress]);
-
-  const isLetterFavorited = useCallback((letterId) => {
-    return progress?.favorites.letters.includes(letterId) || false;
-  }, [progress]);
-
-  const isWordFavorited = useCallback((wordId, letterId) => {
-    return progress?.favorites.words.includes(`${letterId}:${wordId}`) || false;
-  }, [progress]);
-
-  const getProgress = useCallback(() => {
-    return progress;
-  }, [progress]);
-
-  const getCompletionPercentage = useCallback(() => {
-    if (!progress) return 0;
-    const total = 26; // A-Z
-    const completed = progress.completed.length;
-    return Math.round((completed / total) * 100);
-  }, [progress]);
-
-  const getRecentLessons = useCallback(() => {
-    return progress?.recentLessons || [];
-  }, [progress]);
-
-  const getFavoriteLetters = useCallback(() => {
-    return progress?.favorites.letters || [];
-  }, [progress]);
-
-  const getFavoriteWords = useCallback(() => {
-    return progress?.favorites.words || [];
-  }, [progress]);
-
-  const resetProgress = useCallback(() => {
-    setProgress({
-      opened: [],
-      completed: [],
-      favorites: {
-        letters: [],
-        words: []
-      },
-      timeSpent: {},
-      lastVisited: null,
-      totalTime: 0,
-      recentLessons: []
-    });
-  }, []);
+  const resetProgress = useCallback(() => applyProgress(emptyProgress()), [applyProgress]);
 
   return {
     progress,
     markOpened,
     markCompleted,
+    markSkill,
     toggleFavoriteLetter,
     toggleFavoriteWord,
     addTimeSpent,
-    isLetterOpened,
-    isLetterCompleted,
-    isLetterFavorited,
-    isWordFavorited,
-    getProgress,
-    getCompletionPercentage,
-    getRecentLessons,
-    getFavoriteLetters,
-    getFavoriteWords,
-    resetProgress
+    resetProgress,
+    isLetterOpened: id => progress.opened.includes(id),
+    isLetterCompleted: id => progress.completed.includes(id),
+    isLetterFavorited: id => progress.favorites.letters.includes(id),
+    isWordFavorited: (wordId, id) => progress.favorites.words.includes(`${id}:${wordId}`),
+    isSkillComplete: (id, skill) => isSkillComplete(progress, id, skill),
+    getLetterSkillCount: id => getLetterSkillCount(progress, id),
+    getLetterSkillPercent: id => getLetterSkillPercent(progress, id),
+    isLetterMastered: id => isLetterMastered(progress, id),
+    getProgress: () => progress,
+    getCompletionPercentage: () => (
+      Math.round((progress.completed.length / (ALPHABET_DATA.length || 26)) * 100)
+    ),
+    getSkillCompletionPercentage: () => getSkillCompletionPercentage(progress),
+    getRecentLessons: () => progress.recentLessons,
+    getFavoriteLetters: () => progress.favorites.letters,
+    getFavoriteWords: () => progress.favorites.words,
   };
 };
+
+export default useAlphabetProgress;

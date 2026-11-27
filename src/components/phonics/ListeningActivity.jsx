@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCheck, FaTimes, FaVolumeUp } from 'react-icons/fa';
 import { ALPHABET_DATA } from '../../data/alphabetData';
-import { useAudio } from '../../hooks/useAudio';
+import alphabetSpeech from '../../services/AlphabetSpeechService';
 import { announceToScreenReader } from '../../utils/accessibility';
 
 const ListeningActivity = ({
@@ -12,31 +12,32 @@ const ListeningActivity = ({
   onIncorrect = null,
   className = ''
 }) => {
-  const [, setCurrentStep] = useState(0);
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
   const [score, setScore] = useState(0);
   const [totalAttempts, setTotalAttempts] = useState(0);
   const [activityComplete, setActivityComplete] = useState(false);
   const [feedback, setFeedback] = useState('');
-
-  const { speak } = useAudio();
-
-  // Generate random letters for the activity
   const [options, setOptions] = useState([]);
   const [targetLetter, setTargetLetter] = useState(null);
+  const timersRef = useRef([]);
 
-  useEffect(() => {
-    generateQuestion();
-  }, [letterId]);
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach(timer => clearTimeout(timer));
+    timersRef.current = [];
+  }, []);
+
+  const schedule = useCallback((callback, delay) => {
+    const timer = setTimeout(callback, delay);
+    timersRef.current.push(timer);
+  }, []);
 
   const generateQuestion = useCallback(() => {
-    const correct = ALPHABET_DATA.find(l => l.id === letterId);
+    const correct = ALPHABET_DATA.find(letter => letter.id === letterId);
     if (!correct) return;
 
-    // Get 3 random other letters
     const others = ALPHABET_DATA
-      .filter(l => l.id !== letterId)
+      .filter(letter => letter.id !== letterId)
       .sort(() => Math.random() - 0.5)
       .slice(0, 3);
 
@@ -47,80 +48,81 @@ const ListeningActivity = ({
     setIsCorrect(null);
     setFeedback('');
 
-    // Speak the target letter
-    setTimeout(() => {
-      speak(correct.letter, {
-        rate: 0.8,
-        pitch: 1.2
-      });
+    schedule(() => {
+      void alphabetSpeech.speak(correct.letter, { rate: 0.8, pitch: 1.15 });
     }, 500);
-  }, [letterId, speak]);
+  }, [letterId, schedule]);
+
+  useEffect(() => {
+    generateQuestion();
+    return clearTimers;
+  }, [letterId, generateQuestion, clearTimers]);
 
   const handleLetterSelect = useCallback((letter) => {
     if (isCorrect !== null || activityComplete) return;
 
-    setSelectedLetter(letter);
     const correct = letter.id === targetLetter?.id;
+    const nextAttempts = totalAttempts + 1;
+    setSelectedLetter(letter);
     setIsCorrect(correct);
-    setTotalAttempts(prev => prev + 1);
+    setTotalAttempts(nextAttempts);
 
     if (correct) {
       const nextScore = score + 1;
       setScore(nextScore);
       setFeedback('🌟 Excellent! Great job!');
-      void speak('Excellent! Great job!', { rate: 0.9, pitch: 1.2 });
+      void alphabetSpeech.speak('Excellent! Great job!', { rate: 0.9, pitch: 1.15 });
       announceToScreenReader('Correct! Great job!');
-      if (onCorrect) onCorrect();
+      if (onCorrect) onCorrect({ letterId, score: nextScore, totalAttempts: nextAttempts });
 
       if (nextScore >= 3) {
+        const accuracy = Math.round((nextScore / nextAttempts) * 100);
         setActivityComplete(true);
         setFeedback('🎉 Amazing! You completed the activity!');
-        void speak('Amazing! You completed the activity!', { rate: 0.9, pitch: 1.2 });
-        if (onComplete) onComplete();
+        void alphabetSpeech.speak('Amazing! You completed the activity!', { rate: 0.9, pitch: 1.15 });
+        if (onComplete) onComplete({ letterId, score: nextScore, totalAttempts: nextAttempts, accuracy });
       } else {
-        setTimeout(() => {
-          generateQuestion();
-        }, 1200);
+        schedule(() => generateQuestion(), 1200);
       }
     } else {
       setFeedback('🤔 Not quite. Try again!');
-      void speak('Not quite. Try again!', { rate: 0.9, pitch: 1.1 });
+      void alphabetSpeech.speak('Not quite. Try again!', { rate: 0.9, pitch: 1.05 });
       announceToScreenReader('Incorrect. Try again!');
-      if (onIncorrect) onIncorrect();
+      if (onIncorrect) onIncorrect({ letterId, totalAttempts: nextAttempts });
 
-      setTimeout(() => {
+      schedule(() => {
         setSelectedLetter(null);
         setIsCorrect(null);
         setFeedback('');
       }, 900);
     }
-  }, [targetLetter, score, generateQuestion, speak, onCorrect, onIncorrect, onComplete, activityComplete]);
+  }, [
+    activityComplete, generateQuestion, isCorrect, letterId, onComplete, onCorrect,
+    onIncorrect, schedule, score, targetLetter, totalAttempts,
+  ]);
 
   const handleReplaySound = useCallback(() => {
     if (targetLetter) {
-      speak(targetLetter.letter, {
-        rate: 0.8,
-        pitch: 1.2
-      });
+      void alphabetSpeech.speak(targetLetter.letter, { rate: 0.8, pitch: 1.15 });
     }
-  }, [targetLetter, speak]);
+  }, [targetLetter]);
 
   const handleReset = useCallback(() => {
+    clearTimers();
     setScore(0);
     setTotalAttempts(0);
     setActivityComplete(false);
-    setCurrentStep(0);
     generateQuestion();
-  }, [generateQuestion]);
+  }, [clearTimers, generateQuestion]);
 
   if (activityComplete) {
     return (
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className={`bg-gradient-to-br from-green-100 to-blue-100 dark:from-green-900/30 dark:to-blue-900/30 rounded-2xl p-8 text-center ${className}`}
+        className={`bg-gradient-to-br from-green-100 to-blue-100 dark:from-green-900/30 dark:to-blue-900/30 rounded-2xl p-6 sm:p-8 text-center ${className}`}
       >
-        <div className="text-6xl mb-4">🎉</div>
+        <div className="text-5xl sm:text-6xl mb-4">🎉</div>
         <h3 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white">
           Activity Complete!
         </h3>
@@ -140,7 +142,7 @@ const ListeningActivity = ({
   }
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-soft p-6 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-soft p-4 sm:p-6 ${className}`}>
       <div className="text-center mb-6">
         <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white">
           Listen & Find
@@ -156,13 +158,13 @@ const ListeningActivity = ({
             onClick={handleReplaySound}
             className="text-primary hover:text-primary-dark transition-colors"
             aria-label="Replay sound"
+            type="button"
           >
             <FaVolumeUp className="text-2xl" />
           </button>
         </div>
       </div>
 
-      {/* Feedback */}
       <AnimatePresence>
         {feedback && (
           <motion.div
@@ -173,8 +175,8 @@ const ListeningActivity = ({
               isCorrect
                 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                 : isCorrect === false
-                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
           >
             {feedback}
@@ -182,8 +184,7 @@ const ListeningActivity = ({
         )}
       </AnimatePresence>
 
-      {/* Letter Options */}
-      <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-md sm:max-w-xl mx-auto">
         {options.map((letter) => (
           <motion.button
             key={letter.id}
@@ -191,7 +192,7 @@ const ListeningActivity = ({
             whileTap={{ scale: 0.95 }}
             onClick={() => handleLetterSelect(letter)}
             disabled={isCorrect !== null}
-            className={`relative p-6 rounded-2xl text-4xl font-baloo font-bold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+            className={`relative p-4 sm:p-6 rounded-2xl text-3xl sm:text-4xl font-baloo font-bold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
               selectedLetter?.id === letter.id
                 ? isCorrect
                   ? 'bg-green-500 text-white shadow-glow'
@@ -199,10 +200,10 @@ const ListeningActivity = ({
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
             } ${isCorrect !== null && selectedLetter?.id !== letter.id ? 'opacity-50' : ''}`}
             aria-label={`Select letter ${letter.letter}`}
+            type="button"
           >
             {letter.letter}
 
-            {/* Feedback Icon */}
             {selectedLetter?.id === letter.id && (
               <div className="absolute -top-2 -right-2">
                 {isCorrect ? (
@@ -216,7 +217,6 @@ const ListeningActivity = ({
         ))}
       </div>
 
-      {/* Progress */}
       <div className="mt-6 flex justify-center gap-1">
         {[0, 1, 2].map((index) => (
           <div
@@ -225,8 +225,8 @@ const ListeningActivity = ({
               index < score
                 ? 'bg-green-500'
                 : index === score && !activityComplete
-                ? 'bg-primary animate-pulse'
-                : 'bg-gray-300 dark:bg-gray-600'
+                  ? 'bg-primary animate-pulse'
+                  : 'bg-gray-300 dark:bg-gray-600'
             }`}
           />
         ))}
