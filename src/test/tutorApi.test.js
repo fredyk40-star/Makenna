@@ -142,9 +142,37 @@ describe('Gemini tutor API', () => {
     expect(url).not.toContain('test-api-key');
     expect(options.headers['x-goog-api-key']).toBe('test-api-key');
     const request = JSON.parse(options.body);
+    expect(request.generationConfig).toMatchObject({
+      thinkingConfig: { thinkingBudget: 0 },
+      maxOutputTokens: expect.any(Number),
+    });
+    expect(request.generationConfig.maxOutputTokens).toBeGreaterThan(160);
     const prompt = request.contents[0].parts[0].text;
     expect(prompt).toContain('What are vowels?');
     expect(prompt).toContain('The vowel sounds are A, E, I, O, U.');
     expect(prompt).not.toContain(childId);
+  });
+
+  it('returns a clear 502 when Gemini supplies no answer text', async () => {
+    vi.stubEnv('GEMINI_API_KEY', 'test-api-key');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [] } }] }),
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await invoke({
+      childId,
+      token: createChildToken(childId),
+      question: 'What are vowels?',
+      unit: validUnit,
+    });
+
+    expect(response.statusCode).toBe(502);
+    expect(response.payload.success).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Gemini tutor returned no answer:',
+      expect.objectContaining({ finishReason: 'MAX_TOKENS' }),
+    );
   });
 });

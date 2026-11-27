@@ -51,6 +51,14 @@ describe('CurriculumTutorService', () => {
     expect(response.unit.path).toBe('/alphabet');
   });
 
+  it('matches a question to the right curriculum activity', () => {
+    CurriculumTutorService.saveSettings('child-1', { enabled: true, level: 'KG1' });
+    const response = CurriculumTutorService.answer('child-1', 'Show me counting', 'Ama');
+
+    expect(response.matched).toBe(true);
+    expect(response.unit.path).toBe('/numbers');
+  });
+
   it('does not mark suggestion answers as curriculum matches', () => {
     CurriculumTutorService.saveSettings('child-1', { enabled: true, level: 'KG1' });
     const response = CurriculumTutorService.answer('child-1', 'Tell me a joke');

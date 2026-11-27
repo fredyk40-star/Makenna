@@ -1,5 +1,8 @@
 import { ChildAccountService } from './ChildAccountService';
 
+const OFFLINE_TUTOR_MESSAGE = 'The online tutor is unavailable. I used your lesson instead.';
+const BUSY_TUTOR_MESSAGE = 'The online tutor is busy right now. I used your lesson instead.';
+
 const removePersonalDetails = (question, fullName) => {
   const safeQuestion = String(question || '');
   const questionWords = new Set((safeQuestion.match(/[\p{L}\p{N}]+/gu) || []).map(word => word.toLowerCase()));
@@ -9,6 +12,8 @@ const removePersonalDetails = (question, fullName) => {
   if (/(?:\+?\d[\d\s().-]{6,}\d)/.test(safeQuestion)) return null;
   return safeQuestion.trim();
 };
+
+const withOnlineNotice = (result, message) => ({ ...result, onlineError: message });
 
 export class GeminiTutorService {
   static async answer(childId, question, localResult, fullName = '', allowOnlineAI = false, task = 'answer', language = 'english') {
@@ -47,16 +52,23 @@ export class GeminiTutorService {
           },
         }),
       });
-      if (!response.ok) return localResult;
+      if (!response.ok) {
+        return withOnlineNotice(
+          localResult,
+          response.status === 429 ? BUSY_TUTOR_MESSAGE : OFFLINE_TUTOR_MESSAGE,
+        );
+      }
 
       const data = await response.json();
       const text = typeof data?.text === 'string' ? data.text.trim() : '';
-      if (!data.success || !text || text.length > 600) return localResult;
+      if (!data.success || !text || text.length > 600) {
+        return withOnlineNotice(localResult, OFFLINE_TUTOR_MESSAGE);
+      }
 
       return { ...localResult, text };
     } catch {
       console.warn('Gemini tutor unavailable; using the local curriculum answer.');
-      return localResult;
+      return withOnlineNotice(localResult, OFFLINE_TUTOR_MESSAGE);
     }
   }
 }

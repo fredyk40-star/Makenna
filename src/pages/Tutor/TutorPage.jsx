@@ -22,6 +22,23 @@ const LANGUAGES = [
   { value: 'fante', label: 'Fante' },
 ];
 
+const firstName = (fullName) => (fullName ? String(fullName).trim().split(/\s+/)[0] : 'Friend');
+
+const localTaskAnswer = (task, unit, fullName) => {
+  const name = firstName(fullName);
+  const title = unit?.title || 'this lesson';
+  const content = unit?.content || '';
+  const summaries = {
+    practice: `${name}, let's practise ${title}. ${content} Try three little questions from the lesson.`,
+    story: `${name}, here is a short ${title} story: ${content} Keep the story kind and simple.`,
+    pronunciation: `${name}, let's say the words in ${title} slowly. ${content} Clap each sound as you say it.`,
+    math: `${name}, let's count with ${title}. ${content} Try a small market problem with cedis.`,
+    why: `${name}, ${title} matters because it helps you learn step by step. ${content}`,
+    translate: `${name}, ${title} means: ${content} Say it in your own words.`,
+  };
+  return summaries[task] || `${name}, let's learn about ${title}. ${content}`;
+};
+
 const QUICK_ACTIONS = [
   {
     task: 'practice',
@@ -73,6 +90,14 @@ const TutorPage = () => {
   const [tutorLanguage, setTutorLanguage] = useState('english');
   const [mood, setMood] = useState('happy');
   const [isListening, setIsListening] = useState(false);
+  const [onlineNotice, setOnlineNotice] = useState('');
+  const [voiceError, setVoiceError] = useState('');
+  const [units, setUnits] = useState(() => CurriculumTutorService.getUnits(childId));
+  const [selectedUnitKey, setSelectedUnitKey] = useState(
+    () => CurriculumTutorService.getUnits(childId)[0]?.source || null,
+  );
+
+  const activeUnit = units.find(unit => unit.source === selectedUnitKey) || units[0] || null;
 
   const recognitionRef = useRef(null);
   const recognitionActiveRef = useRef(false);
@@ -95,6 +120,13 @@ const TutorPage = () => {
       setTutorEnabled(settings.enabled);
       setAllowVoice(settings.allowVoice);
       setAllowOnlineAI(settings.allowOnlineAI);
+
+      const nextUnits = CurriculumTutorService.getUnits(childId);
+      setUnits(nextUnits);
+      setSelectedUnitKey((current) => {
+        if (nextUnits.some(unit => unit.source === current)) return current;
+        return nextUnits[0]?.source || null;
+      });
     };
     refresh();
     return CurriculumTutorService.subscribe(refresh);
@@ -127,21 +159,43 @@ const TutorPage = () => {
   }, []);
 
   const askTutor = useCallback(async (question, task = 'answer', language = tutorLanguage) => {
-    if (!question?.trim() || !childId || !tutorEnabled) return;
+    const cleanQuestion = question?.trim();
+    if (!cleanQuestion || !childId || !tutorEnabled) return;
 
     setMessages(previous => [
       ...previous,
-      { id: Date.now(), text: question.trim(), sender: 'user' },
+      { id: Date.now(), text: cleanQuestion, sender: 'user' },
     ]);
+    setOnlineNotice('');
 
-    const suggestion = CurriculumTutorService.getSuggestion(childId, childName);
-    const unit = suggestion?.unit || null;
-    const localResult = unit ? { unit, matched: task === 'answer' } : null;
+    // Match the child's words to a real curriculum unit. Quick actions use the
+    // lesson selected in the toolbar because their text is task-only.
+    const localAnswer = CurriculumTutorService.answer(childId, cleanQuestion, childName);
+    const matchedUnit = localAnswer?.matched ? localAnswer.unit : null;
+    // Quick actions describe their text as task-only, so they use the lesson
+    // picked in the toolbar. A typed question must match a real lesson before
+    // it is allowed to produce an "Open lesson" link.
+    const unit = matchedUnit || (task !== 'answer' ? activeUnit : null);
+    const localResult = unit
+      ? {
+        unit,
+        matched: Boolean(matchedUnit) || task !== 'answer',
+        text: matchedUnit && localAnswer?.text
+          ? localAnswer.text
+          : localTaskAnswer(task, unit, childName),
+      }
+      : {
+        unit: null,
+        matched: false,
+        text: localAnswer?.text || 'Choose a lesson first, then ask me about it.',
+      };
+
+    if (matchedUnit) setSelectedUnitKey(matchedUnit.source);
 
     setMood('thinking');
     const result = await GeminiTutorService.answer(
       childId,
-      question.trim(),
+      cleanQuestion,
       localResult,
       childName,
       allowOnlineAI,
@@ -149,27 +203,31 @@ const TutorPage = () => {
       language,
     );
 
-    const response = result?.text || 'I can only help with your lessons right now.';
+    const response = result?.text || localResult.text;
+    if (result?.onlineError) setOnlineNotice(result.onlineError);
     setMessages(previous => [
       ...previous,
       {
         id: Date.now() + 1,
         text: response,
         sender: 'assistant',
-        unit: result?.unit || unit,
+        unit: result?.unit || null,
+        matched: result?.matched === true,
+        onlineError: result?.onlineError || '',
       },
     ]);
     speak(response);
     setMood('happy');
-    CurriculumTutorService.recordQuestion(childId, result?.unit || unit);
+    CurriculumTutorService.recordQuestion(childId, result?.unit || null);
 
     AIAssistantService.recordAIInteraction({
       childId,
       type: `${task}_query`,
-      query: question.trim(),
+      query: cleanQuestion,
       response,
     });
   }, [
+    activeUnit,
     allowOnlineAI,
     childId,
     childName,
@@ -227,6 +285,9 @@ const TutorPage = () => {
         setIsListening(false);
         if (error.error !== 'aborted' && error.error !== 'no-speech') {
           console.warn('Voice recognition failed:', error.error);
+          setVoiceError(error.error === 'network'
+            ? 'Voice input needs an internet connection. Please type your question instead.'
+            : 'Voice input is unavailable here. Please type your question instead.');
         }
       };
     }
@@ -253,7 +314,8 @@ const TutorPage = () => {
         id: Date.now(),
         text: greeting,
         sender: 'assistant',
-        unit: suggestion?.unit || null,
+        unit: null,
+        matched: false,
       }]);
     }, 2000);
 
@@ -269,6 +331,7 @@ const TutorPage = () => {
   const startListening = () => {
     if (!tutorEnabled || !allowVoice || !recognitionRef.current || !childId) return;
     transcriptRef.current = '';
+    setVoiceError('');
     try {
       recognitionActiveRef.current = true;
       recognitionRef.current.start();
@@ -277,6 +340,7 @@ const TutorPage = () => {
       recognitionActiveRef.current = false;
       setIsListening(false);
       console.warn('Voice recognition could not start:', error);
+      setVoiceError('Voice input could not start here. Please type your question instead.');
     }
   };
 
@@ -336,6 +400,22 @@ const TutorPage = () => {
         aria-label="Tutor conversation"
       >
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 pb-2">
+          {onlineNotice && (
+            <p
+              role="status"
+              className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+            >
+              {onlineNotice}
+            </p>
+          )}
+          {voiceError && (
+            <p
+              role="alert"
+              className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
+            >
+              {voiceError}
+            </p>
+          )}
           {!tutorEnabled ? (
             <div className="rounded-xl bg-purple-50 p-4 text-sm text-purple-900 dark:bg-purple-900/40 dark:text-purple-100">
               <p className="font-semibold">Tutor is locked</p>
@@ -366,7 +446,7 @@ const TutorPage = () => {
                     >
                       <FaVolumeUp className="mr-1 inline" /> Read
                     </button>
-                    {message.unit?.path && (
+                    {message.matched && message.unit?.path && (
                       <button
                         type="button"
                         onClick={() => navigate(message.unit.path)}
@@ -395,6 +475,24 @@ const TutorPage = () => {
       {tutorEnabled && (
         <div className="shrink-0 border-t border-gray-200 bg-white/80 dark:border-gray-700 dark:bg-gray-900/80">
           <div className="mx-auto flex w-full max-w-3xl items-center gap-2 overflow-x-auto px-3 pt-2 pb-1">
+            <select
+              value={activeUnit?.source || ''}
+              onChange={event => {
+                setSelectedUnitKey(event.target.value);
+                setOnlineNotice('');
+              }}
+              disabled={units.length === 0}
+              className="h-9 max-w-[11rem] shrink-0 rounded-lg bg-purple-100 px-2 text-xs text-purple-800 dark:bg-purple-900/40 dark:text-purple-200"
+              aria-label="Tutor lesson"
+              title="Lesson used for practice and story activities"
+            >
+              {units.length === 0 && <option value="">No lesson</option>}
+              {units.map(unit => (
+                <option key={unit.source} value={unit.source}>
+                  {unit.subject}: {unit.title}
+                </option>
+              ))}
+            </select>
             <select
               value={tutorLanguage}
               onChange={event => setTutorLanguage(event.target.value)}

@@ -96,7 +96,10 @@ describe('GeminiTutorService', () => {
       localResult,
       '',
       true,
-    )).resolves.toBe(localResult);
+    )).resolves.toEqual({
+      ...localResult,
+      onlineError: 'The online tutor is unavailable. I used your lesson instead.',
+    });
   });
 
   it('does not contact Gemini unless a parent enabled online answers', async () => {
