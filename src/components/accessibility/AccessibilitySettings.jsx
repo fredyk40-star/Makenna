@@ -26,6 +26,7 @@ const AccessibilitySettings = () => {
     soundSensitive,
     switchControl,
     switchInterval,
+    fontScale,
     updateSettings,
     resetAccessibility,
   } = useAccessibility();
@@ -109,6 +110,28 @@ const AccessibilitySettings = () => {
           )}
         </div>
       </div>
+
+      <label className="block pt-2 text-sm">
+        <span className="flex items-center justify-between font-semibold text-gray-800 dark:text-white">
+          <span>Text size</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {Math.round(fontScale * 100)}%
+          </span>
+        </span>
+        <input
+          type="range"
+          min="0.9"
+          max="1.4"
+          step="0.05"
+          value={fontScale}
+          onChange={event => updateSettings({ fontScale: Number(event.target.value) })}
+          className="w-full accent-blue-600"
+          aria-label="Text size"
+        />
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          Fine-tune reading size. Large text mode adds another 20%.
+        </span>
+      </label>
 
       <button
         type="button"

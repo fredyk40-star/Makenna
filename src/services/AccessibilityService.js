@@ -18,6 +18,12 @@ export const DEFAULT_ACCESSIBILITY_SETTINGS = {
   soundSensitive: false,
   switchControl: false,
   switchInterval: 1200,
+  fontScale: 1,
+};
+
+const NUMERIC_RANGES = {
+  switchInterval: { min: 300, max: 5000 },
+  fontScale: { min: 0.9, max: 1.4 },
 };
 
 const listeners = new Set();
@@ -28,8 +34,10 @@ const sanitize = (value) => {
   return Object.fromEntries(Object.entries(DEFAULT_ACCESSIBILITY_SETTINGS).map(([key, fallback]) => {
     const incoming = source[key];
     if (typeof fallback === 'boolean') return [key, typeof incoming === 'boolean' ? incoming : fallback];
+    const range = NUMERIC_RANGES[key];
     const number = Number(incoming);
-    return [key, Number.isFinite(number) && number >= 300 ? number : fallback];
+    if (!range || !Number.isFinite(number)) return [key, fallback];
+    return [key, Math.min(range.max, Math.max(range.min, number))];
   }));
 };
 
@@ -73,6 +81,7 @@ export class AccessibilityService {
       root.classList.toggle(className, !!active);
     });
     root.style.setProperty('--makenna-switch-interval', `${settings.switchInterval}ms`);
+    root.style.setProperty('--makenna-font-scale', String(settings.fontScale));
   }
 
   static subscribe(listener) {

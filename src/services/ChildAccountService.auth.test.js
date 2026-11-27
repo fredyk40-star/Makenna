@@ -98,6 +98,55 @@ describe('ChildAccountService account creation', () => {
   });
 });
 
+describe('ChildAccountService credential changes', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('registers with a password when the chosen credential is not a PIN', async () => {
+    const registered = await ChildAccountService.registerChild(
+      'Ama',
+      'StrongPass1!',
+      'parent@example.com',
+    );
+
+    const account = ChildAccountService.getChild(registered.childId);
+    expect(account.passwordSet).toBe(true);
+    expect(account.pinSet).toBe(false);
+    expect(account.passwordHash).toBeUndefined();
+    expect(apiState.accounts.get(registered.childId).password_hash).toBe(hashCredential('StrongPass1!'));
+
+    const login = await ChildAccountService.loginChild(registered.childId, 'StrongPass1!');
+    expect(login.fullName).toBe('Ama');
+  });
+
+  it('verifies the current credential before changing it', async () => {
+    const registered = await ChildAccountService.registerChild('Kofi', '1234', 'parent@example.com');
+
+    await expect(
+      ChildAccountService.changeCredential(registered.childId, '9999', '5678', 'pin'),
+    ).rejects.toThrow(/incorrect current/i);
+
+    const changed = await ChildAccountService.changeCredential(
+      registered.childId,
+      '1234',
+      'StrongPass2!',
+      'password',
+    );
+    expect(changed.credentialType).toBe('password');
+
+    const account = ChildAccountService.getChild(registered.childId);
+    expect(account.passwordSet).toBe(true);
+    expect(account.pinSet).toBe(false);
+    expect(account.passwordHash).toBeUndefined();
+
+    await expect(ChildAccountService.loginChild(registered.childId, '1234'))
+      .rejects.toThrow(/invalid child id or password/i);
+    const login = await ChildAccountService.loginChild(registered.childId, 'StrongPass2!');
+    expect(login.fullName).toBe('Kofi');
+  });
+});
+
 describe('ChildAccountService temporary-password recovery', () => {
   beforeEach(() => {
     localStorage.clear();

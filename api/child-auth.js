@@ -311,6 +311,81 @@ async function verifyPin(req, client, body) {
   return { valid };
 }
 
+/**
+ * Change the credential used for child login and the parent gate. The current
+ * credential must be supplied so a child cannot take over a signed-in device.
+ */
+async function changeCredential(req, client, body) {
+  const { childId } = await requireActiveChild(
+    client,
+    body.token || body.sessionToken,
+    body.childId,
+  );
+  if (await isRateLimited(req, childId, client)) {
+    throw new ApiError(429, 'Too many attempts. Please wait 15 minutes and try again.');
+  }
+
+  const type = body.type === 'password' ? 'password' : 'pin';
+  const currentCredential = requireCredential(body.currentCredential ?? body.currentPin);
+  const newCredential = requireCredential(body.newCredential ?? body.credential);
+
+  if (type === 'password' && !validatePassword(newCredential)) {
+    throw new ApiError(400, 'Password must be between 8 and 128 characters.');
+  }
+  if (type === 'pin' && !validatePin(newCredential)) {
+    throw new ApiError(400, 'PIN must be 4 or 8 digits.');
+  }
+
+  const row = await getAccountRow(client, childId);
+  if (!row || row.deleted_at) throw new ApiError(404, 'Account not found. Please log in again.');
+
+  const password = verifyStoredCredential(currentCredential, row.password_hash);
+  const legacyPin = verifyStoredCredential(currentCredential, row.pin_hash);
+  const temp = verifyStoredCredential(currentCredential, row.temp_password_hash);
+  const tempValid = !!(
+    temp.valid
+    && row.temp_password_expires_at
+    && Date.parse(row.temp_password_expires_at) > Date.now()
+  );
+  const currentValid = (!!row.password_set && password.valid)
+    || (!!row.pin_set && legacyPin.valid)
+    || tempValid;
+
+  if (!currentValid) {
+    await registerFailure(req, client, childId);
+    throw new ApiError(401, 'Incorrect current PIN or password. Please try again.');
+  }
+
+  await clearFailures(req, childId, client);
+
+  const hash = hashCredentialStrong(newCredential);
+  const updates = type === 'password'
+    ? { password_hash: hash, password_set: true, pin_hash: null, pin_set: false }
+    : { pin_hash: hash, pin_set: true, password_hash: null, password_set: false };
+
+  const nowMs = Date.now();
+  const now = new Date(nowMs).toISOString();
+  // Invalidate older device tokens, but keep the token issued below valid.
+  const revokedBefore = new Date(Math.floor(nowMs / 1000) * 1000 - 1).toISOString();
+  const patch = {
+    ...updates,
+    temp_password_hash: null,
+    temp_password_expires_at: null,
+    requires_credential_reset: false,
+    token_revoked_at: revokedBefore,
+    updated_at: now,
+    version: Number(row.version || 0) + 1,
+  };
+
+  await client.updateAccount(childId, patch);
+
+  return {
+    account: toClientAccount({ ...row, ...patch }),
+    credentialType: type,
+    token: createChildToken(childId),
+  };
+}
+
 const handler = async (req, res) => {
   requirePost(req, res);
   const body = readBody(req);
@@ -335,6 +410,10 @@ const handler = async (req, res) => {
     }
     case 'verify_pin': {
       const result = await verifyPin(req, client, body);
+      return json(res, 200, { success: true, ...result });
+    }
+    case 'change_credential': {
+      const result = await changeCredential(req, client, body);
       return json(res, 200, { success: true, ...result });
     }
     default:

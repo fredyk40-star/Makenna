@@ -47,6 +47,7 @@ body[data-top-banner='true'] .update-preview-banner {
   
   html {
     @apply scroll-smooth;
+    font-size: calc(16px * var(--makenna-font-scale, 1));
   }
   
   /* Dark mode */

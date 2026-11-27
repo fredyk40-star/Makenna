@@ -348,7 +348,11 @@ class AudioService {
    * Toggle mute
    */
   toggleMute() {
-    this.muted = !this.muted;
+    return this.setMuted(!this.muted);
+  }
+
+  setMuted(muted) {
+    this.muted = Boolean(muted);
     if (this.currentAudio?.gainNode) {
       this.currentAudio.gainNode.gain.value = this.muted ? 0 : this.volume;
     }

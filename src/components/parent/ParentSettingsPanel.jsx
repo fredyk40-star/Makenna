@@ -9,6 +9,7 @@ import SyncCenter from '../Sync/SyncCenter';
 import PrivacyPanel from '../privacy/PrivacyPanel';
 import SessionTimeoutSettings from '../session/SessionTimeoutSettings';
 import CurriculumTutorSettings from './CurriculumTutorSettings';
+import CredentialChangeSettings from './CredentialChangeSettings';
 
 const Section = ({ title, children }) => (
   <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
@@ -33,6 +34,10 @@ const ParentSettingsPanel = () => {
       <div className="space-y-6">
         <Section title="Parental controls">
           <ParentalControls />
+        </Section>
+
+        <Section title="Credential & parent gate">
+          <CredentialChangeSettings />
         </Section>
 
         <Section title="Lesson scheduler">

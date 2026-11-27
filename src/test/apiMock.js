@@ -73,13 +73,16 @@ const dispatch = (endpoint, body) => {
     if (body.action === 'register') {
       const childId = `kid${String(apiState.accounts.size + 20345635).slice(-8).padStart(8, '0')}`;
       const now = new Date().toISOString();
+      const credential = body.pin ?? body.credential ?? body.password;
+      const isPin = /^\d{4}$|^\d{8}$/.test(credential);
+      const hash = hashCredential(credential);
       const row = {
         child_id: childId,
         full_name: body.fullName.trim(),
-        pin_hash: hashCredential(body.pin),
-        pin_set: true,
-        password_hash: null,
-        password_set: false,
+        pin_hash: isPin ? hash : null,
+        pin_set: isPin,
+        password_hash: isPin ? null : hash,
+        password_set: !isPin,
         parent_email: normalize(body.parentEmail),
         temp_password_hash: null,
         temp_password_expires_at: null,
@@ -177,6 +180,57 @@ const dispatch = (endpoint, body) => {
       row.temp_password_expires_at = null;
       row.requires_credential_reset = false;
       return ok({ account: safeAccount(row), credentialType: body.type || 'pin' });
+    }
+
+    if (body.action === 'change_credential') {
+      const id = requireChild(body);
+      if (!id) return fail('This device is no longer authorised.', 401);
+      const row = apiState.accounts.get(id);
+      if (!row || row.deleted_at) return fail('Account not found.', 404);
+
+      const currentHash = hashCredential(body.currentCredential ?? body.currentPin);
+      const tempValid = !!(
+        row.temp_password_hash === currentHash
+        && row.temp_password_expires_at
+        && Date.parse(row.temp_password_expires_at) > Date.now()
+      );
+      const regularValid = (row.pin_set && row.pin_hash === currentHash)
+        || (row.password_set && row.password_hash === currentHash);
+      if (!tempValid && !regularValid) {
+        return fail('Incorrect current PIN or password. Please try again.', 401);
+      }
+
+      const newCredential = body.newCredential ?? body.credential;
+      const isPin = body.type !== 'password';
+      if (isPin && !/^\d{4}$|^\d{8}$/.test(newCredential)) {
+        return fail('PIN must be 4 or 8 digits.', 400);
+      }
+      if (!isPin && (typeof newCredential !== 'string' || newCredential.length < 8)) {
+        return fail('Password must be at least 8 characters.', 400);
+      }
+
+      const hash = hashCredential(newCredential);
+      if (isPin) {
+        row.pin_hash = hash;
+        row.pin_set = true;
+        row.password_hash = null;
+        row.password_set = false;
+      } else {
+        row.password_hash = hash;
+        row.password_set = true;
+        row.pin_hash = null;
+        row.pin_set = false;
+      }
+      row.temp_password_hash = null;
+      row.temp_password_expires_at = null;
+      row.requires_credential_reset = false;
+      row.updated_at = new Date().toISOString();
+      row.version = Number(row.version || 0) + 1;
+      return ok({
+        account: safeAccount(row),
+        credentialType: isPin ? 'pin' : 'password',
+        token: `token-${id}`,
+      });
     }
 
     if (body.action === 'verify_pin') {

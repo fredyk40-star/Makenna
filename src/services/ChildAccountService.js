@@ -373,6 +373,33 @@ export class ChildAccountService {
     };
   }
 
+  /**
+   * Change the credential used for login and the parent gate. The server
+   * verifies the current credential before writing the replacement hash.
+   */
+  static async changeCredential(childId, currentCredential, newCredential, type = 'pin') {
+    const token = this.getChildToken(childId);
+    if (!token) throw new Error('Please log in again before changing the credential.');
+    if (!this.validateRegistrationCredential(newCredential)) {
+      throw new Error('Enter a valid PIN (4 or 8 digits) or password (at least 8 characters).');
+    }
+
+    const result = await postApi('child-auth', {
+      action: 'change_credential',
+      childId: this.normalizeChildId(childId),
+      token,
+      currentCredential,
+      newCredential,
+      type: type === 'password' ? 'password' : 'pin',
+    });
+
+    this._saveAccount(result.account, result.token || token);
+    return {
+      childId: result.account.childId,
+      credentialType: result.credentialType,
+    };
+  }
+
   static hasPendingCredentialReset(childId) {
     return !!this._findAccount(childId)?.requiresCredentialReset;
   }

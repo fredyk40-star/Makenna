@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaCog, FaMoon, FaSun, FaMobileAlt } from 'react-icons/fa';
+import { FaCog, FaMoon, FaSun, FaMobileAlt, FaLanguage, FaInfoCircle } from 'react-icons/fa';
 import { useTheme } from '../../context/ThemeContext';
+import { useI18n, LANGUAGE_NAMES } from '../../context/I18nContext';
 import AudioSettings from '../../components/audio/AudioSettings';
 import PWAGuidance from '../../components/PWAGuidance/PWAGuidance';
 import AccessibilitySettings from '../../components/accessibility/AccessibilitySettings';
 import ParentSettingsPanel from '../../components/parent/ParentSettingsPanel';
 
 const Settings = () => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, setThemeMode } = useTheme();
+  const { locale, changeLanguage } = useI18n();
   const [showPWAGuidance, setShowPWAGuidance] = useState(false);
 
   const containerVariants = {
@@ -20,6 +22,11 @@ const Settings = () => {
     hidden: { opacity: 0, y: 15 },
     visible: { opacity: 1, y: 0 },
   };
+
+  const isDark = theme === 'dark' || (theme === 'auto' && typeof window !== 'undefined'
+    && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+  const buildLabel = import.meta.env.MODE === 'production' ? 'Production' : (import.meta.env.MODE || 'Development');
 
   return (
     <motion.div
@@ -38,10 +45,50 @@ const Settings = () => {
           whileHover={{ scale: 1.1, rotate: 15 }}
           whileTap={{ scale: 0.9 }}
           className="p-3 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-          aria-label="Toggle theme"
+          aria-label={`Toggle theme, currently ${theme}`}
         >
-          {theme === 'dark' ? <FaSun /> : <FaMoon />}
+          {isDark ? <FaSun /> : <FaMoon />}
         </motion.button>
+      </motion.div>
+
+      <motion.div
+        variants={itemVariants}
+        className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <FaLanguage className="text-2xl text-purple-500" />
+          <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white">
+            Appearance &amp; language
+          </h3>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+            Theme
+            <select
+              value={theme}
+              onChange={(event) => setThemeMode(event.target.value)}
+              className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white"
+              aria-label="Theme mode"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="auto">Auto (follow device)</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+            App language
+            <select
+              value={locale}
+              onChange={(event) => changeLanguage(event.target.value)}
+              className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white"
+              aria-label="App language"
+            >
+              {Object.entries(LANGUAGE_NAMES).map(([code, name]) => (
+                <option key={code} value={code}>{name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
       </motion.div>
 
       <motion.div
@@ -107,6 +154,28 @@ const Settings = () => {
 
       <motion.div variants={itemVariants}>
         <ParentSettingsPanel />
+      </motion.div>
+
+      <motion.div
+        variants={itemVariants}
+        className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <FaInfoCircle className="text-2xl text-green-500" />
+          <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white">
+            About Makenna
+          </h3>
+        </div>
+        <dl className="grid gap-2 text-sm text-gray-600 dark:text-gray-300 sm:grid-cols-[max-content_1fr]">
+          <dt className="font-semibold text-gray-700 dark:text-gray-200">App</dt>
+          <dd>Makenna Learning Lab</dd>
+          <dt className="font-semibold text-gray-700 dark:text-gray-200">Version</dt>
+          <dd>{appVersion}</dd>
+          <dt className="font-semibold text-gray-700 dark:text-gray-200">Build</dt>
+          <dd>{buildLabel}</dd>
+          <dt className="font-semibold text-gray-700 dark:text-gray-200">Learning</dt>
+          <dd>Ghana-curriculum lessons with offline-first practice.</dd>
+        </dl>
       </motion.div>
     </motion.div>
   );

@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
 
 // Context Providers
 import { ThemeProvider } from './context/ThemeContext';
-import { AccessibilityProvider } from './context/AccessibilityContext';
+import { AccessibilityProvider, useAccessibility } from './context/AccessibilityContext';
 import { AppProvider } from './context/AppContext';
 import { VoiceGuideProvider } from './context/VoiceGuideContext';
 import { ChildAccountProvider, useChildAccount } from './context/ChildAccountContext';
@@ -317,20 +317,31 @@ const AppContent = () => {
   );
 };
 
+function AccessibilityMotionConfig({ children }) {
+  const { reducedMotion } = useAccessibility();
+  return (
+    <MotionConfig reducedMotion={reducedMotion ? 'always' : 'user'}>
+      {children}
+    </MotionConfig>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <AccessibilityProvider>
-          <AppProvider>
-            <I18nProvider>
-              <ChildAccountProvider>
-                <ProfileProvider>
-                  <AppContent />
-                </ProfileProvider>
-              </ChildAccountProvider>
-            </I18nProvider>
-          </AppProvider>
+          <AccessibilityMotionConfig>
+            <AppProvider>
+              <I18nProvider>
+                <ChildAccountProvider>
+                  <ProfileProvider>
+                    <AppContent />
+                  </ProfileProvider>
+                </ChildAccountProvider>
+              </I18nProvider>
+            </AppProvider>
+          </AccessibilityMotionConfig>
         </AccessibilityProvider>
       </ThemeProvider>
     </ErrorBoundary>

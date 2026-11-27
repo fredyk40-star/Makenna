@@ -29,9 +29,7 @@ const AudioSettings = ({ className = '' }) => {
 
   const applySettings = (newSettings) => {
     audioService.setVolume(newSettings.masterVolume * newSettings.voiceVolume);
-    if (newSettings.mute) {
-      audioService.toggleMute();
-    }
+    audioService.setMuted(!!newSettings.mute);
   };
 
   const updateSetting = (key, value) => {
@@ -158,10 +156,7 @@ const AudioSettings = ({ className = '' }) => {
           label="Mute All"
           settingKey="mute"
           value={settings.mute}
-          onChange={(value) => {
-            updateSetting('mute', value);
-            audioService.toggleMute();
-          }}
+          onChange={(value) => updateSetting('mute', value)}
         />
         <ToggleButton
           label="Voice Enabled"

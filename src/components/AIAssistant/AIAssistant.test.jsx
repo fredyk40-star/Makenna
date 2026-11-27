@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AIAssistant from './AIAssistant';
 
@@ -22,7 +23,8 @@ vi.mock('../../services/CurriculumTutorService', () => ({
     isEnabled: () => true,
     getSettings: () => ({ enabled: true, allowVoice: true, allowOnlineAI: false }),
     subscribe: () => () => {},
-    getSuggestion: () => null,
+    getSuggestion: () => ({ unit: mockState.localAnswer.unit }),
+    recordQuestion: vi.fn(),
     answer: () => mockState.localAnswer,
   },
 }));
@@ -70,7 +72,11 @@ describe('AIAssistant speech recognition', () => {
     window.SpeechRecognition = MockSpeechRecognition;
     Element.prototype.scrollIntoView = vi.fn();
     mockState.geminiAnswer.mockImplementation(async (_childId, _text, local) => local);
-    const { container } = render(<AIAssistant />);
+    const { container } = render(
+      <MemoryRouter>
+        <AIAssistant />
+      </MemoryRouter>,
+    );
 
     fireEvent.click(container.querySelector('.w-16.h-16'));
     fireEvent.click(screen.getByTitle('Ask with your voice'));
@@ -97,9 +103,11 @@ describe('AIAssistant speech recognition', () => {
       expect(mockState.geminiAnswer).toHaveBeenCalledWith(
         'kid12345678',
         'What are vowels?',
-        mockState.localAnswer,
+        { unit: mockState.localAnswer.unit, matched: true },
         'Ama Mensah',
         false,
+        'answer',
+        'english',
       );
     });
   });
