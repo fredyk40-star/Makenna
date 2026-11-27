@@ -63,9 +63,12 @@ export const safeEqual = (a, b) => {
 const b64url = (value) => Buffer.from(value).toString('base64url');
 
 function getChildSecret() {
-  if (process.env.CHILD_SESSION_SECRET) return process.env.CHILD_SESSION_SECRET;
-  if (process.env.DEVELOPER_JWT_SECRET) return process.env.DEVELOPER_JWT_SECRET;
-  if (process.env.VERCEL || process.env.VERCEL_ENV) {
+  const isProduction = process.env.NODE_ENV === 'production'
+    || !!process.env.VERCEL
+    || !!process.env.VERCEL_ENV;
+  const secret = process.env.CHILD_SESSION_SECRET;
+  if (secret) return secret;
+  if (isProduction) {
     throw new Error('CHILD_SESSION_SECRET is required in production.');
   }
   return 'makenna-local-child-secret';

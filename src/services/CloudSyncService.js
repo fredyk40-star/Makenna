@@ -9,6 +9,7 @@
 import { StorageService } from './StorageService';
 import { ChildAccountService, postApi } from './ChildAccountService';
 import { SyncQueueService } from './SyncQueueService';
+import { collectSyncedLocalData, restoreSyncedLocalData } from './SyncedLocalData';
 
 const SYNC_STATUS_KEY = 'makenna_sync_status_v1';
 const ENABLED_KEY = 'makenna_cloud_sync_enabled';
@@ -57,6 +58,16 @@ const stableString = (value) => {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableString).join(',')}]`;
   return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableString(value[key])}`).join(',')}}`;
+};
+
+const isPlainObject = value => value && typeof value === 'object' && !Array.isArray(value);
+
+const prefersAccount = (candidate, candidateRank, existing, existingRank) => {
+  const candidateTime = timeOf(candidate);
+  const existingTime = timeOf(existing);
+  if (candidateTime !== existingTime) return candidateTime > existingTime;
+  if (candidateRank !== existingRank) return candidateRank > existingRank;
+  return stableString(candidate) > stableString(existing);
 };
 
 const envAllowsSync = () => {
@@ -239,7 +250,12 @@ export class CloudSyncService {
       createdAt: account.createdAt,
       lastLogin: account.lastLogin,
       progress: account.progress || {},
-      settings: account.settings || {},
+      settings: {
+        ...(account.settings || {}),
+        // Legacy screens keep progress outside the account record. Carry it
+        // in settings so it survives a restore on another device.
+        __localData: collectSyncedLocalData(),
+      },
       updatedAt: account.updatedAt || account.createdAt || new Date().toISOString(),
       version: Number(account.version || 0),
     };
@@ -276,8 +292,11 @@ export class CloudSyncService {
       if (failure) return { success: false, error: failure.error };
       return { success: true, childId: payload.childId };
     } catch (error) {
-      console.error('Cloud upload failed:', { childId: payload.childId, message: error.message });
-      return { success: false, error: error.message };
+      const failure = error.data?.failures?.find(item => item.childId === payload.childId)
+        || error.data?.failures?.[0];
+      const message = failure?.error || error.message;
+      console.error('Cloud upload failed:', { childId: payload.childId, message });
+      return { success: false, error: message };
     }
   }
 
@@ -295,60 +314,91 @@ export class CloudSyncService {
   }
 
   /**
-   * Deterministic merge: newer timestamp wins; equal timestamps use source
-   * rank (cloud over local) then a stable fingerprint as the final tie-break.
+   * Deterministic merge: scalar fields come from the newer account, while
+   * progress/settings keys contributed by only one side are preserved. This
+   * avoids losing an offline edit on one device when another device syncs a
+   * newer but otherwise unrelated change.
    */
   static mergeAccounts(local, cloud, tombstones = SyncQueueService.getTombstones()) {
-    const merged = new Map();
+    const byId = (accounts, sourceRank) => {
+      const map = new Map();
+      (Array.isArray(accounts) ? accounts : []).forEach(account => {
+        if (!account?.childId) return;
+        const id = String(account.childId).toLowerCase();
+        const existing = map.get(id);
+        if (!existing || prefersAccount(account, sourceRank, existing.account, existing.rank)) {
+          map.set(id, { account, rank: sourceRank });
+        }
+      });
+      return map;
+    };
 
-    const consider = (account, sourceRank) => {
-      if (!account?.childId) return;
-      const id = String(account.childId).toLowerCase();
-      const existing = merged.get(id);
-      if (!existing) {
-        merged.set(id, {
+    const localById = byId(local, 0);
+    const cloudById = byId(cloud, 1);
+    const ids = new Set([...localById.keys(), ...cloudById.keys()]);
+    const result = new Map();
+
+    ids.forEach(id => {
+      const localEntry = localById.get(id);
+      const cloudEntry = cloudById.get(id);
+
+      if (!localEntry || !cloudEntry) {
+        const entry = localEntry || cloudEntry;
+        const account = entry.account;
+        result.set(id, {
           ...account,
           childId: account.childId,
           updatedAt: account.updatedAt || account.createdAt || null,
-          __sourceRank: sourceRank,
         });
         return;
       }
 
-      const candidateTime = timeOf(account);
-      const existingTime = timeOf(existing);
-      let useCandidate = candidateTime > existingTime;
+      const winnerEntry = prefersAccount(cloudEntry.account, cloudEntry.rank, localEntry.account, localEntry.rank)
+        ? cloudEntry
+        : localEntry;
+      const loserEntry = winnerEntry === cloudEntry ? localEntry : cloudEntry;
+      const winner = winnerEntry.account;
+      const loser = loserEntry.account;
 
-      if (candidateTime === existingTime) {
-        if (sourceRank !== existing.__sourceRank) {
-          useCandidate = sourceRank > existing.__sourceRank;
-        } else {
-          useCandidate = stableString(account) > stableString(existing);
+      const mergeSection = (key) => {
+        const winnerValue = winner[key];
+        const loserValue = loser[key];
+        if (!isPlainObject(winnerValue) || !isPlainObject(loserValue)) {
+          return winnerValue ?? loserValue ?? {};
         }
+        return { ...loserValue, ...winnerValue };
+      };
+
+      const account = {
+        ...winner,
+        childId: winner.childId,
+        progress: mergeSection('progress'),
+        settings: mergeSection('settings'),
+        updatedAt: winner.updatedAt || winner.createdAt || null,
+        version: Math.max(Number(winner.version || 0), Number(loser.version || 0)),
+      };
+
+      const progressChanged = stableString(account.progress) !== stableString(winner.progress || {});
+      const settingsChanged = stableString(account.settings) !== stableString(winner.settings || {});
+      if (progressChanged || settingsChanged) {
+        // Ensure the merged key set is newer than the cloud row so a push is
+        // accepted instead of skipped by the server's timestamp guard.
+        account.updatedAt = new Date(Math.max(Date.now(), timeOf(winner)) + 1).toISOString();
+        account.version += 1;
       }
 
-      if (useCandidate) {
-        merged.set(id, {
-          ...account,
-          childId: account.childId,
-          updatedAt: account.updatedAt || account.createdAt || new Date(candidateTime).toISOString(),
-          __sourceRank: sourceRank,
-        });
-      }
-    };
-
-    (Array.isArray(local) ? local : []).forEach(account => consider(account, 0));
-    (Array.isArray(cloud) ? cloud : []).forEach(account => consider(account, 1));
+      result.set(id, account);
+    });
 
     Object.entries(tombstones || {}).forEach(([childId, tombstone]) => {
       const id = String(childId).toLowerCase();
-      const existing = merged.get(id);
+      const existing = result.get(id);
       if (existing && new Date(tombstone.deletedAt).getTime() >= timeOf(existing)) {
-        merged.delete(id);
+        result.delete(id);
       }
     });
 
-    return Array.from(merged.values()).map(({ __sourceRank, ...account }) => account);
+    return Array.from(result.values());
   }
 
   static async syncFromCloud() {
@@ -359,6 +409,7 @@ export class CloudSyncService {
     if (result.success) {
       const merged = this.mergeAccounts(ChildAccountService.getAllAccounts(), result.accounts);
       ChildAccountService.saveAllAccounts(merged);
+      merged.forEach(account => restoreSyncedLocalData(account.settings?.__localData));
       this.updateSyncStatus({ lastSync: new Date().toISOString(), lastError: null });
     } else {
       this.updateSyncStatus({ lastError: result.error });
@@ -466,9 +517,14 @@ export class CloudSyncService {
       const developerToken = StorageService.get(DEVELOPER_SESSION_KEY, null);
 
       if (!childToken && !developerToken) {
-        // Without a device token or developer session, this device cannot authorise
-        // cloud deletion. Local deletion is already complete and tombstoned.
-        return { success: true, childId, skippedCloud: true };
+        // Without a device token or developer session this device cannot prove
+        // it may delete the cloud row. Keep the operation queued for retry.
+        return {
+          success: false,
+          childId,
+          skippedCloud: true,
+          error: 'Cloud deletion needs a signed child or developer session.',
+        };
       }
 
       await postApi('child-sync', {
@@ -487,9 +543,12 @@ export class CloudSyncService {
         || error.message?.includes('unauthorized')
         || error.message?.includes('401');
       if (isAuthError) {
-        // A permanent auth failure means this device cannot delete the cloud row.
-        // Return success so the sync queue drops the operation instead of retrying forever.
-        return { success: true, childId, unauthenticated: true };
+        return {
+          success: false,
+          childId,
+          unauthenticated: true,
+          error: 'This device is no longer authorised to delete that cloud account.',
+        };
       }
       return { success: false, error: error.message };
     }

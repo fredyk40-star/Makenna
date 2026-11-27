@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChildAccount } from '../context/ChildAccountContext';
 import { ChildAccountService } from '../services/ChildAccountService';
+import { AnalyticsService } from '../services/AnalyticsService';
 import { ALPHABET_DATA } from '../data/alphabetData';
 import {
   ALPHABET_PROGRESS_KEY,
@@ -83,6 +84,7 @@ export const useAlphabetProgress = () => {
   }, [update]);
 
   const markCompleted = useCallback((id) => {
+    const wasCompleted = progressRef.current.completed.includes(id);
     update(prev => {
       const completed = prev.completed.includes(id)
         ? prev.completed
@@ -94,14 +96,19 @@ export const useAlphabetProgress = () => {
       }, id);
       return next;
     });
+    if (!wasCompleted) AnalyticsService.trackLessonComplete('alphabet', id, 100);
   }, [update]);
 
   /** Record a practiced skill. Core skills also unlock lesson completion. */
   const markSkill = useCallback((id, skill, options = true) => {
+    const correct = typeof options === 'object' && options !== null
+      ? options.completed !== false
+      : options !== false && options !== 0;
     update(prev => withCoreCompletion(
       markSkillInProgress(prev, id, skill, options),
       id,
     ));
+    AnalyticsService.trackAnswer(`${id}:${skill}`, correct, 'alphabet');
   }, [update]);
 
   const toggleFavoriteLetter = useCallback((id) => {

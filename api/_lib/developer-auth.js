@@ -6,10 +6,37 @@ export const DEVELOPER_EMAIL =
 
 const SESSION_TTL_SECONDS = 30 * 60;
 const RESET_TTL_SECONDS = 60 * 60;
+const AUTH_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_LIMIT_MAX = 10;
+const authAttempts = new Map();
+
+/**
+ * Best-effort per-instance throttle for sign-in and reset requests.
+ * Vercel functions are short-lived, so this stops obvious brute-force bursts
+ * without turning the developer portal into a database-backed auth system.
+ */
+export function checkDeveloperAuthRateLimit(key) {
+  const now = Date.now();
+  const bucket = authAttempts.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    authAttempts.set(key, { count: 1, resetAt: now + AUTH_LIMIT_WINDOW_MS });
+    return true;
+  }
+  bucket.count += 1;
+  return bucket.count <= AUTH_LIMIT_MAX;
+}
+
+export function resetDeveloperAuthRateLimit(key) {
+  authAttempts.delete(key);
+}
 
 function getSecret() {
-  if (process.env.DEVELOPER_JWT_SECRET) return process.env.DEVELOPER_JWT_SECRET;
-  if (process.env.VERCEL || process.env.VERCEL_ENV) {
+  const isProduction = process.env.NODE_ENV === 'production'
+    || !!process.env.VERCEL
+    || !!process.env.VERCEL_ENV;
+  const secret = process.env.DEVELOPER_JWT_SECRET;
+  if (secret) return secret;
+  if (isProduction) {
     throw new Error('DEVELOPER_JWT_SECRET is required in production.');
   }
   return 'makenna-local-development-secret';

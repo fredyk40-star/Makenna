@@ -4,6 +4,7 @@
  */
 import { StorageService } from './StorageService';
 import AdaptiveLearningService from './AdaptiveLearningService';
+import { RevisionPlannerService } from './RevisionPlannerService';
 
 
 const REVISION_KEY = 'makenna_revision_plans';
@@ -204,9 +205,16 @@ export class RevisionPlanner {
     const plan = this.getPlan(childId);
     const now = Date.now();
 
-    return Object.entries(plan.spacedRepetition || {})
+    // The Revision page writes cards to RevisionPlannerService, while older
+    // screens used this planner's spacedRepetition map. Surface both so daily
+    // missions and the lesson scheduler see due cards from either source.
+    const legacy = Object.entries(plan.spacedRepetition || {})
       .filter(([_itemId, data]) => data.nextReview <= now)
       .map(([itemId]) => itemId);
+    const modern = RevisionPlannerService.getDueCards(childId, new Date(now))
+      .map(card => card.id || card.topic || card.prompt);
+
+    return [...new Set([...modern, ...legacy])];
   }
 
   /**

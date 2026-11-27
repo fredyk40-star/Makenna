@@ -222,7 +222,7 @@ const AppContent = () => {
                   <Route path="teacher" element={<TeacherDashboard />} />
                   <Route path="alphabet" element={<AlphabetHome />} />
                   <Route path="alphabet/lesson/:letterId" element={<LessonPage />} />
-                  <Route path="alphabet/trace/:letterId" element={<TracingPage />} />
+                  <Route path="alphabet/trace/:letterId/:mode?" element={<TracingPage />} />
                   <Route path="games/alphabet" element={<AlphabetGames />} />
                   <Route
                     path="games/alphabet/:gameId"
@@ -298,7 +298,7 @@ const AppContent = () => {
                   <Route path="numbers/story/:storyId" element={<NumberStoryReader />} />
                   <Route path="numbers/mastery" element={<NumbersMastery />} />
                   <Route path="colours" element={<ColoursHome />} />
-                  <Route path="colours/lesson/:colorId" element={<ColourLesson />} />
+                  <Route path="colours/lesson/:colourId" element={<ColourLesson />} />
                   <Route path="maths" element={<MathsHome />} />
                   <Route path="maths/addition" element={<Addition />} />
                   <Route path="maths/subtraction" element={<Subtraction />} />

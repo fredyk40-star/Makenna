@@ -37,6 +37,26 @@ describe('CloudSyncService conflict resolution', () => {
     expect(merged[0].progress.letters).toBe(9);
   });
 
+  it('preserves progress keys that exist on only one side', () => {
+    const merged = CloudSyncService.mergeAccounts(
+      [{
+        childId: 'kid-1',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        progress: { letters: 4, offlineShapeLesson: { completed: true } },
+      }],
+      [{
+        childId: 'kid-1',
+        updatedAt: '2026-01-03T00:00:00.000Z',
+        progress: { letters: 9 },
+      }],
+      {},
+    );
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].progress.letters).toBe(9);
+    expect(merged[0].progress.offlineShapeLesson).toEqual({ completed: true });
+  });
+
   it('breaks equal timestamps deterministically in favour of cloud', () => {
     const timestamp = '2026-01-02T00:00:00.000Z';
     const merged = CloudSyncService.mergeAccounts(
@@ -98,6 +118,16 @@ describe('CloudSyncService queue integration', () => {
     expect(queue[0].payload).toEqual({ childId: 'kid-4', token: 'token-kid-4' });
   });
 
+  it('reports an unauthorized cloud deletion instead of silently marking it done', async () => {
+    apiState.accounts.set('kid-no-token', { child_id: 'kid-no-token', full_name: 'Ama' });
+
+    const result = await CloudSyncService.deleteFromCloud('kid-no-token');
+
+    expect(result.success).toBe(false);
+    expect(result.skippedCloud).toBe(true);
+    expect(apiState.accounts.has('kid-no-token')).toBe(true);
+  });
+
   it('deletes from the cloud with a developer session after the device token is gone', async () => {
     apiState.accounts.set('kid-5', { child_id: 'kid-5', full_name: 'Ama' });
     StorageService.set('makenna_dev_session_token_v1', 'developer-token');
@@ -105,7 +135,7 @@ describe('CloudSyncService queue integration', () => {
     const result = await CloudSyncService.deleteFromCloud('kid-5');
 
     expect(result.success).toBe(true);
-    expect(apiState.accounts.has('kid-5')).toBe(false);
+    expect(apiState.accounts.get('kid-5').deleted_at).toBeTruthy();
   });
 });
 

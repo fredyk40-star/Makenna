@@ -110,7 +110,7 @@ const SyncCenter = () => {
             onChange={event => setImportMode(event.target.value)}
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
           >
-            <option value="merge">Merge (keep newer local data)</option>
+            <option value="merge">Merge (keep both, imported values win conflicts)</option>
             <option value="replace">Replace this device</option>
           </select>
           <label className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold cursor-pointer">
@@ -125,7 +125,7 @@ const SyncCenter = () => {
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
           The bundle includes child accounts, progress, rewards, analytics and classroom data.
-          Keep it secure — it contains child PIN hashes for offline login.
+          Keep it secure — credentials are verified on the server and are not included.
         </p>
       </div>
 

@@ -6,6 +6,7 @@
  * performed by Vercel functions that use the Supabase service-role key.
  */
 import { StorageService } from './StorageService';
+import { SyncQueueService } from './SyncQueueService';
 
 const CHILD_ACCOUNTS_KEY = 'makenna_child_accounts_v2';
 const ACTIVE_CHILD_KEY = 'makenna_active_child_id';
@@ -57,7 +58,10 @@ export const postApi = async (endpoint, body) => {
   }
 
   if (!response.ok || !data.success) {
-    throw new Error(data.error || 'Request failed. Please try again.');
+    const error = new Error(data.error || 'Request failed. Please try again.');
+    error.data = data;
+    error.status = response.status;
+    throw error;
   }
   return data;
 };
@@ -299,6 +303,30 @@ export class ChildAccountService {
     return result;
   }
 
+  /**
+   * Merge pending offline progress into the server account returned by login.
+   * Login advances the server timestamp, so the preserved state is stamped and
+   * re-queued before the next push would otherwise skip it as "older".
+   */
+  static _mergePendingLoginAccount(local, cloud) {
+    if (!local) return cloud;
+
+    const hasPendingWrite = SyncQueueService.getQueue().some(operation =>
+      operation.type === 'UPSERT_ACCOUNT'
+      && String(operation.childId || '').toLowerCase() === String(cloud.childId || '').toLowerCase());
+    if (!hasPendingWrite) return cloud;
+
+    const merged = {
+      ...cloud,
+      progress: { ...(cloud.progress || {}), ...(local.progress || {}) },
+      settings: { ...(cloud.settings || {}), ...(local.settings || {}) },
+      version: Math.max(Number(local.version || 0), Number(cloud.version || 0)) + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    queueCloudChange('UPSERT_ACCOUNT', merged);
+    return merged;
+  }
+
   /** Server-side credential verification. Never compares hashes in the browser. */
   static async loginChild(childId, credential) {
     const result = await postApi('child-auth', {
@@ -307,11 +335,13 @@ export class ChildAccountService {
       credential,
     });
 
-    this._saveAccount(result.account, result.token);
-    this.setActiveChild(result.account.childId);
+    const local = this.getChild(result.account.childId);
+    const account = this._mergePendingLoginAccount(local, result.account);
+    this._saveAccount(account, result.token);
+    this.setActiveChild(account.childId);
     return {
-      childId: result.account.childId,
-      fullName: result.account.fullName,
+      childId: account.childId,
+      fullName: account.fullName,
       requiresCredentialReset: !!result.requiresCredentialReset,
     };
   }

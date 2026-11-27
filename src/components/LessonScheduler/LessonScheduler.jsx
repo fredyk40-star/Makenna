@@ -91,8 +91,8 @@ const LessonSchedulerComponent = () => {
   const getLessonTypes = () => LessonScheduler.getLessonTypes();
 
   return (
-    <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft text-gray-800 dark:text-white">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft text-gray-800 dark:text-white">
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-baloo text-2xl font-bold">
           Learning Schedule <FaCalendarAlt className="inline-block ml-2 text-purple-500" />
         </h2>
@@ -105,7 +105,7 @@ const LessonSchedulerComponent = () => {
       </div>
 
       {/* Week Navigation */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={handlePrevWeek}

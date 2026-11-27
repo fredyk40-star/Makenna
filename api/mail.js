@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     console.error('Temporary password mail failed:', error.message);
     return json(res, 502, {
       success: false,
-      error: `Email could not be sent: ${error.message}`,
+      error: 'Email could not be sent. Please try again later.',
     });
   }
 }

@@ -7,6 +7,8 @@ import {
   verifyDeveloperPassword,
   saveDeveloperPassword,
   validateStrongPassword,
+  checkDeveloperAuthRateLimit,
+  resetDeveloperAuthRateLimit,
 } from './_lib/developer-auth.js';
 import { sendMail } from './_lib/mailer.js';
 
@@ -19,13 +21,23 @@ export default async function handler(req, res) {
   }
 
   const { action, email, password, token, newPassword } = req.body || {};
+  const clientKey = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || req.socket?.remoteAddress
+    || 'unknown';
 
   try {
     if (action === 'login') {
+      if (!checkDeveloperAuthRateLimit(`login:${clientKey}`)) {
+        return json(res, 429, {
+          success: false,
+          error: 'Too many sign-in attempts. Please wait 15 minutes and try again.',
+        });
+      }
       const valid = await verifyDeveloperPassword(email, password);
       if (!valid) {
         return json(res, 401, { success: false, error: 'Invalid developer email or password.' });
       }
+      resetDeveloperAuthRateLimit(`login:${clientKey}`);
       return json(res, 200, {
         success: true,
         token: createSessionToken(),
@@ -39,11 +51,17 @@ export default async function handler(req, res) {
     }
 
     if (action === 'request-reset') {
+      if (!checkDeveloperAuthRateLimit(`reset:${clientKey}`)) {
+        return json(res, 429, {
+          success: false,
+          error: 'Too many reset requests. Please wait 15 minutes and try again.',
+        });
+      }
       // A reset link is only ever generated and mailed for the configured mailbox.
       const normalizedEmail = String(email || '').trim().toLowerCase();
-      if (normalizedEmail === DEVELOPER_EMAIL.toLowerCase()) {
+      if (normalizedEmail === DEVELOPER_EMAIL.toLowerCase() && process.env.APP_URL) {
         const resetToken = createResetToken();
-        const origin = process.env.APP_URL || `https://${req.headers.host}`;
+        const origin = process.env.APP_URL;
         const link = `${origin.replace(/\/$/, '')}/developer-reset-password?token=${encodeURIComponent(resetToken)}`;
         try {
           await sendMail({
@@ -80,6 +98,6 @@ export default async function handler(req, res) {
     return json(res, 400, { success: false, error: 'Unknown action' });
   } catch (error) {
     console.error('Developer auth error:', error.message);
-    return json(res, 500, { success: false, error: error.message });
+    return json(res, 500, { success: false, error: 'Developer authentication is temporarily unavailable.' });
   }
 }

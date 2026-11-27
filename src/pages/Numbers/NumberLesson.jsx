@@ -196,8 +196,8 @@ const NumberLesson = () => {
       className="space-y-6 pb-4"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <Link
             to="/numbers"
             className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -212,11 +212,11 @@ const NumberLesson = () => {
             <FaPencilAlt className="text-sm" />
             Trace
           </Link>
-          <h2 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white">
+          <h2 className="min-w-0 font-baloo text-2xl font-bold text-gray-800 dark:text-white">
             Number {number.number}
           </h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleFavoriteToggle}
             className={`p-2 rounded-full transition-colors ${

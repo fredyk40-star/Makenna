@@ -57,8 +57,9 @@ const NotificationBell = () => {
 
   // Initialize NotificationService with default parent ID for demo
   useEffect(() => {
-    // Sync NotificationService notifications if available
+    // Sync NotificationService notifications into the active child's bell.
     const parentId = 'demo_parent';
+    const userId = activeChild?.childId || StorageService.get('makenna_current_user_id', 'default');
     const parentNotifications = NotificationService.getNotifications(parentId);
     if (parentNotifications.length > 0) {
       const allNotifications = NotificationBellService.getAllNotifications();
@@ -66,7 +67,7 @@ const NotificationBell = () => {
       parentNotifications.forEach(pn => {
         const exists = allNotifications.some(n => n.id === pn.id);
         if (!exists) {
-          NotificationBellService.addNotification({
+          NotificationBellService.addNotification(userId, {
             title: pn.title,
             message: pn.message,
             timestamp: pn.timestamp,
@@ -77,7 +78,7 @@ const NotificationBell = () => {
       });
       loadNotifications();
     }
-  }, []);
+  }, [activeChild?.childId]);
 
   const markAsRead = (id) => {
     NotificationBellService.markAsRead(id);
@@ -105,10 +106,10 @@ const NotificationBell = () => {
     <div className="relative" ref={dropdownRef}>
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+        className="rounded-full bg-gray-100 p-2 text-gray-700 backdrop-blur-sm transition-colors hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
         whileTap={{ scale: 0.9 }}
       >
-        <FaBell className="text-white text-xl" />
+        <FaBell className="text-xl" />
         {unreadCount > 0 && (
           <motion.span
             initial={{ scale: 0 }}

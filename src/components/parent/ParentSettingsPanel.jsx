@@ -11,7 +11,7 @@ import SessionTimeoutSettings from '../session/SessionTimeoutSettings';
 import CurriculumTutorSettings from './CurriculumTutorSettings';
 
 const Section = ({ title, children }) => (
-  <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
+  <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
     <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white mb-4">{title}</h3>
     {children}
   </div>

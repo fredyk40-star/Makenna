@@ -64,9 +64,43 @@ export const AVATAR_UNLOCKS = [
 ];
 
 export class GamificationService {
-  /**
-   * Get default state for a new child
-   */
+  static normalizeChildId(childId) {
+    return String(childId ?? '').trim().toLowerCase();
+  }
+
+  /** Load, mutate once, and save once so helper rewards are never overwritten. */
+  static _apply(childId, mutator) {
+    const id = this.normalizeChildId(childId);
+    const state = this.getState(id);
+    const result = mutator(state);
+    this.saveState(id, state);
+    return { state, result };
+  }
+
+  static _awardXP(state, amount) {
+    state.xp += amount;
+    const newLevel = this.getLevel(state.xp);
+    const leveledUp = newLevel > state.level;
+    state.level = newLevel;
+    if (leveledUp) state.coins += newLevel * 10;
+    return { leveledUp, newLevel, totalXP: state.xp };
+  }
+
+  static _awardCoins(state, amount) {
+    state.coins += amount;
+    return state.coins;
+  }
+
+  static _awardBadge(state, badgeId) {
+    if (state.badges.find(b => b.id === badgeId)) return false;
+    const badgeDef = BADGE_DEFINITIONS.find(b => b.id === badgeId);
+    if (!badgeDef) return false;
+
+    state.badges.push({ id: badgeId, earnedAt: new Date().toISOString() });
+    this._awardXP(state, badgeDef.xpReward);
+    return true;
+  }
+
   static getDefaultState() {
     return {
       xp: 0,
@@ -93,48 +127,35 @@ export class GamificationService {
     };
   }
 
-  /**
-   * Get gamification state for a child
-   */
   static getState(childId) {
+    const id = this.normalizeChildId(childId);
     const allStates = StorageService.get(GAMIFICATION_KEY, {});
-    if (!allStates[childId]) {
-      allStates[childId] = this.getDefaultState();
+    if (!allStates[id]) {
+      allStates[id] = this.getDefaultState();
       StorageService.set(GAMIFICATION_KEY, allStates);
     }
-    return allStates[childId];
+    return allStates[id];
   }
 
-  /**
-   * Save gamification state for a child
-   */
   static saveState(childId, state) {
+    const id = this.normalizeChildId(childId);
     const allStates = StorageService.get(GAMIFICATION_KEY, {});
-    allStates[childId] = state;
+    allStates[id] = state;
     StorageService.set(GAMIFICATION_KEY, allStates);
   }
 
-  /**
-   * Calculate level from XP
-   */
   static getLevel(xp) {
-    for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i -= 1) {
       if (xp >= LEVEL_THRESHOLDS[i]) return i + 1;
     }
     return 1;
   }
 
-  /**
-   * Get XP needed for next level
-   */
   static getXPForNextLevel(level) {
     if (level >= LEVEL_THRESHOLDS.length) return Infinity;
     return LEVEL_THRESHOLDS[level];
   }
 
-  /**
-   * Get XP progress within current level
-   */
   static getLevelProgress(xp) {
     const level = this.getLevel(xp);
     const currentLevelXP = LEVEL_THRESHOLDS[level - 1] || 0;
@@ -143,243 +164,150 @@ export class GamificationService {
     return Math.min(100, Math.max(0, progress));
   }
 
-  /**
-   * Add XP to a child
-   */
   static addXP(childId, amount, _reason = '') {
-    const state = this.getState(childId);
-    state.xp += amount;
-    const newLevel = this.getLevel(state.xp);
-    const leveledUp = newLevel > state.level;
-    state.level = newLevel;
-
-    if (leveledUp) {
-      state.coins += newLevel * 10; // Bonus coins on level up
-    }
-
-    this.saveState(childId, state);
-    return { leveledUp, newLevel, totalXP: state.xp };
+    return this._apply(childId, state => this._awardXP(state, amount)).result;
   }
 
-  /**
-   * Add coins to a child
-   */
   static addCoins(childId, amount) {
-    const state = this.getState(childId);
-    state.coins += amount;
-    this.saveState(childId, state);
-    return state.coins;
+    return this._apply(childId, state => this._awardCoins(state, amount)).result;
   }
 
-  /**
-   * Spend coins (e.g., on avatar unlocks)
-   */
   static spendCoins(childId, amount) {
-    const state = this.getState(childId);
+    const id = this.normalizeChildId(childId);
+    const state = this.getState(id);
     if (state.coins < amount) return false;
     state.coins -= amount;
-    this.saveState(childId, state);
+    this.saveState(id, state);
     return true;
   }
 
-  /**
-   * Add a badge to a child
-   */
   static addBadge(childId, badgeId) {
-    const state = this.getState(childId);
-    if (state.badges.find(b => b.id === badgeId)) return false;
-
-    const badgeDef = BADGE_DEFINITIONS.find(b => b.id === badgeId);
-    if (!badgeDef) return false;
-
-    state.badges.push({
-      id: badgeId,
-      earnedAt: new Date().toISOString(),
-    });
-
-    // XP reward for earning badge
-    this.addXP(childId, badgeDef.xpReward, `Badge: ${badgeDef.name}`);
-
-    this.saveState(childId, state);
-    return true;
+    return this._apply(childId, state => this._awardBadge(state, badgeId)).result;
   }
 
-  /**
-   * Record a correct answer
-   */
   static recordCorrectAnswer(childId) {
-    const state = this.getState(childId);
-    state.totalCorrectAnswers++;
-    state.totalAnswers++;
-    state.stars += 1;
-    this.addXP(childId, 10, 'Correct answer');
-    this.saveState(childId, state);
+    this._apply(childId, state => {
+      state.totalCorrectAnswers += 1;
+      state.totalAnswers += 1;
+      state.stars += 1;
+      this._awardXP(state, 10);
+    });
   }
 
-  /**
-   * Record an incorrect answer
-   */
   static recordIncorrectAnswer(childId) {
-    const state = this.getState(childId);
-    state.totalAnswers++;
-    this.addXP(childId, 2, 'Attempted answer');
-    this.saveState(childId, state);
+    this._apply(childId, state => {
+      state.totalAnswers += 1;
+      this._awardXP(state, 2);
+    });
   }
 
-  /**
-   * Complete a lesson
-   */
   static completeLesson(childId, score) {
-    const state = this.getState(childId);
-    state.lessonsCompleted++;
     const xpGained = Math.round(50 + (score / 100) * 50);
-    this.addXP(childId, xpGained, 'Lesson completed');
-
-    if (score === 100) {
-      this.addBadge(childId, 'perfectionist');
-    }
-
-    this.addCoins(childId, Math.round(5 + (score / 100) * 10));
-    this.saveState(childId, state);
+    const coinsGained = Math.round(5 + (score / 100) * 10);
+    const { state } = this._apply(childId, current => {
+      current.lessonsCompleted += 1;
+      this._awardXP(current, xpGained);
+      if (score === 100) this._awardBadge(current, 'perfectionist');
+      this._awardCoins(current, coinsGained);
+    });
     return { xpGained, lessonsCompleted: state.lessonsCompleted };
   }
 
-  /**
-   * Play a game
-   */
   static playGame(childId) {
-    const state = this.getState(childId);
-    state.gamesPlayed++;
-    this.addXP(childId, 20, 'Game played');
-    this.addCoins(childId, 5);
-    this.saveState(childId, state);
-
-    if (state.gamesPlayed >= 10) {
-      this.addBadge(childId, 'game_champion');
-    }
+    const { state } = this._apply(childId, current => {
+      current.gamesPlayed += 1;
+      this._awardXP(current, 20);
+      this._awardCoins(current, 5);
+      if (current.gamesPlayed >= 10) this._awardBadge(current, 'game_champion');
+    });
+    return state.gamesPlayed;
   }
 
-  /**
-   * Claim daily reward
-   */
   static claimDailyReward(childId) {
-    const state = this.getState(childId);
     const today = new Date().toISOString().split('T')[0];
-    const lastDate = state.lastDailyRewardDate;
-
-    // Reset streak if a day was missed
-    if (lastDate) {
-      const diff = (new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24);
-      if (diff > 1) {
-        state.dailyRewardDay = 0;
-        state.currentStreak = 0;
+    return this._apply(childId, state => {
+      if (state.lastDailyRewardDate) {
+        const diff = (new Date(today) - new Date(state.lastDailyRewardDate)) / (1000 * 60 * 60 * 24);
+        if (diff > 1) {
+          state.dailyRewardDay = 0;
+          state.currentStreak = 0;
+        }
       }
-    }
 
-    state.dailyRewardDay = (state.dailyRewardDay % 7) + 1;
-    const reward = DAILY_REWARDS.find(r => r.day === state.dailyRewardDay) || DAILY_REWARDS[0];
-    state.coins += reward.coins;
-    state.lastDailyRewardDate = today;
-    state.dailyRewardClaimed = true;
-    state.currentStreak++;
+      state.dailyRewardDay = (state.dailyRewardDay % 7) + 1;
+      const reward = DAILY_REWARDS.find(r => r.day === state.dailyRewardDay) || DAILY_REWARDS[0];
+      const xpGained = reward.xp + state.currentStreak * 5;
+      state.coins += reward.coins;
+      state.lastDailyRewardDate = today;
+      state.dailyRewardClaimed = true;
+      state.currentStreak += 1;
+      if (state.currentStreak > state.longestStreak) state.longestStreak = state.currentStreak;
 
-    if (state.currentStreak > state.longestStreak) {
-      state.longestStreak = state.currentStreak;
-    }
+      if (state.currentStreak >= 3) this._awardBadge(state, 'streak_3');
+      if (state.currentStreak >= 7) this._awardBadge(state, 'streak_7');
+      if (state.currentStreak >= 30) this._awardBadge(state, 'streak_30');
+      this._awardXP(state, xpGained);
 
-    // Streak badges
-    if (state.currentStreak >= 3) this.addBadge(childId, 'streak_3');
-    if (state.currentStreak >= 7) this.addBadge(childId, 'streak_7');
-    if (state.currentStreak >= 30) this.addBadge(childId, 'streak_30');
-
-    this.addXP(childId, reward.xp + state.currentStreak * 5, 'Daily reward');
-    this.saveState(childId, state);
-
-    return { day: state.dailyRewardDay, coins: reward.coins, xp: reward.xp + state.currentStreak * 5, streak: state.currentStreak };
+      return { day: state.dailyRewardDay, coins: reward.coins, xp: xpGained, streak: state.currentStreak };
+    }).result;
   }
 
-  /**
-   * Record an unlocked avatar. Currency is handled by RewardsStore.
-   */
   static unlockAvatar(childId, avatarId) {
     const reward = findReward(avatarId);
     if (!reward || reward.type !== 'avatar') return { success: false, reason: 'Invalid avatar' };
 
-    const state = this.getState(childId);
     const id = resolveAvatarId(avatarId);
-    const unlocked = Array.isArray(state.unlockedAvatars) ? state.unlockedAvatars : [];
-
-    if (unlocked.includes(id)) return { success: false, reason: 'Already unlocked' };
-
-    state.unlockedAvatars = [...unlocked, id];
-    this.saveState(childId, state);
-    return { success: true, id };
+    return this._apply(childId, state => {
+      const unlocked = Array.isArray(state.unlockedAvatars) ? state.unlockedAvatars : [];
+      if (unlocked.includes(id)) return { success: false, reason: 'Already unlocked' };
+      state.unlockedAvatars = [...unlocked, id];
+      return { success: true, id };
+    }).result;
   }
 
-  /**
-   * Generate daily challenges
-   */
   static generateDailyChallenges() {
-    const challenges = [
+    return [
       { id: 'dc_1', description: 'Answer 5 questions correctly', icon: '✅', target: 5, progress: 0, xpReward: 50 },
       { id: 'dc_2', description: 'Complete 2 lessons', icon: '📚', target: 2, progress: 0, xpReward: 80 },
       { id: 'dc_3', description: 'Play 1 game', icon: '🎮', target: 1, progress: 0, xpReward: 30 },
       { id: 'dc_4', description: 'Read 1 story', icon: '📖', target: 1, progress: 0, xpReward: 60 },
     ];
-    return challenges;
   }
 
-  /**
-   * Generate weekly missions
-   */
   static generateWeeklyMissions() {
-    const missions = [
+    return [
       { id: 'wm_1', description: 'Complete 10 lessons this week', icon: '🏅', target: 10, progress: 0, xpReward: 300, coinsReward: 100 },
       { id: 'wm_2', description: 'Earn 3 badges', icon: '🎖️', target: 3, progress: 0, xpReward: 200, coinsReward: 50 },
       { id: 'wm_3', description: 'Maintain a 5-day streak', icon: '🔥', target: 5, progress: 0, xpReward: 500, coinsReward: 200 },
     ];
-    return missions;
   }
 
-  /**
-   * Update daily challenge progress
-   */
   static updateDailyChallenge(childId, challengeId, increment = 1) {
-    const state = this.getState(childId);
-    const challenge = state.dailyChallenges.find(c => c.id === challengeId);
-    if (challenge && challenge.progress < challenge.target) {
+    return this._apply(childId, state => {
+      const challenge = state.dailyChallenges.find(c => c.id === challengeId);
+      if (!challenge || challenge.progress >= challenge.target) return null;
       challenge.progress = Math.min(challenge.target, challenge.progress + increment);
       if (challenge.progress >= challenge.target) {
-        this.addXP(childId, challenge.xpReward, `Daily challenge: ${challenge.description}`);
-        this.addCoins(childId, Math.round(challenge.xpReward / 2));
+        this._awardXP(state, challenge.xpReward);
+        this._awardCoins(state, Math.round(challenge.xpReward / 2));
       }
-      this.saveState(childId, state);
       return challenge;
-    }
-    return null;
+    }).result;
   }
 
-  /**
-   * Update weekly mission progress
-   */
   static updateWeeklyMission(childId, missionId, increment = 1) {
-    const state = this.getState(childId);
-    const mission = state.weeklyMissions.find(m => m.id === missionId);
-    if (mission && mission.progress < mission.target) {
+    return this._apply(childId, state => {
+      const mission = state.weeklyMissions.find(m => m.id === missionId);
+      if (!mission || mission.progress >= mission.target) return null;
       mission.progress = Math.min(mission.target, mission.progress + increment);
       if (mission.progress >= mission.target) {
-        this.addXP(childId, mission.xpReward, `Weekly mission: ${mission.description}`);
-        this.addCoins(childId, mission.coinsReward);
+        this._awardXP(state, mission.xpReward);
+        this._awardCoins(state, mission.coinsReward);
       }
-      this.saveState(childId, state);
       return mission;
-    }
-    return null;
+    }).result;
   }
 
-  /**
-   * Get full gamification summary for display
-   */
   static getSummary(childId) {
     const state = this.getState(childId);
     return {
@@ -407,40 +335,31 @@ export class GamificationService {
     };
   }
 
-  /**
-   * Reset daily claims at midnight
-   */
   static checkDailyReset(childId) {
-    const state = this.getState(childId);
+    const id = this.normalizeChildId(childId);
+    const state = this.getState(id);
     const today = new Date().toISOString().split('T')[0];
-    const lastDate = state.lastDailyRewardDate;
-
-    if (lastDate !== today) {
+    if (state.lastDailyRewardDate !== today) {
       state.dailyRewardClaimed = false;
-      // Reset daily challenges
       state.dailyChallenges = this.generateDailyChallenges();
-      this.saveState(childId, state);
+      this.saveState(id, state);
     }
     return state;
   }
 
-  /**
-   * Toggle confetti
-   */
   static toggleConfetti(childId) {
-    const state = this.getState(childId);
-    state.confettiEnabled = !state.confettiEnabled;
-    this.saveState(childId, state);
-    return state.confettiEnabled;
+    return this._apply(childId, state => {
+      state.confettiEnabled = !state.confettiEnabled;
+      return state.confettiEnabled;
+    }).result;
   }
 
-  /**
-   * Toggle sound effects
-   */
   static toggleSoundEffects(childId) {
-    const state = this.getState(childId);
-    state.soundEffectsEnabled = !state.soundEffectsEnabled;
-    this.saveState(childId, state);
-    return state.soundEffectsEnabled;
+    return this._apply(childId, state => {
+      state.soundEffectsEnabled = !state.soundEffectsEnabled;
+      return state.soundEffectsEnabled;
+    }).result;
   }
 }
+
+export default GamificationService;

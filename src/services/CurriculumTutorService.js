@@ -6,6 +6,7 @@
  * carries the curriculum unit it came from so it can be checked.
  */
 import { StorageService } from './StorageService';
+import { ChildAccountService } from './ChildAccountService';
 import { GhanaCurriculumService } from './GhanaCurriculumService';
 import { ClassroomService } from './ClassroomService';
 import { LearningAnalytics } from './LearningAnalytics';
@@ -88,6 +89,18 @@ export class CurriculumTutorService {
 
     all[childId] = settings;
     if (!StorageService.set(TUTOR_SETTINGS_KEY, all)) return null;
+
+    // Mirror the parent's opt-in into the child account settings so the API can
+    // verify consent server-side instead of trusting this device.
+    if (childId) {
+      const account = ChildAccountService.getChild(childId);
+      if (account) {
+        ChildAccountService.updateChild(childId, {
+          settings: { ...(account.settings || {}), tutor: settings },
+        });
+      }
+    }
+
     notify();
     return settings;
   }

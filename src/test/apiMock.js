@@ -234,7 +234,21 @@ const dispatch = (endpoint, body) => {
       if (!id || !/^kid[\d-]+$/i.test(id)) {
         return fail('This device is no longer authorised.', 401);
       }
-      apiState.accounts.delete(id);
+      const row = apiState.accounts.get(id);
+      if (row) row.deleted_at = new Date().toISOString();
+      return ok({ childId: id });
+    }
+
+    if (body.action === 'restore') {
+      if (!requireDev(body)) return fail('Developer session is invalid.', 401);
+      const id = normalize(body.childId);
+      const row = apiState.accounts.get(id);
+      if (!row) return fail('Account not found.', 404);
+      row.deleted_at = null;
+      row.progress = body.account?.progress || row.progress;
+      row.settings = body.account?.settings || row.settings;
+      row.updated_at = body.account?.updatedAt || new Date().toISOString();
+      row.version = body.account?.version || row.version;
       return ok({ childId: id });
     }
 

@@ -18,8 +18,10 @@ window.addEventListener('online', () => errorReporter.flush());
 // Register service worker with update handling
 registerServiceWorker();
 
-// Add debug utilities to window for console access
-window.MakennaDebug = {
+// Add debug utilities to window for console access in development only.
+// These helpers can read and clear every localStorage key, so they must never
+// ship to production.
+if (import.meta.env.DEV) window.MakennaDebug = {
   // Show all localStorage data
   getAllData: () => {
     const data = {};

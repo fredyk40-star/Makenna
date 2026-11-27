@@ -336,7 +336,7 @@ const AIAssistant = () => {
   const isSpeechSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
 
   return (
-    <div className="assistant-root fixed bottom-24 left-4 z-[80] pointer-events-none">
+    <div className="assistant-root fixed bottom-24 left-4 z-[45] pointer-events-none">
       <AnimatePresence>
         {isOpen && !isMinimized && (
           <motion.div

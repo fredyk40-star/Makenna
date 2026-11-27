@@ -31,6 +31,8 @@ export class GeminiTutorService {
           token,
           question: safeQuestion,
           unit: {
+            id: localResult.unit.id,
+            source: localResult.unit.source,
             title: localResult.unit.title,
             content: localResult.unit.content,
             level: localResult.unit.level,

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { useChildAccount } from '../../context/ChildAccountContext';
@@ -10,6 +11,15 @@ const OfflineDetector = () => {
   const syncing = cloudSyncStatus?.syncing || false;
   const showBanner = isOffline || pending > 0 || syncing;
 
+  // Reserve a fixed-height slot above the sticky header so the banner never
+  // covers the logo, theme toggle, notifications or profile controls.
+  useEffect(() => {
+    document.body.dataset.topBanner = showBanner ? 'true' : 'false';
+    return () => {
+      delete document.body.dataset.topBanner;
+    };
+  }, [showBanner]);
+
   return (
     <AnimatePresence>
       {showBanner && (
@@ -17,12 +27,12 @@ const OfflineDetector = () => {
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -100, opacity: 0 }}
-          className="fixed top-0 left-0 right-0 z-[100] bg-orange-500 text-white px-4 py-3 flex items-center justify-center gap-3 shadow-lg"
+          className="fixed inset-x-0 top-0 z-[100] flex h-14 items-center justify-center gap-3 overflow-hidden bg-orange-500 px-4 text-white shadow-lg"
         >
           {syncing && !isOffline
-            ? <FaSyncAlt className="text-xl animate-spin" />
-            : <FaExclamationTriangle className="text-xl" />}
-          <span className="font-medium">
+            ? <FaSyncAlt className="shrink-0 text-xl animate-spin" />
+            : <FaExclamationTriangle className="shrink-0 text-xl" />}
+          <span className="truncate font-medium">
             {isOffline
               ? `You're offline. ${pending > 0 ? `${pending} change(s) will sync automatically.` : 'Some features may be limited.'}`
               : syncing

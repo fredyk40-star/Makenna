@@ -29,7 +29,7 @@ export const ROUTES = {
   // Alphabet Routes
   ALPHABET: '/alphabet',
   ALPHABET_LESSON: '/alphabet/lesson/:letterId',
-  ALPHABET_TRACE: '/alphabet/trace/:letterId',
+  ALPHABET_TRACE: '/alphabet/trace/:letterId/:mode?',
   // Game Routes
   ALPHABET_GAMES: '/games/alphabet',
   ANIMAL_SAFARI: '/animal-safari',
@@ -82,7 +82,7 @@ export const ROUTES = {
   SHAPE_SORTING: '/games/shapes/shape-sorting',
   SHAPE_MEMORY: '/games/shapes/shape-memory',
   COLOURS: '/colours',
-  COLOUR_LESSON: '/colours/lesson/:colorId',
+  COLOUR_LESSON: '/colours/lesson/:colourId',
 
   // Maths Routes
   MATHS: '/maths',

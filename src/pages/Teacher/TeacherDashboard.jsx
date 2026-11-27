@@ -160,13 +160,13 @@ const TeacherDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-4">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-6xl mx-auto"
       >
-        <div className="flex justify-between items-center mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
               <FaGraduationCap /> Teacher Dashboard
@@ -197,7 +197,7 @@ const TeacherDashboard = () => {
 
         {activeTab === 'classes' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Your Classes</h2>
               <button
                 type="button"
@@ -316,7 +316,7 @@ const TeacherDashboard = () => {
 
         {activeTab === 'assignments' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Assignments</h2>
               <button
                 type="button"

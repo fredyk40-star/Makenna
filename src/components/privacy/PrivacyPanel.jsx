@@ -24,7 +24,10 @@ const PrivacyPanel = () => {
     const result = await PrivacyService.deleteAll();
     setPreview(PrivacyService.getDeletionPreview());
     setConfirmation('');
-    setMessage(`Erased ${result.keysDeleted} local data item(s) and ${result.children} child profile(s). Reload the app to finish.`);
+    const cloudNote = result.cloudFailed > 0
+      ? ` ${result.cloudFailed} cloud deletion(s) still need a signed-in device or developer session.`
+      : '';
+    setMessage(`Erased ${result.keysDeleted} local data item(s) and ${result.children} child profile(s).${cloudNote} Reload the app to finish.`);
   };
 
   return (

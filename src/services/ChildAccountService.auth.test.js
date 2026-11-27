@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CHILD_ID_PATTERN, ChildAccountService } from './ChildAccountService';
 import { StorageService } from './StorageService';
+import SyncQueueService from './SyncQueueService';
 import { hashCredential } from '../../api/_lib/child-auth.js';
 import { apiState } from '../test/apiMock.js';
 
@@ -57,6 +58,24 @@ describe('ChildAccountService account creation', () => {
     const legacyLogin = await ChildAccountService.loginChild('KID-7', '5678');
     expect(legacyLogin.childId).toBe('kid-7');
     expect(ChildAccountService.getChild('kid-7').pinHash).toBeUndefined();
+  });
+
+  it('preserves queued offline progress when login returns older cloud data', async () => {
+    const registered = await ChildAccountService.registerChild('Ama', '1234', 'parent@example.com');
+    const accounts = ChildAccountService.getAllAccounts();
+    accounts[0].progress = { offlineLesson: { completed: true } };
+    ChildAccountService.saveAllAccounts(accounts);
+    SyncQueueService.enqueue({
+      type: 'UPSERT_ACCOUNT',
+      childId: registered.childId,
+      payload: { childId: registered.childId, progress: accounts[0].progress },
+    });
+
+    apiState.accounts.get(registered.childId).progress = {};
+    await ChildAccountService.loginChild(registered.childId, '1234');
+
+    expect(ChildAccountService.getChildProgress(registered.childId, 'offlineLesson'))
+      .toEqual({ completed: true });
   });
 
   it('rejects a bad credential without exposing the stored hash', async () => {

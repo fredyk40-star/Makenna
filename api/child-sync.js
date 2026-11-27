@@ -59,7 +59,8 @@ async function push(client, body) {
       if (error) throw new Error(error.message);
       applied += 1;
     } catch (error) {
-      failures.push({ childId, error: error.message });
+      console.error('Child sync push failed:', { childId, message: error.message });
+      failures.push({ childId, error: 'Could not sync this account. Please try again.' });
     }
   }
 
@@ -84,6 +85,25 @@ async function softDelete(client, body) {
   const { error } = await client
     .from('child_accounts')
     .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('child_id', childId);
+  if (error) throw new Error(error.message);
+  return { childId };
+}
+
+async function restore(client, body) {
+  if (!verifySessionToken(body.developerToken || body.sessionToken)) {
+    throw new HttpError(401, 'Developer session is invalid. Please sign in again.');
+  }
+  const childId = normalizeChildId(body.childId);
+  if (!validateChildId(childId)) throw new HttpError(400, 'Invalid child ID.');
+  const row = await getAccountRow(client, childId);
+  if (!row) throw new HttpError(404, 'Account not found.');
+
+  const patch = syncPatch(body.account || {});
+  patch.deleted_at = null;
+  const { error } = await client
+    .from('child_accounts')
+    .update(patch)
     .eq('child_id', childId);
   if (error) throw new Error(error.message);
   return { childId };
@@ -118,6 +138,10 @@ const handler = async (req, res) => {
     }
     case 'delete': {
       const result = await softDelete(client, body);
+      return json(res, 200, { success: true, ...result });
+    }
+    case 'restore': {
+      const result = await restore(client, body);
       return json(res, 200, { success: true, ...result });
     }
     case 'admin_list': {

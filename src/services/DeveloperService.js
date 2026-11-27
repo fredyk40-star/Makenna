@@ -4,6 +4,7 @@
  */
 import { StorageService } from './StorageService';
 import { ChildAccountService, postApi } from './ChildAccountService';
+import { SyncQueueService } from './SyncQueueService';
 import { UpdateService } from './UpdateService';
 
 const DEVELOPER_KEY = 'makenna_developer_pin_hash_v1';
@@ -484,46 +485,33 @@ export class DeveloperService {
     const account = ChildAccountService.getChild(childId);
     if (!account) return false;
 
+    const progress = { ...(account.progress || {}) };
+    const settings = { ...(account.settings || {}) };
+
     switch (type) {
       case 'all':
-        account.progress = {};
-        account.settings = {};
-        break;
+        return !!ChildAccountService.updateChild(childId, { progress: {}, settings: {} });
       case 'achievements':
-        if (account.progress) {
-          account.progress.achievements = {};
-        }
+        progress.achievements = {};
         break;
       case 'stars':
-        if (account.progress) {
-          account.progress.stars = 0;
-        }
+        progress.stars = 0;
         break;
       case 'certificates':
-        if (account.progress) {
-          account.progress.certificates = [];
-        }
+        progress.certificates = [];
         break;
       case 'mastery':
-        if (account.progress) {
-          account.progress.mastery = {};
-        }
+        progress.mastery = {};
         break;
       case 'history':
-        if (account.progress) {
-          account.progress.history = [];
-        }
+        progress.history = [];
         break;
+      default:
+        return false;
     }
-    
-    const accounts = ChildAccountService.getAllAccounts();
-    const index = accounts.findIndex(a => a.childId.toLowerCase() === childId.toLowerCase());
-    if (index !== -1) {
-      accounts[index] = account;
-      ChildAccountService.saveAllAccounts(accounts);
-    }
-    
-    return true;
+
+    // updateChild stamps updatedAt/version and queues the cloud upsert.
+    return !!ChildAccountService.updateChild(childId, { progress, settings });
   }
 
   /**
@@ -578,20 +566,36 @@ export class DeveloperService {
   static async restoreChild(childId) {
     const trash = this.getTrashBin();
     const index = trash.findIndex(a => a.childId.toLowerCase() === childId.toLowerCase());
-    
+
     if (index === -1) return false;
-    
-    const account = trash[index];
+
+    const { CloudSyncService } = await import('./CloudSyncService');
+    const account = ChildAccountService.sanitize({ ...trash[index] });
+    delete account.deletedAt;
+    account.updatedAt = new Date().toISOString();
+    account.version = Number(account.version || 0) + 1;
+
+    // Clear the server-side soft delete first so the restored child can log in
+    // and normal pulls can see it again.
+    await postApi('child-sync', {
+      action: 'restore',
+      childId,
+      developerToken: this.getSessionToken(),
+      account: CloudSyncService.toSyncPayload(account),
+    });
+
     const accounts = ChildAccountService.getAllAccounts();
-    accounts.push(account);
+    const exists = accounts.some(a => a.childId?.toLowerCase() === account.childId?.toLowerCase());
+    if (!exists) accounts.push(account);
     ChildAccountService.saveAllAccounts(accounts);
-    
+    SyncQueueService.clearDeletion(account.childId);
+
     trash.splice(index, 1);
     StorageService.set('makenna_trash_bin', trash);
-    
-    // Remove from Supabase cloud trash
+
+    // Remove from the developer trash mirror as well.
     await this._deleteFromCloudTrash(childId);
-    
+
     return true;
   }
 

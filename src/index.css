@@ -18,7 +18,18 @@ body[data-assistant-open='true'] .update-preview-banner {
 }
 
 body[data-notification-open='true'] .assistant-root,
-body[data-notification-open='true'] .install-prompt {
+body[data-notification-open='true'] .install-prompt,
+body[data-notification-open='true'] .update-preview-banner {
+  display: none;
+}
+
+/* The fixed offline/sync banner reserves a slot above the sticky header. */
+body[data-top-banner='true'] .app-header {
+  margin-top: 3.5rem;
+}
+
+/* Never stack two fixed top banners on top of each other. */
+body[data-top-banner='true'] .update-preview-banner {
   display: none;
 }
 

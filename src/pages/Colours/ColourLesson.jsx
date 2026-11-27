@@ -8,6 +8,7 @@ import {
 import { getColourById, COLOURS_DATA } from '../../data/coloursData';
 import { useAudio } from '../../hooks/useAudio';
 import { useChildAccount } from '../../context/ChildAccountContext';
+import { ChildAccountService } from '../../services/ChildAccountService';
 import { announceToScreenReader } from '../../utils/accessibility';
 
 const ColourLesson = () => {
@@ -30,13 +31,11 @@ const ColourLesson = () => {
 
       // Load progress from child account or localStorage
       if (childId) {
-        const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
-        const account = accounts.find(a => a.childId?.toLowerCase() === childId?.toLowerCase());
-        const progress = account?.progress?.colour_progress || {};
+        const progress = ChildAccountService.getChildProgress(childId, 'colour_progress', {});
         setIsCompleted(progress[colourId]?.completed || false);
 
         // Load favorites
-        const favorites = account?.progress?.colour_favorites || [];
+        const favorites = ChildAccountService.getChildProgress(childId, 'colour_favorites', []);
         setIsFavorite(favorites.includes(colourId));
       } else {
         // Fallback to localStorage for backward compatibility
@@ -59,18 +58,12 @@ const ColourLesson = () => {
     const newIsFavorite = !isFavorite;
 
     if (childId) {
-      // Save to child account
-      const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
-      const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
-      if (accountIndex !== -1) {
-        if (!accounts[accountIndex].progress) accounts[accountIndex].progress = {};
-        const favorites = accounts[accountIndex].progress.colour_favorites || [];
-        const newFavorites = newIsFavorite
-          ? [...favorites, colourId]
-          : favorites.filter(id => id !== colourId);
-        accounts[accountIndex].progress.colour_favorites = newFavorites;
-        localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
-      }
+      // Save through ChildAccountService so the sync timestamp, version and queue are updated.
+      const favorites = ChildAccountService.getChildProgress(childId, 'colour_favorites', []);
+      const newFavorites = newIsFavorite
+        ? [...favorites, colourId]
+        : favorites.filter(id => id !== colourId);
+      ChildAccountService.setChildProgress(childId, 'colour_favorites', newFavorites);
     } else {
       // Fallback to localStorage
       const favorites = JSON.parse(localStorage.getItem('colour_favorites') || '[]');
@@ -100,14 +93,11 @@ const ColourLesson = () => {
 
       // Mark as completed
       if (childId) {
-        const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
-        const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
-        if (accountIndex !== -1) {
-          if (!accounts[accountIndex].progress) accounts[accountIndex].progress = {};
-          if (!accounts[accountIndex].progress.colour_progress) accounts[accountIndex].progress.colour_progress = {};
-          accounts[accountIndex].progress.colour_progress[colourId] = { completed: true };
-          localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
-        }
+        const progress = ChildAccountService.getChildProgress(childId, 'colour_progress', {});
+        ChildAccountService.setChildProgress(childId, 'colour_progress', {
+          ...progress,
+          [colourId]: { completed: true },
+        });
       } else {
         // Fallback to localStorage
         const progress = JSON.parse(localStorage.getItem('colour_progress') || '{}');

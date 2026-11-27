@@ -11,7 +11,7 @@ const BottomNav = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 px-2 pb-4 pt-2"
+      className="fixed bottom-0 left-0 right-0 z-40 px-2 pb-4 pt-2"
       role="navigation"
       aria-label="Main navigation"
     >

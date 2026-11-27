@@ -37,7 +37,7 @@ const KaraokePlayer = () => {
         voiceGuide.speak(`Hello ${childName}! Let's sing ${found.title} in karaoke mode!`);
       }
     } else {
-      navigate('/music/library');
+      navigate('/music');
     }
 
     return () => {
@@ -263,7 +263,7 @@ const KaraokePlayer = () => {
           </div>
 
           {/* Speed Control */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="text-white text-sm">Speed:</span>
             {speedOptions.map(speed => (
               <button

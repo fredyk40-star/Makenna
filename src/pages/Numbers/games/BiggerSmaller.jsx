@@ -98,12 +98,12 @@ const BiggerSmaller = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
         </div>
       </div>
 
-      <div className="flex justify-center gap-8 p-4">
+      <div className="flex flex-wrap items-center justify-center gap-2 p-2 sm:gap-8 sm:p-4">
         <motion.div
           whileHover={{ scale: selected ? 1 : 1.05 }}
           whileTap={{ scale: selected ? 1 : 0.95 }}
           onClick={() => handleSelect(num1)}
-          className={`w-32 h-32 rounded-2xl flex items-center justify-center text-5xl font-bold transition-all duration-300 cursor-pointer ${
+          className={`w-24 h-24 sm:w-32 sm:h-32 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl font-bold transition-all duration-300 cursor-pointer ${
             selected === num1
               ? isCorrect
                 ? 'bg-green-500 text-white shadow-glow'
@@ -115,12 +115,12 @@ const BiggerSmaller = ({ game, onComplete, onScoreUpdate, onStarsUpdate }) => {
         >
           {num1}
         </motion.div>
-        <div className="flex items-center text-4xl text-gray-400">vs</div>
+        <div className="flex items-center text-2xl sm:text-4xl text-gray-400">vs</div>
         <motion.div
           whileHover={{ scale: selected ? 1 : 1.05 }}
           whileTap={{ scale: selected ? 1 : 0.95 }}
           onClick={() => handleSelect(num2)}
-          className={`w-32 h-32 rounded-2xl flex items-center justify-center text-5xl font-bold transition-all duration-300 cursor-pointer ${
+          className={`w-24 h-24 sm:w-32 sm:h-32 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl font-bold transition-all duration-300 cursor-pointer ${
             selected === num2
               ? isCorrect
                 ? 'bg-green-500 text-white shadow-glow'

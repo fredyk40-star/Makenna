@@ -42,6 +42,9 @@ const srcDir = join(root, 'src');
 if (existsSync(srcDir)) {
   const strayTempFiles = [];
   const clientSupabaseImports = [];
+  const leakedServerSecrets = [];
+  const deniedClientEnv = /VITE_(?:SUPABASE_|DEVELOPER_JWT_SECRET|CHILD_SESSION_SECRET|GEMINI_API_KEY|GMAIL_|SMTP_)/;
+  const deniedServerEnv = /process\.env\.(?:SUPABASE_SERVICE_ROLE_KEY|DEVELOPER_JWT_SECRET|CHILD_SESSION_SECRET|GEMINI_API_KEY|GMAIL_|SMTP_)/;
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
@@ -62,6 +65,11 @@ if (existsSync(srcDir)) {
         if (/@supabase\/supabase-js|VITE_SUPABASE_(?:URL|ANON_KEY)/.test(source)) {
           clientSupabaseImports.push(relativePath);
         }
+        // Tests may stub secret names; production browser code must never
+        // reference a server secret or a VITE_ alias for one.
+        if (!entry.name.includes('.test.') && (deniedClientEnv.test(source) || deniedServerEnv.test(source))) {
+          leakedServerSecrets.push(relativePath);
+        }
       }
     }
   };
@@ -72,6 +80,11 @@ if (existsSync(srcDir)) {
   if (clientSupabaseImports.length) {
     failures.push(
       `Browser code must use /api/* instead of Supabase: ${clientSupabaseImports.join(', ')}`,
+    );
+  }
+  if (leakedServerSecrets.length) {
+    failures.push(
+      `Browser code must never reference server secrets: ${leakedServerSecrets.join(', ')}`,
     );
   }
 }

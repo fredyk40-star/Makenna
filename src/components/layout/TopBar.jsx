@@ -35,7 +35,7 @@ const TopBar = () => {
     : 'M';
 
   return (
-    <header className="glassmorphism sticky top-0 z-50 px-4 py-3 md:px-6 md:py-4">
+    <header className="app-header glassmorphism sticky top-0 z-50 px-4 py-3 md:px-6 md:py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group" aria-label="Go to home">

@@ -5,36 +5,12 @@
  * between devices, without requiring a network connection or cloud account.
  */
 import { StorageService } from './StorageService';
+import { BUNDLE_DATA_KEYS, isAppStorageKey, listAppStorageKeys } from './AppStorageKeys';
 
 export const BUNDLE_FORMAT = 'makenna-school-bundle';
 export const BUNDLE_VERSION = 1;
 
-const DATA_KEYS = [
-  'makenna_child_accounts_v2',
-  'makenna_active_child_id',
-  'makenna_gamification_state',
-  'makenna_analytics_events',
-  'makenna_analytics_config',
-  'makenna_daily_missions',
-  'makenna_revision_plans',
-  'makenna_rewards_store',
-  'makenna_selected_avatar',
-  'makenna_achievements',
-  'makenna_safe_mode_settings',
-  'makenna_time_limits',
-  'makenna_classes_v1',
-  'makenna_assignments_v1',
-  'makenna_teacher_v1',
-  'makenna_teacher_data',
-  'makenna_class_data',
-  'makenna_ghana_curriculum_v1',
-  'makenna_portfolio_v1',
-  'makenna_certificates_v1',
-  'makenna_sticker_book_v1',
-  'makenna_revision_planner_v1',
-  'makenna_parent_tutor_settings_v1',
-  'makenna_camera_hunt_v1',
-];
+export { BUNDLE_DATA_KEYS as DATA_KEYS };
 
 const isPlainObject = value => value && typeof value === 'object' && !Array.isArray(value);
 
@@ -56,7 +32,7 @@ const mergeValue = (existing, incoming) => {
 export class SchoolDataExchangeService {
   static exportBundle() {
     const data = {};
-    DATA_KEYS.forEach(key => {
+    listAppStorageKeys().forEach(key => {
       const value = StorageService.get(key, null);
       if (value !== null && value !== undefined) data[key] = value;
     });
@@ -101,13 +77,13 @@ export class SchoolDataExchangeService {
     return bundle;
   }
 
-  /** Restore a bundle. Merge keeps newer local records; replace overwrites. */
+  /** Restore a bundle. Merge lets imported records win; replace overwrites. */
   static importBundle(text, { mode = 'merge' } = {}) {
     const bundle = this.parseBundle(text);
     const imported = [];
 
     Object.entries(bundle.data).forEach(([key, incoming]) => {
-      if (!DATA_KEYS.includes(key)) return;
+      if (!isAppStorageKey(key)) return;
       const next = mode === 'replace'
         ? incoming
         : mergeValue(StorageService.get(key, null), incoming);

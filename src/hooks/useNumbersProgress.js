@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChildAccount } from '../context/ChildAccountContext';
 import { ChildAccountService } from '../services/ChildAccountService';
+import { AnalyticsService } from '../services/AnalyticsService';
 import { NUMBERS_DATA } from '../data/numbersData';
 import {
   NUMBERS_PROGRESS_KEY,
@@ -97,8 +98,9 @@ export const useNumbersProgress = () => {
   }, [update]);
 
   const markCompleted = useCallback((id) => {
+    const safeId = String(id);
+    const wasCompleted = progressRef.current.completed.includes(safeId);
     update(prev => {
-      const safeId = String(id);
       const withCore = withCoreCompletion(prev, safeId);
       return {
         ...withCore,
@@ -108,6 +110,7 @@ export const useNumbersProgress = () => {
         recentLessons: [safeId, ...withCore.recentLessons.filter(item => item !== safeId)].slice(0, 10),
       };
     });
+    if (!wasCompleted) AnalyticsService.trackLessonComplete('numbers', safeId, 100);
   }, [update]);
 
   const markMastered = useCallback((id) => {
@@ -125,10 +128,14 @@ export const useNumbersProgress = () => {
 
   /** Record a practiced skill. Core skills also unlock lesson completion. */
   const markSkill = useCallback((id, skill, options = true) => {
+    const correct = typeof options === 'object' && options !== null
+      ? options.completed !== false
+      : options !== false && options !== 0;
     update(prev => {
       const withSkill = markSkillInProgress(prev, id, skill, options);
       return withMasteryCompletion(withCoreCompletion(withSkill, id), id);
     });
+    AnalyticsService.trackAnswer(`${id}:${skill}`, correct, 'numbers');
   }, [update]);
 
   const toggleFavorite = useCallback((id) => {

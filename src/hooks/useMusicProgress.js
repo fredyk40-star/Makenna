@@ -42,31 +42,24 @@ export const useMusicProgress = () => {
   }, [progress, childId]);
 
   const recordPlay = useCallback((songId, duration = 0) => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const xpEarned = 10;
+    const starsEarned = 1;
+
+    // State updaters must stay pure: StrictMode may call them twice, which
+    // would award XP twice. Side effects run once, outside the updater.
     setProgress(prev => {
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      
-      const played = prev.played.includes(songId) 
-        ? prev.played 
+      const played = prev.played.includes(songId)
+        ? prev.played
         : [...prev.played, songId];
-      
       const timesPlayed = {
         ...prev.timesPlayed,
         [songId]: (prev.timesPlayed[songId] || 0) + 1
       };
-
       const streakDays = prev.streakDays.includes(today)
         ? prev.streakDays
         : [...prev.streakDays, today];
-
-      // Award XP and stars for listening
-      const xpEarned = 10;
-      const starsEarned = 1;
-      
-      if (childId) {
-        GamificationService.addXP(childId, xpEarned, `Song played: ${songId}`);
-        GamificationService.recordCorrectAnswer(childId);
-      }
 
       return {
         ...prev,
@@ -77,43 +70,39 @@ export const useMusicProgress = () => {
         streakDays,
         totalXP: prev.totalXP + xpEarned,
         totalStars: prev.totalStars + starsEarned,
-        recentSongs: [
-          songId,
-          ...prev.recentSongs.filter(id => id !== songId)
-        ].slice(0, 10)
+        recentSongs: [songId, ...prev.recentSongs.filter(id => id !== songId)].slice(0, 10)
       };
     });
+
+    if (childId) {
+      GamificationService.addXP(childId, xpEarned, `Song played: ${songId}`);
+      GamificationService.recordCorrectAnswer(childId);
+    }
   }, [childId]);
 
   const markCompleted = useCallback((songId) => {
-    setProgress(prev => {
-      if (!prev.completed.includes(songId)) {
-        const now = new Date();
-        
-        // Award bonus XP for completion
-        const xpEarned = 20;
-        const starsEarned = 2;
-        
-        if (childId) {
-          GamificationService.addXP(childId, xpEarned, `Song completed: ${songId}`);
-          GamificationService.addCoins(childId, 5);
-        }
+    if (progress.completed.includes(songId)) return;
+    const now = new Date();
+    const xpEarned = 20;
+    const starsEarned = 2;
 
-        return {
-          ...prev,
-          completed: [...prev.completed, songId],
-          lastPlayed: now.toISOString(),
-          totalXP: prev.totalXP + xpEarned,
-          totalStars: prev.totalStars + starsEarned,
-          recentSongs: [
-            songId,
-            ...prev.recentSongs.filter(id => id !== songId)
-          ].slice(0, 10)
-        };
-      }
-      return prev;
+    setProgress(prev => {
+      if (prev.completed.includes(songId)) return prev;
+      return {
+        ...prev,
+        completed: [...prev.completed, songId],
+        lastPlayed: now.toISOString(),
+        totalXP: prev.totalXP + xpEarned,
+        totalStars: prev.totalStars + starsEarned,
+        recentSongs: [songId, ...prev.recentSongs.filter(id => id !== songId)].slice(0, 10)
+      };
     });
-  }, [childId]);
+
+    if (childId) {
+      GamificationService.addXP(childId, xpEarned, `Song completed: ${songId}`);
+      GamificationService.addCoins(childId, 5);
+    }
+  }, [childId, progress.completed]);
 
   const toggleFavorite = useCallback((songId) => {
     setProgress(prev => {

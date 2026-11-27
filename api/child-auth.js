@@ -227,17 +227,21 @@ async function resetCredential(client, body) {
   };
 }
 
-async function verifyPin(client, body) {
+async function verifyPin(req, client, body) {
   const childId = requireChildToken(body.token || body.sessionToken, body.childId);
+  if (isRateLimited(req, childId)) {
+    throw new ApiError(429, 'Too many attempts. Please wait a few minutes and try again.');
+  }
   const pin = requireCredential(body.pin);
   const row = await getAccountRow(client, childId);
   if (!row || row.deleted_at) return { valid: false };
 
   const hash = hashCredential(pin);
-  return {
-    valid: (!!row.pin_set && safeEqual(row.pin_hash, hash))
-      || (!!row.password_set && safeEqual(row.password_hash, hash)),
-  };
+  const valid = (!!row.pin_set && safeEqual(row.pin_hash, hash))
+    || (!!row.password_set && safeEqual(row.password_hash, hash));
+  if (valid) clearFailures(req, childId);
+  else recordFailure(req, childId);
+  return { valid };
 }
 
 const handler = async (req, res) => {
@@ -263,7 +267,7 @@ const handler = async (req, res) => {
       return json(res, 200, { success: true, ...result });
     }
     case 'verify_pin': {
-      const result = await verifyPin(client, body);
+      const result = await verifyPin(req, client, body);
       return json(res, 200, { success: true, ...result });
     }
     default:

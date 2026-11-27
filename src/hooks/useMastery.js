@@ -10,8 +10,9 @@ import { useProfiles } from '../context/ProfileContext';
 import { useChildAccount } from '../context/ChildAccountContext';
 
 export const useMastery = () => {
-  const { getProfileData, activeProfile } = useProfiles();
+  const { getProfileData } = useProfiles();
   const { activeChild } = useChildAccount();
+  const childId = activeChild?.childId || ChildAccountService.getActiveChildId();
   const [letterData, setLetterData] = useState({});
   const [recommendations, setRecommendations] = useState([]);
   const [progressSummary, setProgressSummary] = useState({
@@ -21,8 +22,6 @@ export const useMastery = () => {
   });
 
   useEffect(() => {
-    if (!activeProfile) return;
-
     const calculateMastery = (progress, tracing, games, reading) => {
       let score = 0;
       let total = 0;
@@ -49,7 +48,6 @@ export const useMastery = () => {
     // Load all letter data from localStorage
     const loadLetterData = () => {
       const data = {};
-      const childId = activeProfile?.childId || ChildAccountService.getActiveChildId();
       const canonicalProgress = normalizeAlphabetProgress(
         childId ? ChildAccountService.getChild(childId)?.progress?.alphabet_progress : null
       );
@@ -66,8 +64,11 @@ export const useMastery = () => {
 
         const tracing = tracingProgress[id] || {};
 
-        // TODO: Migrate game and reading progress to be profile-specific
-        const games = JSON.parse(localStorage.getItem(`game_progress_${id}`) || '{}');
+        // Game progress is stored by game ID, not by letter ID. Keep legacy
+        // per-letter keys as a fallback for older devices.
+        const gameProgress = JSON.parse(localStorage.getItem('game_progress') || '{}');
+        const legacyGames = JSON.parse(localStorage.getItem(`game_progress_${id}`) || '{}');
+        const games = gameProgress[id] || gameProgress[letter.letter] || legacyGames;
         const reading = JSON.parse(localStorage.getItem(`reading_progress_${id}`) || '{}');
 
         data[id] = {
@@ -94,9 +95,10 @@ export const useMastery = () => {
 
     // Get recommendations
     // The recommendation service needs the childId, not global profile data
-    if (activeProfile?.childId) {
-      const recs = RecommendationService.getRecommendations(activeProfile.childId);
-      setRecommendations(recs);
+    if (childId) {
+      setRecommendations(RecommendationService.getRecommendations(childId));
+    } else {
+      setRecommendations([]);
     }
 
     // Progress summary for letters (if needed, otherwise rely on LearningAnalytics)
@@ -107,7 +109,7 @@ export const useMastery = () => {
       total: totalLetters,
       progress: totalLetters > 0 ? Math.round((masteredCount / totalLetters) * 100) : 0,
     });
-  }, [activeProfile, activeChild?.progress?.alphabet_progress, getProfileData]);
+  }, [childId, activeChild?.progress?.alphabet_progress, getProfileData]);
 
   const getLetterMastery = useCallback((letterId) => {
     return letterData[letterId]?.mastery || 0;
@@ -123,16 +125,15 @@ export const useMastery = () => {
   }, [getLetterMastery]);
 
   const getRecommendations = useCallback(() => {
-    if (!activeProfile?.childId) return [];
-    return RecommendationService.getRecommendations(activeProfile.childId);
-  }, [activeProfile]);
+    if (!childId) return [];
+    return RecommendationService.getRecommendations(childId);
+  }, [childId]);
 
   const getNextActivity = useCallback(() => {
-    if (!activeProfile?.childId) return null;
-    // Assuming RecommendationService will have a more specific getNextActivity
-    const recommendations = RecommendationService.getRecommendations(activeProfile.childId);
-    return recommendations.length > 0 ? recommendations[0] : null;
-  }, [activeProfile]);
+    if (!childId) return null;
+    const childRecommendations = RecommendationService.getRecommendations(childId);
+    return childRecommendations.length > 0 ? childRecommendations[0] : null;
+  }, [childId]);
 
   const getProgressSummary = useCallback(() => {
     return progressSummary;
