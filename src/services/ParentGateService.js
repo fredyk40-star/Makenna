@@ -75,10 +75,34 @@ export class ParentGateService {
       const hash = await ChildAccountService.hashPin(pin);
       valid = StorageService.get(PIN_KEY) === hash;
     } else {
-      const account = (ChildAccountService.getAllAccounts() || []).find(item => item.pinSet);
+      const account = (ChildAccountService.getAllAccounts() || []).find(item => item.pinSet || item.passwordSet);
       valid = account ? await ChildAccountService.verifyPin(account.childId, pin) : false;
     }
 
+    if (valid) {
+      this.unlock();
+      return true;
+    }
+
+    const attempts = StorageService.get(ATTEMPTS_KEY, { count: 0 });
+    const count = (attempts.count || 0) + 1;
+    StorageService.set(ATTEMPTS_KEY, {
+      count,
+      until: count >= MAX_ATTEMPTS ? new Date(Date.now() + LOCKOUT_MS).toISOString() : null,
+    });
+    notify();
+    return false;
+  }
+
+  /**
+   * Verify against the active child's registered PIN or password. This avoids a
+   * separate parent PIN and keeps sensitive settings tied to the child credential.
+   */
+  static async verifyChildCredential(childId, credential) {
+    if (this.getLockoutRemaining() > 0) return false;
+    if (!childId || !credential) return false;
+
+    const valid = await ChildAccountService.verifyPin(childId, credential);
     if (valid) {
       this.unlock();
       return true;

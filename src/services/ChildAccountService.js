@@ -251,6 +251,7 @@ export class ChildAccountService {
       childId: result.account.childId,
       fullName: result.account.fullName,
       parentEmail: result.account.parentEmail,
+      welcomeEmailSent: !!result.welcomeEmailSent,
     };
   }
 

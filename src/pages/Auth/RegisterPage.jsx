@@ -22,7 +22,8 @@ const RegisterPage = () => {
   const [localError, setLocalError] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
   const [showCelebration, setShowCelebration] = useState(false);
-  const [registeredChild, setRegisteredChild] = useState({ name: '', childId: '' });
+  const [registeredChild, setRegisteredChild] = useState({ name: '', childId: '', parentEmail: '' });
+  const [welcomeEmailSent, setWelcomeEmailSent] = useState(false);
 
   const validateForm = () => {
     const errors = {};
@@ -71,7 +72,8 @@ const RegisterPage = () => {
     setIsSubmitting(true);
     try {
       const result = await register(fullName.trim(), pin, parentEmail.trim());
-      setRegisteredChild({ name: result.fullName, childId: result.childId });
+      setRegisteredChild({ name: result.fullName, childId: result.childId, parentEmail: result.parentEmail });
+      setWelcomeEmailSent(!!result.welcomeEmailSent);
       setShowCelebration(true);
     } catch (err) {
       setLocalError(err.message || 'Registration failed. Please try again.');
@@ -361,6 +363,8 @@ const RegisterPage = () => {
         onClose={handleCelebrationClose}
         childName={registeredChild.name}
         childId={registeredChild.childId}
+        parentEmail={registeredChild.parentEmail}
+        welcomeEmailSent={welcomeEmailSent}
         requireAcknowledgement
       />
     </div>

@@ -21,6 +21,7 @@ import {
   verifyStoredCredential,
 } from './_lib/child-auth.js';
 import { verifySessionToken } from './_lib/developer-auth.js';
+import { sendMail, isMailConfigured } from './_lib/mailer.js';
 import { requireStore } from './_lib/store.js';
 import { HttpError as ApiError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
@@ -84,9 +85,46 @@ async function register(client, body) {
     version: 1,
   });
 
+  let welcomeEmailSent = false;
+  if (isMailConfigured() && parentEmail) {
+    try {
+      const normalizedParentEmail = parentEmail.trim().toLowerCase();
+      await sendMail({
+        to: normalizedParentEmail,
+        subject: `Welcome to Makenna Learning Lab - ${fullName.trim()}'s account`,
+        text: [
+          'Hello,',
+          '',
+          `A Makenna Learning Lab account has been created for ${fullName.trim()}.`,
+          '',
+          `Child ID: ${childId}`,
+          `Registered with: ${isPin ? 'a 4/8-digit PIN' : 'a password'}`,
+          `Parent email on file: ${normalizedParentEmail}`,
+          '',
+          'To sign in, use the Child ID above together with the PIN or password chosen during registration.',
+          '',
+          'Keep the Child ID safe. If the PIN or password is forgotten, use the support page with this parent email to request recovery.',
+          '',
+          'Tips for parents:',
+          '- Encourage short, regular practice sessions.',
+          '- Keep the PIN/password private to the child.',
+          '- Parent settings can be unlocked from the child app using the child credential.',
+          '',
+          `Open Makenna: ${process.env.APP_URL || 'https://makenna.vercel.app'}`,
+          '',
+          'If you did not expect this email, you can ignore it.',
+        ].join('\\n'),
+      });
+      welcomeEmailSent = true;
+    } catch (error) {
+      console.error('Welcome email failed:', error.message);
+    }
+  }
+
   return {
     account: toClientAccount(data),
     token: createChildToken(childId),
+    welcomeEmailSent,
   };
 }
 

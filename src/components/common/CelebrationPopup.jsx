@@ -7,7 +7,7 @@ import { voiceGuide } from '../../services/VoiceGuideService';
  * When requireAcknowledgement is true (account creation), the user must copy
  * and acknowledge the generated Child ID before continuing.
  */
-const CelebrationPopup = ({ isOpen, onClose, childName, childId, onReplay, requireAcknowledgement = false }) => {
+const CelebrationPopup = ({ isOpen, onClose, childName, childId, onReplay, requireAcknowledgement = false, welcomeEmailSent = false, parentEmail = '' }) => {
   const [hasSpoken, setHasSpoken] = useState(false);
   const [speechError, setSpeechError] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -105,6 +105,12 @@ const CelebrationPopup = ({ isOpen, onClose, childName, childId, onReplay, requi
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               Your account has been created successfully and saved to the cloud.
             </p>
+
+            {welcomeEmailSent && (
+              <p className="text-sm text-green-600 dark:text-green-400 mb-4">
+                A welcome email with your Child ID and recovery tips was sent to {parentEmail || 'your parent email'}.
+              </p>
+            )}
 
             <div className="bg-purple-100 dark:bg-purple-900 rounded-xl p-4 mb-4">
               <p className="text-sm text-purple-600 dark:text-purple-400 mb-1">
