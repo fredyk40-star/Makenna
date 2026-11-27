@@ -3,7 +3,6 @@ import { ChildAccountService } from '../services/ChildAccountService';
 import { AnalyticsService } from '../services/AnalyticsService';
 import { GamificationService } from '../services/GamificationService';
 import { CloudSyncService } from '../services/CloudSyncService';
-import { isSupabaseConfigured } from '../services/SupabaseService';
 
 const ChildAccountContext = createContext();
 
@@ -19,6 +18,12 @@ export const ChildAccountProvider = ({ children }) => {
   const [activeChild, setActiveChild] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState(() => CloudSyncService.getSyncStatus());
+
+  useEffect(() => {
+    setCloudSyncStatus(CloudSyncService.init().status);
+    return CloudSyncService.subscribe(status => setCloudSyncStatus({ ...status }));
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -35,11 +40,11 @@ export const ChildAccountProvider = ({ children }) => {
         console.error('AnalyticsService initialization error:', err);
       }
 
-      // Auto-sync from Supabase cloud on app load (cross-device accounts)
-      if (isSupabaseConfigured()) {
+      // Replay queued writes and merge cloud changes when the app starts.
+      if (CloudSyncService.isEnabled()) {
         try {
-          await CloudSyncService.syncFromCloud();
-          console.log('Cloud sync completed on app init');
+          const result = await CloudSyncService.syncNow();
+          if (!result.success) console.warn('Cloud sync pending:', result.error);
         } catch (syncErr) {
           console.warn('Cloud sync skipped (offline or unavailable):', syncErr.message);
         }
@@ -71,14 +76,12 @@ export const ChildAccountProvider = ({ children }) => {
       setActiveChild(child);
       AnalyticsService.trackLogin();
       
-      // Auto-sync to Supabase after successful registration
-      if (isSupabaseConfigured()) {
+      // The account is queued by ChildAccountService; flush it when possible.
+      if (CloudSyncService.isEnabled()) {
         try {
-          await CloudSyncService.syncToCloud();
-          console.log('Account synced to Supabase successfully');
+          await CloudSyncService.syncNow();
         } catch (syncErr) {
-          console.warn('Supabase sync failed (account saved locally):', syncErr.message);
-          // Don't throw - account is saved locally even if sync fails
+          console.warn('Supabase sync pending (account saved locally):', syncErr.message);
         }
       }
       
@@ -127,32 +130,34 @@ export const ChildAccountProvider = ({ children }) => {
   const clearError = useCallback(() => setError(null), []);
 
   // Cloud sync functions
-  const syncToCloud = useCallback(async () => {
-    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase not configured' };
-    return await CloudSyncService.syncToCloud();
+  const refreshAfterSync = useCallback((result) => {
+    if (result.success && activeChild) {
+      setActiveChild(ChildAccountService.getActiveChild());
+    }
+    return result;
+  }, [activeChild]);
+
+  const syncToCloud = useCallback(async () => (
+    refreshAfterSync(await CloudSyncService.syncToCloud())
+  ), [refreshAfterSync]);
+
+  const syncFromCloud = useCallback(async () => (
+    refreshAfterSync(await CloudSyncService.syncFromCloud())
+  ), [refreshAfterSync]);
+
+  const fullSync = useCallback(async () => (
+    refreshAfterSync(await CloudSyncService.syncNow())
+  ), [refreshAfterSync]);
+
+  const syncNow = useCallback(async () => (
+    refreshAfterSync(await CloudSyncService.syncNow())
+  ), [refreshAfterSync]);
+
+  const toggleCloudSync = useCallback((enabled) => {
+    const init = CloudSyncService.setEnabled(enabled);
+    setCloudSyncStatus({ ...init.status });
+    return init;
   }, []);
-
-  const syncFromCloud = useCallback(async () => {
-    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase not configured' };
-    
-    const result = await CloudSyncService.syncFromCloud();
-    if (result.success && activeChild) {
-      // Refresh active child after sync
-      const updatedChild = ChildAccountService.getActiveChild();
-      setActiveChild(updatedChild);
-    }
-    return result;
-  }, [activeChild]);
-
-  const fullSync = useCallback(async () => {
-    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase not configured' };
-    const result = await CloudSyncService.fullSync();
-    if (result.success && activeChild) {
-      const updatedChild = ChildAccountService.getActiveChild();
-      setActiveChild(updatedChild);
-    }
-    return result;
-  }, [activeChild]);
 
   const value = {
     activeChild,
@@ -170,8 +175,10 @@ export const ChildAccountProvider = ({ children }) => {
     syncToCloud,
     syncFromCloud,
     fullSync,
-    isCloudSyncEnabled: CloudSyncService.isEnabled(),
-    cloudSyncStatus: CloudSyncService.getSyncStatus(),
+    syncNow,
+    toggleCloudSync,
+    isCloudSyncEnabled: cloudSyncStatus.enabled,
+    cloudSyncStatus,
   };
 
   return (

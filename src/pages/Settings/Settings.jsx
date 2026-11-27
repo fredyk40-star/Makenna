@@ -8,6 +8,7 @@ import AudioSettings from '../../components/audio/AudioSettings';
 import PWAGuidance from '../../components/PWAGuidance/PWAGuidance';
 import ParentalControls from '../../components/ParentalControls/ParentalControls';
 import LessonScheduler from '../../components/LessonScheduler/LessonScheduler';
+import SyncCenter from '../../components/Sync/SyncCenter';
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
@@ -135,7 +136,15 @@ const Settings = () => {
         </h3>
         <LessonScheduler />
       </motion.div>
-      
+
+      {/* Sync & Offline Data */}
+      <motion.div
+        variants={itemVariants}
+        className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft"
+      >
+        <SyncCenter />
+      </motion.div>
+
       {/* Data Management */}
       <motion.div
         variants={itemVariants}

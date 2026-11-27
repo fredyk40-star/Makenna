@@ -8,6 +8,23 @@ const CHILD_ACCOUNTS_KEY = 'makenna_child_accounts_v2';
 const ACTIVE_CHILD_KEY = 'makenna_active_child_id';
 const STORAGE_VERSION_KEY = 'makenna_storage_version';
 
+// Dynamic import avoids a circular dependency (CloudSyncService reads accounts).
+const stampForSync = account => ({
+  ...account,
+  updatedAt: new Date().toISOString(),
+  version: Number(account.version || 0) + 1,
+});
+
+const queueCloudChange = (type, account, childId) => {
+  void import('./CloudSyncService')
+    .then(({ CloudSyncService }) => {
+      CloudSyncService.queueAccountChange(type, account, childId);
+    })
+    .catch(() => {
+      // Offline or sync unavailable — the local write is already saved.
+    });
+};
+
 export class ChildAccountService {
   static VERSION = 2;
 
@@ -139,6 +156,8 @@ export class ChildAccountService {
       pinSet: true,
       avatar: 'default',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      version: 1,
       lastLogin: null,
       progress: {},
       settings: {},
@@ -147,6 +166,7 @@ export class ChildAccountService {
 
     accounts.push(newAccount);
     this.saveAllAccounts(accounts);
+    queueCloudChange('UPSERT_ACCOUNT', newAccount);
     return { childId, fullName: newAccount.fullName };
   }
 
@@ -213,8 +233,10 @@ export class ChildAccountService {
     }
 
     // Update last login
-    account.lastLogin = new Date().toISOString();
+    const updated = stampForSync({ ...account, lastLogin: new Date().toISOString() });
+    accounts[accounts.findIndex(item => item.childId === account.childId)] = updated;
     this.saveAllAccounts(accounts);
+    queueCloudChange('UPSERT_ACCOUNT', updated);
 
     // Set as active
     this.setActiveChild(account.childId);
@@ -269,8 +291,9 @@ export class ChildAccountService {
     const normalizedId = this.normalizeChildId(childId);
     const index = accounts.findIndex(a => a.childId?.toLowerCase() === normalizedId);
     if (index !== -1) {
-      accounts[index] = { ...accounts[index], ...updates };
+      accounts[index] = stampForSync({ ...accounts[index], ...updates });
       this.saveAllAccounts(accounts);
+      queueCloudChange('UPSERT_ACCOUNT', accounts[index]);
       return accounts[index];
     }
     return null;
@@ -282,8 +305,10 @@ export class ChildAccountService {
   static deleteChild(childId) {
     const normalizedId = this.normalizeChildId(childId);
     let accounts = this.getAllAccounts();
+    const removed = accounts.find(a => a.childId?.toLowerCase() === normalizedId);
     accounts = accounts.filter(a => a.childId?.toLowerCase() !== normalizedId);
     this.saveAllAccounts(accounts);
+    if (removed) queueCloudChange('DELETE_ACCOUNT', removed, removed.childId);
     if (this.getActiveChildId()?.toLowerCase() === normalizedId) {
       this.logoutChild();
     }
@@ -318,8 +343,12 @@ export class ChildAccountService {
       if (!accounts[index].progress) {
         accounts[index].progress = {};
       }
-      accounts[index].progress[key] = value;
+      accounts[index] = stampForSync({
+        ...accounts[index],
+        progress: { ...accounts[index].progress, [key]: value },
+      });
       this.saveAllAccounts(accounts);
+      queueCloudChange('UPSERT_ACCOUNT', accounts[index]);
     }
   }
 

@@ -11,7 +11,14 @@ import errorReporter from './services/ErrorReportingService';
 // Bring saved data up to the current schema before any component reads it.
 migrateStorage();
 errorReporter.installGlobalHandlers();
-window.addEventListener('online', () => errorReporter.flush());
+window.addEventListener('online', () => {
+  errorReporter.flush();
+  if (CloudSyncService.isEnabled()) {
+    CloudSyncService.syncNow().catch(() => {
+      // Status is updated in CloudSyncService; the app stays usable offline.
+    });
+  }
+});
 
 // Register service worker with update handling
 registerServiceWorker();

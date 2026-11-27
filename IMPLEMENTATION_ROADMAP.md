@@ -41,11 +41,11 @@ Legend: `[ ]` planned · `[~]` in progress · `[x]` done
 - [x] Class progress view
 - [x] Printable certificates and worksheets
 
-## Phase 5 — Offline-first sync `[ ]`
-- [ ] Sync queue with deterministic conflict resolution
-- [ ] Visible sync status and "Sync now" control
-- [ ] Supabase Row Level Security guidance/migration updates
-- [ ] Offline export/import for schools
+## Phase 5 — Offline-first sync `[x]`
+- [x] Sync queue with deterministic conflict resolution
+- [x] Visible sync status and "Sync now" control
+- [x] Supabase Row Level Security guidance/migration updates
+- [x] Offline export/import for schools
 
 ## Phase 6 — Accessibility, safety & privacy `[ ]`
 - [ ] Full keyboard/switch-control operation for games and tracing

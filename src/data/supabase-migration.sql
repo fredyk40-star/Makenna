@@ -1,5 +1,9 @@
 -- Makenna Learning Lab - Supabase Schema Migration
--- Run this in your Supabase SQL editor
+-- Run this in your Supabase SQL editor, then run supabase-phase5-sync.sql.
+--
+-- SECURITY NOTE: the anon policies below are development-only. They allow any
+-- client holding the anon key to read PIN hashes and overwrite child rows.
+-- See supabase-phase5-sync.sql for the Phase 5 hardening guidance.
 --
 -- QUICK FIX for 401 errors: Run the GRANT statements below to fix
 -- "permission denied for table child_accounts" for the anon role.
