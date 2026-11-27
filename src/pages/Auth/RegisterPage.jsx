@@ -5,6 +5,7 @@ import { useChildAccount } from '../../context/ChildAccountContext';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 import CelebrationPopup from '../../components/common/CelebrationPopup';
 import LoginGuidance from '../../components/LoginGuidance/LoginGuidance';
+import { ChildAccountService } from '../../services/ChildAccountService';
 import StudyLampBackdrop from '../../components/auth/StudyLampBackdrop';
 
 const RegisterPage = () => {
@@ -16,6 +17,7 @@ const RegisterPage = () => {
   const [parentEmail, setParentEmail] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [usePassword, setUsePassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
@@ -41,13 +43,15 @@ const RegisterPage = () => {
     }
 
     if (!pin) {
-      errors.pin = 'Please enter a PIN.';
-    } else if (!/^\d{4}$/.test(pin) && !/^\d{8}$/.test(pin)) {
+      errors.pin = usePassword ? 'Please enter a password.' : 'Please enter a PIN.';
+    } else if (usePassword && !ChildAccountService.validatePassword(pin)) {
+      errors.pin = 'Password must be at least 8 characters.';
+    } else if (!usePassword && !ChildAccountService.validatePin(pin)) {
       errors.pin = 'PIN must be 4 or 8 digits.';
     }
 
     if (pin !== confirmPin) {
-      errors.confirmPin = 'PINs do not match.';
+      errors.confirmPin = usePassword ? 'Passwords do not match.' : 'PINs do not match.';
     }
 
     setValidationErrors(errors);
@@ -218,29 +222,30 @@ const RegisterPage = () => {
               transition={{ duration: 0.3, delay: 0.12 }}
             >
               <label htmlFor="pin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Choose a PIN 🔒
+                {usePassword ? 'Choose a Password 🔒' : 'Choose a PIN 🔒'}
               </label>
               <input
                 id="pin"
                 type="password"
                 value={pin}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  if (val.length <= 8) {
+                  const raw = e.target.value;
+                  const val = usePassword ? raw : raw.replace(/\D/g, '');
+                  if (val.length <= (usePassword ? 128 : 8)) {
                     setPin(val);
                     setLocalError('');
                     setValidationErrors(prev => ({ ...prev, pin: '' }));
                   }
                 }}
-                placeholder="4 or 8 digit PIN"
+                placeholder={usePassword ? 'At least 8 characters' : '4 or 8 digit PIN'}
                 className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)] ${
                   validationErrors.pin ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'
                 }`}
                 autoComplete="new-password"
                 disabled={isSubmitting}
-                aria-label="Choose a PIN"
-                inputMode="numeric"
-                pattern="[0-9]*"
+                aria-label={usePassword ? 'Choose a password' : 'Choose a PIN'}
+                inputMode={usePassword ? undefined : 'numeric'}
+                pattern={usePassword ? undefined : '[0-9]*'}
                 aria-invalid={!!validationErrors.pin}
               />
               {validationErrors.pin ? (
@@ -249,9 +254,21 @@ const RegisterPage = () => {
                 </p>
               ) : (
                 <p className="text-xs text-gray-400 mt-1">
-                  PIN must be 4 or 8 digits (numbers only)
+                  {usePassword ? 'Password must be at least 8 characters' : 'PIN must be 4 or 8 digits (numbers only)'}
                 </p>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setUsePassword(value => !value);
+                  setPin('');
+                  setConfirmPin('');
+                  setValidationErrors(prev => ({ ...prev, pin: '', confirmPin: '' }));
+                }}
+                className="mt-2 text-xs font-medium text-teal-700 dark:text-teal-300 hover:underline"
+              >
+                {usePassword ? 'Use a PIN instead' : 'Use a password instead'}
+              </button>
             </motion.div>
 
             {/* Confirm PIN input */}
@@ -261,27 +278,28 @@ const RegisterPage = () => {
               transition={{ duration: 0.3, delay: 0.18 }}
             >
               <label htmlFor="confirmPin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Confirm PIN ✅
+                {usePassword ? 'Confirm Password ✅' : 'Confirm PIN ✅'}
               </label>
               <input
                 id="confirmPin"
                 type="password"
                 value={confirmPin}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  if (val.length <= 8) {
+                  const raw = e.target.value;
+                  const val = usePassword ? raw : raw.replace(/\D/g, '');
+                  if (val.length <= (usePassword ? 128 : 8)) {
                     setConfirmPin(val);
                     setLocalError('');
                     setValidationErrors(prev => ({ ...prev, confirmPin: '' }));
                   }
                 }}
-                placeholder="Re-enter your PIN"
+                placeholder={usePassword ? 'Re-enter your password' : 'Re-enter your PIN'}
                 className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)] ${
                   validationErrors.confirmPin ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'
                 }`}
                 autoComplete="new-password"
                 disabled={isSubmitting}
-                aria-label="Confirm your PIN"
+                aria-label={usePassword ? 'Confirm your password' : 'Confirm your PIN'}
                 inputMode="numeric"
                 pattern="[0-9]*"
                 aria-invalid={!!validationErrors.confirmPin}

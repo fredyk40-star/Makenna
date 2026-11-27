@@ -158,6 +158,11 @@ export class ChildAccountService {
     return /^\d{4}$/.test(pin) || /^\d{8}$/.test(pin);
   }
 
+  /** Registration accepts either a 4/8-digit PIN or a password (8+ chars). */
+  static validateRegistrationCredential(credential) {
+    return this.validatePin(credential) || this.validatePassword(credential);
+  }
+
   static validateEmail(email) {
     return typeof email === 'string' && EMAIL_PATTERN.test(email.trim());
   }
@@ -175,7 +180,7 @@ export class ChildAccountService {
   }
 
   static saveAllAccounts(accounts) {
-    StorageService.set(CHILD_ACCOUNTS_KEY, accounts.map(account => this.sanitize(account)));
+    return StorageService.set(CHILD_ACCOUNTS_KEY, accounts.map(account => this.sanitize(account)));
   }
 
   static getChildTokens() {
@@ -216,12 +221,12 @@ export class ChildAccountService {
    * Register a child. The server generates the ID, hashes the PIN and writes
    * the row with the service-role key; the browser only receives public fields.
    */
-  static async registerChild(fullName, pin, parentEmail) {
+  static async registerChild(fullName, credential, parentEmail) {
     if (!this.validateName(fullName)) {
       throw new Error('Please enter a valid name (1-50 characters).');
     }
-    if (!this.validatePin(pin)) {
-      throw new Error('PIN must be 4 or 8 digits.');
+    if (!this.validateRegistrationCredential(credential)) {
+      throw new Error('Enter a valid PIN (4 or 8 digits) or password (at least 8 characters).');
     }
     if (!this.validateEmail(parentEmail)) {
       throw new Error(
@@ -237,7 +242,7 @@ export class ChildAccountService {
     const result = await postApi('child-auth', {
       action: 'register',
       fullName: fullName.trim(),
-      pin,
+      pin: credential,
       parentEmail: parentEmail.trim().toLowerCase(),
     });
 

@@ -75,15 +75,15 @@ export const ChildAccountProvider = ({ children }) => {
     init();
   }, []);
 
-  const register = useCallback(async (fullName, pin, parentEmail) => {
+  const register = useCallback(async (fullName, credential, parentEmail) => {
     setError(null);
     try {
-      const result = await ChildAccountService.registerChild(fullName, pin, parentEmail);
+      const result = await ChildAccountService.registerChild(fullName, credential, parentEmail);
       // Registration already saved the account and device token. Auto-login is
       // a convenience; a transient failure here must not make the user retry a
       // name that is already registered.
       try {
-        await ChildAccountService.loginChild(result.childId, pin);
+        await ChildAccountService.loginChild(result.childId, credential);
       } catch (loginErr) {
         console.warn('Auto-login pending after registration:', loginErr.message);
         ChildAccountService.setActiveChild(result.childId);

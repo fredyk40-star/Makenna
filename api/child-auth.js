@@ -47,9 +47,14 @@ const requireDeveloper = (token) => {
 };
 
 async function register(client, body) {
-  const { fullName, pin, parentEmail } = body;
+  const { fullName, parentEmail } = body;
+  const credential = body.credential || body.password || body.pin;
+  const isPin = validatePin(credential);
+
   if (!validateName(fullName)) throw new ApiError(400, 'Please enter a valid name (1-50 characters).');
-  if (!validatePin(pin)) throw new ApiError(400, 'PIN must be 4 or 8 digits.');
+  if (!validatePin(credential) && !validatePassword(credential)) {
+    throw new ApiError(400, 'Enter a valid PIN (4 or 8 digits) or password (at least 8 characters).');
+  }
   if (!validateEmail(parentEmail)) {
     throw new ApiError(400, 'A parent email is required so this account can be recovered.');
   }
@@ -60,10 +65,10 @@ async function register(client, body) {
   const data = await client.insertAccount({
     child_id: childId,
     full_name: fullName.trim(),
-    pin_hash: hashCredentialStrong(pin),
-    pin_set: true,
-    password_hash: null,
-    password_set: false,
+    pin_hash: isPin ? hashCredentialStrong(credential) : null,
+    pin_set: isPin,
+    password_hash: isPin ? null : hashCredentialStrong(credential),
+    password_set: !isPin,
     parent_email: parentEmail.trim().toLowerCase(),
     temp_password_hash: null,
     temp_password_expires_at: null,
