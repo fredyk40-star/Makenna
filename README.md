@@ -25,58 +25,54 @@ A progressive web application designed for children aged 5-8 to explore, learn, 
 - Framer Motion
 - React Icons
 - PWA (Workbox)
-- Supabase (optional - for cloud sync)
+- Supabase (server-side, for cloud sync and account recovery)
 
-## ☁️ Cloud Sync Setup (Optional)
+## ☁️ Cloud Sync Setup
 
-For cross-device account sync, connect to Supabase:
+Cloud access is entirely server-side. The browser has **no** Supabase table grants and never receives credential hashes.
 
-1. Create a free account at [supabase.com](https://supabase.com)
-2. Create a new project
-3. Go to Settings → API to get your credentials
-4. Run the migration SQL in `src/data/supabase-migration.sql` in your Supabase SQL editor
-5. Run these migrations in order in the Supabase SQL editor:
-   - `src/data/supabase-migration.sql`
-   - `supabase-phase5-sync.sql`
-   - `supabase-auth-recovery.sql`
-   - `supabase-cloud-sync-fix.sql`
-
-   The last one adds the recovery columns and the `UNIQUE(child_id)` constraint required by account upserts.
-6. Copy `.env.example` to `.env` and add your Supabase credentials:
+1. Create a project at [supabase.com](https://supabase.com).
+2. Run **`supabase-schema.sql` once** in the Supabase SQL Editor. It is idempotent and replaces the older deprecated `supabase-*.sql` scripts.
+3. Copy `.env.example` to `.env` for local development. Do **not** set `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` — the client no longer uses them.
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
+Serverless functions need these server-only variables:
+
 ```
-VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR-ANON-KEY-HERE
-VITE_ENABLE_CLOUD_SYNC=true
+SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR-SERVICE-ROLE-KEY
+DEVELOPER_JWT_SECRET=<random 48-byte base64url value>
+CHILD_SESSION_SECRET=<another random 48-byte base64url value>
 ```
+
+Child registration, login, credential reset, cloud sync and support requests are handled by `api/child-auth.js`, `api/child-sync.js` and `api/support.js`. Browser calls carry signed device tokens or developer session tokens.
 
 ## 🔐 Accounts, Recovery, and Developer Access
 
-- New accounts get a `kid########` Child ID, require a parent email, and are always queued for cloud persistence.
+- New accounts get a `kid########` Child ID, require a parent email, and are written to Supabase by the server at registration.
+- PIN/password hashes are created and verified only in serverless functions; they are never returned to the browser.
 - Account creation requires the user to copy/acknowledge the generated Child ID.
-- `/support` lets a parent submit a forgot-PIN request with the Child ID + parent email.
+- `/support` lets a parent submit a forgot-PIN request with the Child ID + parent email. The server verifies the pair before storing the message.
 - The developer portal has a **Support** tab. When an ID/email pair matches an account, the developer can email a one-time password. The child must then choose a new PIN or password before continuing.
 - Developer login is restricted to `addaifrederick72@gmail.com` and a strong password. Reset links are only sent to that mailbox.
+- Children already signed in on a device can keep using the app offline; signing in on a new device requires a network connection.
 
 Production setup in Vercel:
 
-1. Run `src/data/supabase-migration.sql`, `supabase-phase5-sync.sql`, then `supabase-auth-recovery.sql` in the Supabase SQL editor.
-2. Generate the password hash:
+1. Run `supabase-schema.sql` in the Supabase SQL editor (once; safe to re-run).
+2. Generate the developer password hash:
 
    ```bash
    node scripts/hash-developer-password.js "your-strong-password"
    ```
 
-3. Add the printed `DEVELOPER_PASSWORD_HASH` / `DEVELOPER_PASSWORD_SALT`, plus `DEVELOPER_JWT_SECRET`, `DEVELOPER_EMAIL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` as **server-only** Vercel env vars.
+3. Add the printed `DEVELOPER_PASSWORD_HASH` / `DEVELOPER_PASSWORD_SALT`, plus `DEVELOPER_JWT_SECRET`, `CHILD_SESSION_SECRET`, `DEVELOPER_EMAIL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` as **server-only** Vercel env vars.
 4. Add `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Google App Password), `GMAIL_FROM`, and `APP_URL`. Gmail SMTP is handled by `api/mail.js`; browser code never sees these secrets.
-5. Add the client-side `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_DEVELOPER_EMAIL` values.
+5. Add only `VITE_DEVELOPER_EMAIL` and `VITE_ENABLE_CLOUD_SYNC` as client env vars. Never expose `SUPABASE_SERVICE_ROLE_KEY` with a `VITE_` prefix.
 6. If Gmail is not configured locally, the developer portal shows the one-time password on screen so the flow can still be tested.
-7. If sync logs show HTTP 400 on `child_accounts?on_conflict=child_id`, run `supabase-cloud-sync-fix.sql`. The browser console will now print the exact PostgREST message, details, hint, and code.
 
 ## 🎨 Branding Assets
 

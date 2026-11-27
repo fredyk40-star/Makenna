@@ -1,26 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
+/**
+ * Deprecated: the browser no longer accesses Supabase directly.
+ *
+ * Cloud reads and writes go through /api/* serverless functions that use the
+ * service-role key. This module is kept only so older imports cannot
+ * accidentally create an anon-key client from VITE_* variables.
+ */
+export const supabase = null;
+export const isSupabaseConfigured = () => false;
 
-// Supabase client configuration. Placeholder values from .env.example must not
-// be treated as a live project, otherwise every local write queues a failing
-// network request instead of staying offline.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-const isRealValue = value => (
-  typeof value === 'string'
-  && value.trim().length > 0
-  && !/your[_-]?project|your[_-]?key|example|placeholder|change[_-]?me/i.test(value)
-);
-
-// Create client only if environment variables are set
-export const supabase = isRealValue(supabaseUrl) && isRealValue(supabaseKey)
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
-
-// Check if Supabase is configured
-export const isSupabaseConfigured = () => !!supabase;
-
-// Sync status tracking
 let syncInProgress = false;
 let lastSyncTime = null;
 

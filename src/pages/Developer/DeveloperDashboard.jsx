@@ -176,9 +176,8 @@ const DeveloperDashboard = () => {
     setSupportRequests(SupportService.getRequests());
     setSupportSyncing(true);
     try {
-      // A developer reviewing on another device needs the child accounts before
-      // the ID/email match can be confirmed.
-      await ChildAccountService.syncAccountsFromCloud();
+      // Identity checks now happen on the server, so no local account pull is
+      // required before reviewing requests on another device.
       const result = await SupportService.syncFromCloud();
       if (result.success) setSupportRequests(result.requests);
     } finally {
@@ -372,9 +371,9 @@ const DeveloperDashboard = () => {
     }
   };
 
-  const handleSupportStatus = (request, status) => {
+  const handleSupportStatus = async (request, status) => {
     try {
-      const updated = SupportService.markStatus(request.id, status);
+      const updated = await SupportService.markStatus(request.id, status);
       setSupportRequests(SupportService.getRequests());
       DeveloperService.logAction('SUPPORT_REQUEST_UPDATED', { id: request.id, status: updated.status });
     } catch (err) {
@@ -387,14 +386,14 @@ const DeveloperDashboard = () => {
     setTempSending(true);
     setError('');
     try {
-      await ChildAccountService.syncAccountsFromCloud();
       const credential = await ChildAccountService.issueTemporaryPassword(
         tempRequest.childId,
-        tempRequest.parentEmail
+        tempRequest.parentEmail,
+        DeveloperService.getSessionToken()
       );
       const result = await DeveloperService.sendTemporaryPassword(credential);
       setTempPasswordResult(result?.success ? '' : credential.tempPassword);
-      SupportService.markStatus(tempRequest.id, 'reviewing', 'One-time password issued.');
+      await SupportService.markStatus(tempRequest.id, 'reviewing', 'One-time password issued.');
       loadSupportRequests();
       DeveloperService.logAction('TEMP_PASSWORD_SENT', { childId: credential.childId, success: true });
       if (!result?.success) {
@@ -588,9 +587,7 @@ const DeveloperDashboard = () => {
             </div>
           ) : (
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {supportRequests.map(request => {
-                const matched = !!ChildAccountService.validateSupportIdentity(request.childId, request.parentEmail);
-                return (
+              {supportRequests.map(request => (
                   <div key={request.id} className="bg-gray-800 rounded-xl p-4">
                     <div className="flex justify-between items-start gap-3 flex-wrap">
                       <div>
@@ -603,11 +600,9 @@ const DeveloperDashboard = () => {
                           }`}>
                             {request.status}
                           </span>
-                          {matched && (
-                            <span className="text-xs text-green-400 flex items-center gap-1">
-                              <FaCheck /> ID + email matched
-                            </span>
-                          )}
+                          <span className="text-xs text-green-400 flex items-center gap-1">
+                            <FaCheck /> ID + email verified by server
+                          </span>
                         </p>
                         <p className="text-sm text-gray-400">
                           {request.fullName || 'Child'} • {request.parentEmail}
@@ -631,9 +626,8 @@ const DeveloperDashboard = () => {
                         </button>
                         <button
                           onClick={() => { setTempRequest(request); setTempPasswordResult(''); setError(''); }}
-                          disabled={!matched}
-                          className="px-2 py-1 bg-purple-600 rounded text-xs flex items-center gap-1 disabled:opacity-50"
-                          title={matched ? 'Send a one-time password' : 'Child ID and email do not match an account'}
+                          className="px-2 py-1 bg-purple-600 rounded text-xs flex items-center gap-1"
+                          title="Send a one-time password"
                         >
                           <FaKey /> Send Temp Password
                         </button>
@@ -646,8 +640,7 @@ const DeveloperDashboard = () => {
                       <p className="mt-2 text-xs text-purple-300">Note: {request.developerNote}</p>
                     )}
                   </div>
-                );
-              })}
+              ))}
             </div>
           )}
         </div>

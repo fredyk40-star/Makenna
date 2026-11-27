@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured } from '../../services/SupabaseService';
 import { ChildAccountService } from '../../services/ChildAccountService';
 import { CloudSyncService } from '../../services/CloudSyncService';
+import { DeveloperService } from '../../services/DeveloperService';
 
 export default function TestSupabase() {
   const [cloudData, setCloudData] = useState([]);
@@ -14,33 +14,16 @@ export default function TestSupabase() {
   const testConnection = async () => {
     setLoading(true);
     try {
-      if (!isSupabaseConfigured() || !supabase) {
-        setConnectionStatus({
-          success: false,
-          message: 'Supabase is not configured. Check .env file.'
-        });
-        return;
-      }
-
-      // Try to connect
-      const { data, error } = await supabase
-        .from('child_accounts')
-        .select('*')
-        .limit(10);
-
-      if (error) {
-        setConnectionStatus({
-          success: false,
-          message: `Connection error: ${error.message}`
-        });
-      } else {
-        setConnectionStatus({
-          success: true,
-          message: `Connected successfully! Found ${data.length} records.`
-        });
-        setCloudData(data);
-
-        // Load local data too
+      // All cloud access is server-side; the browser never uses an anon key.
+      const result = await DeveloperService.syncChildrenFromCloud();
+      setConnectionStatus({
+        success: result.success,
+        message: result.success
+          ? `Connected successfully! Found ${result.count} records.`
+          : `Connection error: ${result.error}`,
+      });
+      if (result.success) {
+        setCloudData(ChildAccountService.getAllAccounts());
         setLocalData(ChildAccountService.getAllAccounts());
       }
     } catch (error) {
@@ -80,30 +63,13 @@ export default function TestSupabase() {
 
   // Insert test record
   const insertTestRecord = async () => {
-    if (!supabase) return;
-
     setLoading(true);
     try {
-      const testAccount = {
-        child_id: `test-${Date.now()}`,
-        full_name: `Test Child ${Date.now()}`,
-        pin_hash: 'test-hash',
-        pin_set: true,
-        avatar: 'default',
-        created_at: new Date().toISOString(),
-        last_login: new Date().toISOString(),
-        progress: { test: true, synced: new Date().toISOString() },
-        settings: {}
-      };
-
-      const { data, error } = await supabase
-        .from('child_accounts')
-        .insert(testAccount)
-        .select();
-
-      if (error) throw error;
-
-      setSyncResult({ success: true, message: 'Test record inserted!', data });
+      const parentEmail = 'parent@example.com';
+      const result = await ChildAccountService.registerChild(
+        `Test Child ${Date.now()}`, '1234', parentEmail,
+      );
+      setSyncResult({ success: true, message: 'Test account registered!', data: result });
       await testConnection();
     } catch (error) {
       setSyncResult({ success: false, error: error.message });

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
+import { getServerClient } from './supabase-server.js';
 
 export const DEVELOPER_EMAIL =
   process.env.DEVELOPER_EMAIL || 'addaifrederick72@gmail.com';
@@ -87,13 +87,6 @@ function safeHexEqual(a, b) {
   } catch (error) {
     return false;
   }
-}
-
-function getServerClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey || url.includes('YOUR_PROJECT')) return null;
-  return createClient(url, serviceKey, { auth: { persistSession: false } });
 }
 
 async function getAuthRecord() {

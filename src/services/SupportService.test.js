@@ -4,10 +4,12 @@ import { SupportService } from './SupportService';
 import { StorageService } from './StorageService';
 
 const SUPPORT_KEY = 'makenna_support_requests_v1';
+const SESSION_TOKEN_KEY = 'makenna_dev_session_token_v1';
 
 describe('SupportService', () => {
   beforeEach(() => {
     localStorage.clear();
+    StorageService.set(SESSION_TOKEN_KEY, 'developer-token');
   });
 
   it('stores a parent message from a verified child ID and email pair', async () => {
@@ -33,12 +35,12 @@ describe('SupportService', () => {
       message: 'Please help me log in.',
     });
 
-    const reviewed = SupportService.markStatus(request.id, 'reviewing', 'Identity checked.');
+    const reviewed = await SupportService.markStatus(request.id, 'reviewing', 'Identity checked.');
     expect(reviewed.status).toBe('reviewing');
     expect(reviewed.developerNote).toBe('Identity checked.');
     expect(SupportService.getOpenCount()).toBe(0);
 
-    const resolved = SupportService.markStatus(request.id, 'resolved');
+    const resolved = await SupportService.markStatus(request.id, 'resolved');
     expect(resolved.status).toBe('resolved');
   });
 

@@ -3,7 +3,8 @@
  * Only accessible via secret URL - not exposed in navigation
  */
 import { StorageService } from './StorageService';
-import { ChildAccountService } from './ChildAccountService';
+import { ChildAccountService, postApi } from './ChildAccountService';
+import { UpdateService } from './UpdateService';
 
 const DEVELOPER_KEY = 'makenna_developer_pin_hash_v1';
 const DEVELOPER_SALT = 'makenna-developer-salt-v1';
@@ -179,10 +180,9 @@ export class DeveloperService {
     if (!/^\d{4}$/.test(newPin) && !/^\d{8}$/.test(newPin)) {
       throw new Error('PIN must be 4 or 8 digits');
     }
-    const result = await this.setDeveloperPin(newPin);
-    // Sync to Supabase for cross-device access
-    await this._syncPinToCloud();
-    return result;
+    // Developer credentials are verified server-side; this local PIN is only
+    // used by legacy offline tooling and is never uploaded.
+    return this.setDeveloperPin(newPin);
   }
 
   // =====================
@@ -303,21 +303,14 @@ export class DeveloperService {
    */
   static async syncChildrenFromCloud() {
     try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) {
-        return { success: false, count: 0, error: 'Supabase not configured' };
-      }
-
-      const { CloudSyncService } = await import('./CloudSyncService');
-      const result = await CloudSyncService.syncFromCloud();
-
-      if (result.success) {
-        const totalCount = ChildAccountService.getAllAccounts().length;
-        this.logAction('DEV_CLOUD_SYNC_CHILDREN', { count: totalCount });
-        return { success: true, count: totalCount, error: null };
-      }
-
-      return { success: false, count: 0, error: result.error || 'Sync failed' };
+      const result = await postApi('child-sync', {
+        action: 'admin_list',
+        developerToken: this.getSessionToken(),
+      });
+      ChildAccountService.saveAllAccounts(result.accounts || []);
+      const totalCount = ChildAccountService.getAllAccounts().length;
+      this.logAction('DEV_CLOUD_SYNC_CHILDREN', { count: totalCount });
+      return { success: true, count: totalCount, error: null };
     } catch (err) {
       console.warn('Sync children from cloud failed:', err.message);
       return { success: false, count: 0, error: err.message };
@@ -340,21 +333,11 @@ export class DeveloperService {
    */
   static async _syncFeaturesToCloud() {
     try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) return false;
-      const { supabase } = await import('./SupabaseService');
-      const flags = this.getFeatureFlags();
-      const { error } = await supabase
-        .from('feature_flags')
-        .upsert({
-          id: 'default',
-          flags: flags,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
-      if (error) {
-        console.warn('Failed to sync feature flags to cloud:', error.message);
-        return false;
-      }
+      await postApi('developer-data', {
+        action: 'flags_push',
+        developerToken: this.getSessionToken(),
+        flags: this.getFeatureFlags(),
+      });
       return true;
     } catch (err) {
       console.warn('Feature flags sync skipped:', err.message);
@@ -367,22 +350,12 @@ export class DeveloperService {
    */
   static async syncFeaturesFromCloud() {
     try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) {
-        return { success: false, error: 'Supabase not configured' };
-      }
-      const { supabase } = await import('./SupabaseService');
-      const { data, error } = await supabase
-        .from('feature_flags')
-        .select('flags')
-        .eq('id', 'default')
-        .maybeSingle();
-      if (error || !data) {
-        return { success: false, error: error?.message || 'No flags found' };
-      }
+      const result = await postApi('developer-data', {
+        action: 'flags_pull',
+        developerToken: this.getSessionToken(),
+      });
       // Merge cloud flags with local (cloud takes priority)
-      const localFlags = this.getFeatureFlags();
-      const merged = { ...localFlags, ...data.flags };
+      const merged = { ...this.getFeatureFlags(), ...(result.flags || {}) };
       this.updateFeatureFlags(merged);
       this.logAction('DEV_SYNC_FEATURES', { count: Object.keys(merged).length });
       return { success: true, flags: merged };
@@ -397,31 +370,14 @@ export class DeveloperService {
    */
   static async _syncUpdatesToCloud() {
     try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) return false;
-      const { supabase } = await import('./SupabaseService');
       const { UpdateService } = await import('./UpdateService');
       const updates = UpdateService.getUpdateHistory();
       if (!updates.length) return true;
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('developer_updates')
-          .upsert({
-            id: update.id,
-            version: update.version,
-            type: update.type || 'feature',
-            changelog: update.changelog || '',
-            target: update.target || 'all',
-            target_ids: update.targetIds || [],
-            preview_children: update.previewChildren || [],
-            status: update.status || 'preview',
-            created_at: update.timestamp || new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'id' });
-        if (error) {
-          console.warn('Failed to sync update to cloud:', error.message);
-        }
-      }
+      await postApi('developer-data', {
+        action: 'updates_push',
+        developerToken: this.getSessionToken(),
+        updates,
+      });
       return true;
     } catch (err) {
       console.warn('Updates sync skipped:', err.message);
@@ -434,46 +390,21 @@ export class DeveloperService {
    */
   static async syncUpdatesFromCloud() {
     try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) {
-        return { success: false, error: 'Supabase not configured', count: 0 };
-      }
-      const { supabase } = await import('./SupabaseService');
-      const { UpdateService } = await import('./UpdateService');
-      const { data, error } = await supabase
-        .from('developer_updates')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) {
-        return { success: false, error: error.message, count: 0 };
-      }
-      // Merge: cloud updates overwrite local ones with same ID
+      const result = await postApi('developer-data', {
+        action: 'updates_pull',
+        developerToken: this.getSessionToken(),
+      });
+      // Merge: cloud updates overwrite local ones with the same ID.
       const localUpdates = UpdateService.getUpdateHistory();
       const mergedIds = new Set();
       const merged = [];
-      // Cloud first (newest)
-      for (const item of (data || [])) {
-        merged.push({
-          id: item.id,
-          version: item.version,
-          type: item.type || 'feature',
-          changelog: item.changelog || '',
-          target: item.target || 'all',
-          targetIds: item.target_ids || [],
-          previewChildren: item.preview_children || [],
-          status: item.status || 'preview',
-          timestamp: item.created_at
-        });
+      for (const item of (result.updates || [])) {
+        merged.push(item);
         mergedIds.add(item.id);
       }
-      // Local ones not in cloud
       for (const local of localUpdates) {
-        if (!mergedIds.has(local.id)) {
-          merged.push(local);
-        }
+        if (!mergedIds.has(local.id)) merged.push(local);
       }
-      // Save merged to localStorage
-      const { StorageService } = await import('./StorageService');
       StorageService.set('makenna_updates_v1', merged);
       this.logAction('DEV_SYNC_UPDATES', { count: merged.length });
       return { success: true, count: merged.length, updates: merged };
@@ -488,71 +419,11 @@ export class DeveloperService {
   // =====================
 
   /**
-   * Sync developer PIN hash to Supabase for cross-device access
-   */
-  static async _syncPinToCloud() {
-    try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) return false;
-      const { supabase } = await import('./SupabaseService');
-      const pinHash = StorageService.get(DEVELOPER_KEY);
-      if (!pinHash) return false;
-      const { error } = await supabase
-        .from('developer_auth')
-        .upsert({
-          id: 'default',
-          pin_hash: pinHash,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
-      if (error) {
-        console.warn('Failed to sync developer PIN to cloud:', error.message);
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.warn('Cloud sync skipped:', err.message);
-      return false;
-    }
-  }
-
-  /**
-   * Pull developer PIN hash from Supabase (for new device login)
-   */
-  static async _syncPinFromCloud() {
-    try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) return false;
-      const { supabase } = await import('./SupabaseService');
-      const { data, error } = await supabase
-        .from('developer_auth')
-        .select('pin_hash')
-        .eq('id', 'default')
-        .maybeSingle();
-      if (error || !data) return false;
-      StorageService.set(DEVELOPER_KEY, data.pin_hash);
-      return true;
-    } catch (err) {
-      console.warn('Failed to pull developer PIN from cloud:', err.message);
-      return false;
-    }
-  }
-
-  /**
-   * Verify PIN with cloud fallback (for new devices)
-   * First checks localStorage, then pulls from Supabase and retries
+   * Legacy local PIN fallback. Developer credentials are now verified by
+   * api/developer-auth.js using a server-stored scrypt hash.
    */
   static async verifyWithCloudFallback(pin) {
-    // First attempt: local
-    const localVerified = await this.verifyDeveloperPin(pin);
-    if (localVerified) return true;
-
-    // Second attempt: pull from Supabase and retry
-    const synced = await this._syncPinFromCloud();
-    if (synced) {
-      return await this.verifyDeveloperPin(pin);
-    }
-
-    return false;
+    return this.verifyDeveloperPin(pin);
   }
 
   /**
@@ -729,23 +600,12 @@ export class DeveloperService {
    */
   static async _syncTrashToCloud(trashEntry) {
     try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) return false;
-      const { supabase } = await import('./SupabaseService');
-      const { error } = await supabase
-        .from('developer_trash')
-        .upsert({
-          child_id: trashEntry.childId,
-          full_name: trashEntry.fullName,
-          pin_hash: trashEntry.pinHash || null,
-          avatar: trashEntry.avatar || 'default',
-          progress: trashEntry.progress || {},
-          settings: trashEntry.settings || {},
-          created_at: trashEntry.createdAt,
-          deleted_at: trashEntry.deletedAt
-        }, { onConflict: 'child_id' });
-      if (error) console.warn('Failed to sync trash to cloud:', error.message);
-      return !error;
+      await postApi('developer-data', {
+        action: 'trash_push',
+        developerToken: this.getSessionToken(),
+        entry: trashEntry,
+      });
+      return true;
     } catch (err) {
       console.warn('Trash cloud sync skipped:', err.message);
       return false;
@@ -754,15 +614,12 @@ export class DeveloperService {
 
   static async _deleteFromCloudTrash(childId) {
     try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) return false;
-      const { supabase } = await import('./SupabaseService');
-      const { error } = await supabase
-        .from('developer_trash')
-        .delete()
-        .eq('child_id', childId);
-      if (error) console.warn('Failed to delete from cloud trash:', error.message);
-      return !error;
+      await postApi('developer-data', {
+        action: 'trash_delete',
+        developerToken: this.getSessionToken(),
+        childId,
+      });
+      return true;
     } catch (err) {
       console.warn('Trash cloud delete skipped:', err.message);
       return false;
@@ -771,34 +628,15 @@ export class DeveloperService {
 
   static async syncTrashFromCloud() {
     try {
-      const { isSupabaseConfigured } = await import('./SupabaseService');
-      if (!isSupabaseConfigured()) {
-        return { success: false, error: 'Supabase not configured', items: [] };
-      }
-      const { supabase } = await import('./SupabaseService');
-      const { data, error } = await supabase
-        .from('developer_trash')
-        .select('*')
-        .order('deleted_at', { ascending: false });
-      if (error) {
-        return { success: false, error: error.message, items: [] };
-      }
-      // Convert to local format + merge with existing
-      const cloudTrash = (data || []).map(item => ({
-        childId: item.child_id,
-        fullName: item.full_name,
-        pinHash: item.pin_hash || null,
-        avatar: item.avatar || 'default',
-        progress: item.progress || {},
-        settings: item.settings || {},
-        createdAt: item.created_at,
-        deletedAt: item.deleted_at
-      }));
-      // Merge: cloud entries take priority, avoid duplicates
+      const result = await postApi('developer-data', {
+        action: 'trash_pull',
+        developerToken: this.getSessionToken(),
+      });
+      // Merge: cloud entries take priority, avoid duplicates.
       const localTrash = this.getTrashBin();
       const seen = new Set();
       const merged = [];
-      for (const entry of [...cloudTrash, ...localTrash]) {
+      for (const entry of [...(result.entries || []), ...localTrash]) {
         if (!seen.has(entry.childId)) {
           seen.add(entry.childId);
           merged.push(entry);

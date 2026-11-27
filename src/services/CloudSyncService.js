@@ -1,13 +1,13 @@
 /**
- * CloudSyncService - offline-first child account sync.
+ * CloudSyncService - offline-first child account sync through serverless APIs.
  *
- * Local storage is always the source of truth while offline. Writes are
- * queued, replayed on reconnect, and merged with cloud rows using preserved
- * timestamps so the newer record wins deterministically.
+ * Local storage remains the source of truth while offline. Writes are queued
+ * and replayed on reconnect. All cloud reads/writes go through /api/child-sync
+ * with a signed device token, so the browser never needs anon database access
+ * and never downloads credential hashes.
  */
-import { supabase, isSupabaseConfigured } from './SupabaseService';
 import { StorageService } from './StorageService';
-import { ChildAccountService } from './ChildAccountService';
+import { ChildAccountService, postApi } from './ChildAccountService';
 import { SyncQueueService } from './SyncQueueService';
 
 const SYNC_STATUS_KEY = 'makenna_sync_status_v1';
@@ -15,7 +15,7 @@ const ENABLED_KEY = 'makenna_cloud_sync_enabled';
 
 const DEFAULT_STATUS = {
   enabled: false,
-  configured: false,
+  configured: true,
   reason: null,
   lastSync: null,
   lastError: null,
@@ -48,15 +48,14 @@ const envAllowsSync = () => {
 export class CloudSyncService {
   /** Check configuration and refresh the stored status snapshot. */
   static init() {
-    const configured = isSupabaseConfigured() && !!supabase;
     const stored = StorageService.get(ENABLED_KEY, true) !== false;
-    const enabled = configured && stored && envAllowsSync();
-    const reason = !configured
-      ? 'Supabase not configured'
-      : (!stored ? 'Cloud sync turned off in settings' : (!envAllowsSync() ? 'Cloud sync disabled by environment' : null));
+    const enabled = stored && envAllowsSync();
+    const reason = !stored
+      ? 'Cloud sync turned off in settings'
+      : (!envAllowsSync() ? 'Cloud sync disabled by environment' : null);
 
-    const status = this.updateSyncStatus({ enabled, configured, reason });
-    return { enabled, configured, reason, status };
+    const status = this.updateSyncStatus({ enabled, configured: true, reason });
+    return { enabled, configured: true, reason, status };
   }
 
   static subscribe(listener) {
@@ -64,7 +63,6 @@ export class CloudSyncService {
     return () => listeners.delete(listener);
   }
 
-  /** Current reactive status, including live queue and connectivity state. */
   static getSyncStatus() {
     const stored = StorageService.get(SYNC_STATUS_KEY, {});
     const pendingCount = SyncQueueService.getPendingCount();
@@ -97,8 +95,7 @@ export class CloudSyncService {
 
   static isEnabled() {
     return envAllowsSync()
-      && StorageService.get(ENABLED_KEY, true) !== false
-      && isSupabaseConfigured();
+      && StorageService.get(ENABLED_KEY, true) !== false;
   }
 
   static setEnabled(enabled) {
@@ -106,32 +103,22 @@ export class CloudSyncService {
     return this.init();
   }
 
+  /** Public fields only — hashes stay on the server. */
   static toSyncPayload(account) {
     return {
       childId: account.childId,
       fullName: account.fullName,
-      pinHash: account.pinHash,
-      pinSet: account.pinSet,
-      passwordHash: account.passwordHash || null,
-      passwordSet: account.passwordSet || false,
       parentEmail: account.parentEmail || null,
-      tempPasswordHash: account.tempPasswordHash || null,
-      tempPasswordExpiresAt: account.tempPasswordExpiresAt || null,
-      requiresCredentialReset: account.requiresCredentialReset || false,
       avatar: account.avatar,
       createdAt: account.createdAt,
       lastLogin: account.lastLogin,
       progress: account.progress || {},
       settings: account.settings || {},
-      updatedAt: account.updatedAt || account.updated_at || account.createdAt || new Date().toISOString(),
+      updatedAt: account.updatedAt || account.createdAt || new Date().toISOString(),
       version: Number(account.version || 0),
     };
   }
 
-  /**
-   * Record a local change. Account writes are always queued so every created
-   * account is persisted to the cloud as soon as Supabase is configured.
-   */
   static queueAccountChange(type, account, childId = null) {
     if (type === 'DELETE_ACCOUNT') {
       const id = childId || account?.childId;
@@ -145,88 +132,32 @@ export class CloudSyncService {
     return this.updateSyncStatus({ lastError: null });
   }
 
-  /** Upload one account. Never reports success when Supabase rejects a write. */
   static async uploadChildAccount(account) {
-    if (!isSupabaseConfigured() || !supabase) {
-      return { success: false, error: 'Supabase not configured' };
-    }
-
     const payload = this.toSyncPayload(account);
     try {
-      const { error } = await supabase
-        .from('child_accounts')
-        .upsert({
-          child_id: payload.childId,
-          full_name: payload.fullName,
-          pin_hash: payload.pinHash,
-          pin_set: payload.pinSet,
-          password_hash: payload.passwordHash,
-          password_set: payload.passwordSet,
-          parent_email: payload.parentEmail,
-          temp_password_hash: payload.tempPasswordHash,
-          temp_password_expires_at: payload.tempPasswordExpiresAt,
-          requires_credential_reset: payload.requiresCredentialReset,
-          avatar: payload.avatar,
-          created_at: payload.createdAt,
-          last_login: payload.lastLogin,
-          progress: payload.progress,
-          settings: payload.settings,
-          updated_at: payload.updatedAt,
-        }, { onConflict: 'child_id' });
-
-      if (error) throw error;
+      const result = await postApi('child-sync', {
+        action: 'push',
+        tokens: ChildAccountService.getChildTokens(),
+        accounts: [payload],
+      });
+      const failure = result.failures?.[0];
+      if (failure) return { success: false, error: failure.error };
       return { success: true, childId: payload.childId };
     } catch (error) {
-      // Supabase/PostgREST errors are objects; log the useful fields so a 400
-      // caused by a missing column or missing UNIQUE(child_id) is actionable.
-      console.error('Cloud upload failed:', {
-        childId: payload.childId,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
+      console.error('Cloud upload failed:', { childId: payload.childId, message: error.message });
       return { success: false, error: error.message };
     }
   }
 
   static async downloadChildAccounts() {
-    if (!isSupabaseConfigured() || !supabase) {
-      return { success: false, error: 'Supabase not configured', accounts: [] };
-    }
-
     try {
-      const { data, error } = await supabase
-        .from('child_accounts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const accounts = (data || []).map(item => ({
-        childId: item.child_id,
-        fullName: item.full_name,
-        pinHash: item.pin_hash,
-        pinSet: item.pin_set,
-        passwordHash: item.password_hash || null,
-        passwordSet: item.password_set || false,
-        parentEmail: item.parent_email || null,
-        tempPasswordHash: item.temp_password_hash || null,
-        tempPasswordExpiresAt: item.temp_password_expires_at || null,
-        requiresCredentialReset: item.requires_credential_reset || false,
-        avatar: item.avatar,
-        createdAt: item.created_at,
-        lastLogin: item.last_login,
-        progress: item.progress || {},
-        settings: item.settings || {},
-        updatedAt: item.updated_at || item.created_at,
-        deletedAt: item.deleted_at || null,
-        parentId: item.parent_id || null,
-      }));
-
-      return { success: true, accounts };
+      const result = await postApi('child-sync', {
+        action: 'pull',
+        tokens: ChildAccountService.getChildTokens(),
+      });
+      return { success: true, accounts: result.accounts || [] };
     } catch (error) {
-      console.error('Cloud download failed:', error);
+      console.error('Cloud download failed:', error.message);
       return { success: false, error: error.message, accounts: [] };
     }
   }
@@ -393,20 +324,15 @@ export class CloudSyncService {
   }
 
   static async deleteFromCloud(childId) {
-    if (!isSupabaseConfigured() || !supabase) {
-      return { success: false, error: 'Supabase not configured' };
-    }
-
     try {
-      const { error } = await supabase
-        .from('child_accounts')
-        .delete()
-        .eq('child_id', childId);
-
-      if (error) throw error;
+      await postApi('child-sync', {
+        action: 'delete',
+        childId,
+        tokens: ChildAccountService.getChildTokens(),
+      });
       return { success: true, childId };
     } catch (error) {
-      console.error('Cloud delete failed:', error);
+      console.error('Cloud delete failed:', error.message);
       return { success: false, error: error.message };
     }
   }
