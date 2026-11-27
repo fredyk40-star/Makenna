@@ -42,10 +42,13 @@ export const ChildAccountProvider = ({ children }) => {
         console.error('AnalyticsService initialization error:', err);
       }
 
+      // Keep syncing automatically for the lifetime of the app.
+      CloudSyncService.startAutoSync();
+
       // Replay queued writes and merge cloud changes when the app starts.
       if (CloudSyncService.isEnabled()) {
         try {
-          const result = await CloudSyncService.syncNow();
+          const result = await CloudSyncService.requestSync('startup');
           if (!result.success) console.warn('Cloud sync pending:', result.error);
         } catch (syncErr) {
           console.warn('Cloud sync skipped (offline or unavailable):', syncErr.message);
@@ -98,7 +101,7 @@ export const ChildAccountProvider = ({ children }) => {
       // The account is queued by ChildAccountService; flush it when possible.
       if (CloudSyncService.isEnabled()) {
         try {
-          await CloudSyncService.syncNow();
+          await CloudSyncService.requestSync('registration');
         } catch (syncErr) {
           console.warn('Supabase sync pending (account saved locally):', syncErr.message);
         }
@@ -190,11 +193,11 @@ export const ChildAccountProvider = ({ children }) => {
   ), [refreshAfterSync]);
 
   const fullSync = useCallback(async () => (
-    refreshAfterSync(await CloudSyncService.syncNow())
+    refreshAfterSync(await CloudSyncService.requestSync('manual'))
   ), [refreshAfterSync]);
 
   const syncNow = useCallback(async () => (
-    refreshAfterSync(await CloudSyncService.syncNow())
+    refreshAfterSync(await CloudSyncService.requestSync('manual'))
   ), [refreshAfterSync]);
 
   const toggleCloudSync = useCallback((enabled) => {

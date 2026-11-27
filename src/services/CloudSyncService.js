@@ -27,7 +27,25 @@ const DEFAULT_STATUS = {
   online: true,
 };
 
+const AUTO_SYNC_DEBOUNCE_MS = 1200;
+const AUTO_SYNC_INTERVAL_MS = 60_000;
+
 const listeners = new Set();
+const autoSync = {
+  started: false,
+  debounceTimer: null,
+  intervalTimer: null,
+  inFlight: null,
+  reschedule: false,
+};
+
+const handleOnline = () => CloudSyncService.requestSync('online');
+const handleFocus = () => CloudSyncService.requestSync('focus');
+const handleVisibility = () => {
+  if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+    CloudSyncService.requestSync('visible');
+  }
+};
 
 const timeOf = (account) => {
   const value = account?.updatedAt || account?.updated_at || account?.createdAt || 0;
@@ -62,6 +80,106 @@ export class CloudSyncService {
   static subscribe(listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
+  }
+
+  /**
+   * Automatic sync is event-driven, not click-driven:
+   * - a local change queues an immediate debounced sync
+   * - coming back online / focusing the tab triggers a sync
+   * - a slow background poll picks up changes made on other devices
+   */
+  static startAutoSync() {
+    if (typeof window === 'undefined') return;
+    this.init();
+    if (autoSync.started) return;
+    autoSync.started = true;
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+    autoSync.intervalTimer = setInterval(
+      () => CloudSyncService.requestSync('interval'),
+      AUTO_SYNC_INTERVAL_MS
+    );
+  }
+
+  static stopAutoSync() {
+    if (!autoSync.started) return;
+    if (autoSync.debounceTimer) clearTimeout(autoSync.debounceTimer);
+    if (autoSync.intervalTimer) clearInterval(autoSync.intervalTimer);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    }
+    autoSync.debounceTimer = null;
+    autoSync.intervalTimer = null;
+    autoSync.inFlight = null;
+    autoSync.reschedule = false;
+    autoSync.started = false;
+  }
+
+  static clearScheduledSync() {
+    if (autoSync.debounceTimer) {
+      clearTimeout(autoSync.debounceTimer);
+      autoSync.debounceTimer = null;
+    }
+  }
+
+  /** Request a full sync without letting overlapping requests pile up. */
+  static requestSync(reason = 'auto') {
+    if (!this.isEnabled()) return Promise.resolve(false);
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.updateSyncStatus({ syncing: false, lastError: 'Offline — changes are queued' });
+      return Promise.resolve(false);
+    }
+
+    this.clearScheduledSync();
+
+    if (autoSync.inFlight) {
+      // An event happened while a sync was already running. One follow-up is
+      // enough; it runs after the current request settles.
+      if (reason !== 'interval') autoSync.reschedule = true;
+      return autoSync.inFlight;
+    }
+
+    autoSync.inFlight = this.syncNow()
+      .catch(error => {
+        console.warn('Automatic sync failed:', error.message);
+        return { success: false, error: error.message };
+      })
+      .finally(() => {
+        autoSync.inFlight = null;
+        if (autoSync.reschedule) {
+          autoSync.reschedule = false;
+          this.scheduleAutoSync(250);
+        }
+      });
+
+    return autoSync.inFlight;
+  }
+
+  /** Schedule a debounced sync after the newest local change. */
+  static scheduleAutoSync(delay = AUTO_SYNC_DEBOUNCE_MS) {
+    if (!this.isEnabled()) return;
+    this.startAutoSync();
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.updateSyncStatus({ syncing: false, lastError: 'Offline — changes are queued' });
+      return;
+    }
+
+    if (autoSync.inFlight) {
+      autoSync.reschedule = true;
+      return;
+    }
+
+    this.clearScheduledSync();
+    autoSync.debounceTimer = setTimeout(() => {
+      autoSync.debounceTimer = null;
+      this.requestSync('queued-change');
+    }, delay);
   }
 
   static getSyncStatus() {
@@ -101,7 +219,14 @@ export class CloudSyncService {
 
   static setEnabled(enabled) {
     StorageService.set(ENABLED_KEY, !!enabled);
-    return this.init();
+    const result = this.init();
+    if (result.enabled) {
+      this.startAutoSync();
+      this.requestSync('enabled');
+    } else {
+      this.stopAutoSync();
+    }
+    return result;
   }
 
   /** Public fields only — hashes stay on the server. */
@@ -132,7 +257,11 @@ export class CloudSyncService {
       SyncQueueService.enqueue({ type: 'UPSERT_ACCOUNT', childId: payload.childId, payload });
     }
 
-    return this.updateSyncStatus({ lastError: null });
+    this.updateSyncStatus({ lastError: null });
+    // Every local child write is followed by an automatic cloud flush. The
+    // short debounce collapses rapid progress updates into one request.
+    this.scheduleAutoSync();
+    return this.getSyncStatus();
   }
 
   static async uploadChildAccount(account) {

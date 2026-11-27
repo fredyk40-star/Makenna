@@ -14,20 +14,10 @@ const SyncCenter = () => {
     cloudSyncStatus,
     isCloudSyncEnabled,
     toggleCloudSync,
-    syncNow,
   } = useChildAccount();
   const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [, setBusy] = useState(false);
   const [importMode, setImportMode] = useState('merge');
-
-  const handleSync = async () => {
-    setBusy(true);
-    const result = await syncNow();
-    setMessage(result.success
-      ? `Synced ${result.pushed} account(s) and pulled ${result.pulled}.`
-      : (result.error || 'Sync pending — changes are safe on this device.'));
-    setBusy(false);
-  };
 
   const handleExport = () => {
     try {
@@ -63,7 +53,8 @@ const SyncCenter = () => {
             Sync &amp; offline data
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Changes are saved on this device first, then synced when a connection is available.
+            Changes are saved on this device first, then synced automatically when a connection
+            is available. You do not need to press anything.
           </p>
         </div>
       </div>
@@ -71,7 +62,7 @@ const SyncCenter = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
         {[
           ['Status', cloudSyncStatus.online ? 'Online' : 'Offline'],
-          ['Cloud sync', isCloudSyncEnabled ? 'On' : 'Off'],
+          ['Auto sync', isCloudSyncEnabled ? (cloudSyncStatus.syncing ? 'Syncing…' : 'On') : 'Off'],
           ['Waiting', `${cloudSyncStatus.pendingCount || 0} change(s)`],
           ['Last sync', formatDate(cloudSyncStatus.lastSync)],
         ].map(([label, value]) => (
@@ -88,16 +79,13 @@ const SyncCenter = () => {
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={handleSync}
-          disabled={busy || !isCloudSyncEnabled}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50"
-        >
-          <FaSyncAlt className={cloudSyncStatus.syncing ? 'animate-spin' : ''} />
-          Sync now
-        </button>
+      <div className="flex flex-wrap items-center gap-2">
+        {cloudSyncStatus.syncing && (
+          <span className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-300">
+            <FaSyncAlt className="animate-spin" />
+            Syncing in the background…
+          </span>
+        )}
         <button
           type="button"
           onClick={() => toggleCloudSync(!isCloudSyncEnabled)}

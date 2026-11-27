@@ -1,11 +1,18 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloudSyncService } from './CloudSyncService';
 import SyncQueueService from './SyncQueueService';
 import { StorageService } from './StorageService';
-import { apiState } from '../test/apiMock.js';
+import { apiState, resetApiMock } from '../test/apiMock.js';
 
 beforeEach(() => {
   localStorage.clear();
+  resetApiMock();
+});
+
+afterEach(() => {
+  CloudSyncService.stopAutoSync();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('CloudSyncService conflict resolution', () => {
@@ -99,5 +106,54 @@ describe('CloudSyncService queue integration', () => {
 
     expect(result.success).toBe(true);
     expect(apiState.accounts.has('kid-5')).toBe(false);
+  });
+});
+
+describe('CloudSyncService automatic sync', () => {
+  it('flushes a queued change automatically after a short debounce', async () => {
+    vi.useFakeTimers();
+    StorageService.set('makenna_cloud_sync_enabled', true);
+    const syncNow = vi.spyOn(CloudSyncService, 'syncNow').mockResolvedValue({ success: true });
+
+    CloudSyncService.queueAccountChange('UPSERT_ACCOUNT', {
+      childId: 'kid-auto',
+      fullName: 'Ama',
+      updatedAt: new Date().toISOString(),
+    });
+
+    expect(syncNow).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(syncNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not schedule automatic sync when cloud sync is turned off', async () => {
+    vi.useFakeTimers();
+    StorageService.set('makenna_cloud_sync_enabled', false);
+    const syncNow = vi.spyOn(CloudSyncService, 'syncNow').mockResolvedValue({ success: true });
+
+    CloudSyncService.queueAccountChange('UPSERT_ACCOUNT', {
+      childId: 'kid-off',
+      fullName: 'Ama',
+      updatedAt: new Date().toISOString(),
+    });
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(syncNow).not.toHaveBeenCalled();
+  });
+
+  it('coalesces overlapping sync requests', async () => {
+    StorageService.set('makenna_cloud_sync_enabled', true);
+    let resolveSync;
+    const pending = new Promise(resolve => { resolveSync = resolve; });
+    const syncNow = vi.spyOn(CloudSyncService, 'syncNow').mockReturnValue(pending);
+
+    const first = CloudSyncService.requestSync('queued-change');
+    const second = CloudSyncService.requestSync('focus');
+
+    expect(syncNow).toHaveBeenCalledTimes(1);
+    expect(second).toBe(first);
+
+    resolveSync({ success: true });
+    await first;
   });
 });
