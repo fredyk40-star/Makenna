@@ -56,6 +56,19 @@ const toUnit = (unit, subject) => ({
 
 const cleanContent = (content) => String(content || '').replace(/\.\.\.$/, '.').trim();
 
+const STOP_WORDS = new Set([
+  'about', 'can', 'give', 'how', 'learn', 'lesson', 'me', 'please',
+  'practice', 'practise', 'show', 'tell', 'teach', 'want', 'what',
+  'why', 'with', 'your',
+]);
+
+const scoreUnit = (unit, words) => {
+  const searchable = `${unit.title} ${unit.subject} ${unit.lesson} ${unit.content}`.toLowerCase();
+  return words.reduce((total, word) => total + (searchable.includes(word) ? 1 : 0), 0);
+};
+
+const sortByScore = (entries) => entries.sort((a, b) => b.score - a.score);
+
 export class CurriculumTutorService {
   static subscribe(listener) {
     if (typeof listener !== 'function') return () => {};
@@ -166,37 +179,64 @@ export class CurriculumTutorService {
       .toLowerCase()
       .replace(/[^\p{L}\p{N}\s]/gu, ' ')
       .split(/\s+/)
-      .filter((word) => word.length > 2);
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word));
     if (words.length === 0) return null;
 
-    const scores = this.getUnits(childId).map((unit) => {
-      const searchable = `${unit.title} ${unit.subject} ${unit.lesson} ${unit.content}`.toLowerCase();
-      const score = words.reduce((total, word) => total + (searchable.includes(word) ? 1 : 0), 0);
-      return { unit, score };
-    });
+    const name = firstName(fullName);
+    const units = this.getUnits(childId);
+    const best = sortByScore(units.map((unit) => ({ unit, score: scoreUnit(unit, words) })))[0];
 
-    const best = scores.sort((a, b) => b.score - a.score)[0];
-    if (!best || best.score === 0) {
-      const suggestion = this.getSuggestion(childId, fullName);
-      return suggestion
-        ? {
-          text: `${suggestion.text} You can also ask me about ${suggestion.unit.subject.replace(/_/g, ' ')}.`,
-          unit: suggestion.unit,
-          matched: false,
-        }
-        : null;
+    if (best?.score > 0) {
+      const { unit } = best;
+      const prompt = unit.path
+        ? ` Open ${unit.title} to practise.`
+        : '';
+
+      return {
+        unit,
+        text: `${name}, in our ${unit.level} ${unit.subject.replace(/_/g, ' ')} work: ${unit.title}. ${cleanContent(unit.content)}${prompt}`,
+        matched: true,
+      };
     }
 
-    const { unit } = best;
-    const name = firstName(fullName);
-    const prompt = unit.path
-      ? ` Open ${unit.title} to practise.`
-      : '';
+    // A parent may have allowed only some subjects or one level. If the lesson
+    // exists elsewhere in the bundled curriculum, say exactly what to enable
+    // instead of repeating an unrelated suggestion.
+    const allowedSources = new Set(units.map((unit) => unit.source));
+    const level = this.getSettings(childId).level;
+    const fullCurriculum = GhanaCurriculumService.getSubjects().flatMap((subject) => (
+      GhanaCurriculumService.getSubjectContent(subject)
+        .filter((unit) => unit?.id && unit?.title)
+        .map((unit) => toUnit(unit, subject))
+    ));
+    const outsideMatch = fullCurriculum
+      .filter((unit) => !allowedSources.has(unit.source))
+      .map((unit) => ({
+        unit,
+        score: scoreUnit(unit, words),
+        levelMatch: unit.level === level ? 1 : 0,
+      }))
+      .sort((a, b) => b.levelMatch - a.levelMatch || b.score - a.score)[0];
+
+    if (outsideMatch?.score > 0) {
+      const { unit } = outsideMatch;
+      return {
+        unit: null,
+        matched: false,
+        text: `${name}, ${unit.title} is not in your allowed lessons. Ask a grown-up to allow ${unit.subject.replace(/_/g, ' ')} for ${unit.level} in Settings → AI tutor.`,
+        blockedUnit: unit,
+      };
+    }
+
+    const topics = units.slice(0, 3).map((unit) => unit.title);
+    const hint = topics.length > 0
+      ? ` Try ${topics.join(', ')}.`
+      : ' Choose a lesson first.';
 
     return {
-      unit,
-      text: `${name}, in our ${unit.level} ${unit.subject.replace(/_/g, ' ')} work: ${unit.title}. ${cleanContent(unit.content)}${prompt}`,
-      matched: true,
+      unit: null,
+      matched: false,
+      text: `${name}, I can only help with your lessons right now.${hint}`,
     };
   }
 

@@ -198,7 +198,11 @@ describe('Makenna Tutor page', () => {
   });
 
   it('does not offer an unmatched lesson link', async () => {
-    mockState.curriculumAnswer.mockReturnValue(null);
+    mockState.curriculumAnswer.mockReturnValue({
+      matched: false,
+      text: 'Ama, I can only help with your lessons right now. Try Vowels.',
+      unit: null,
+    });
     mockState.geminiAnswer.mockImplementation(async (_childId, _text, local) => local);
     renderTutorPage();
 
@@ -207,7 +211,7 @@ describe('Makenna Tutor page', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
 
-    await screen.findByText('Choose a lesson first, then ask me about it.');
+    await screen.findByText('Ama, I can only help with your lessons right now. Try Vowels.');
     expect(screen.queryByRole('button', { name: /open lesson/i })).not.toBeInTheDocument();
   });
 

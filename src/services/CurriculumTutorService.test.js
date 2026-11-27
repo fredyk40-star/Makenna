@@ -64,6 +64,24 @@ describe('CurriculumTutorService', () => {
     const response = CurriculumTutorService.answer('child-1', 'Tell me a joke');
 
     expect(response.matched).toBe(false);
+    expect(response.unit).toBeNull();
+    expect(response.text).not.toContain("let's practise");
+    expect(response.text).toContain('only help with your lessons');
+  });
+
+  it('explains how to unlock a lesson outside the allowed subjects', () => {
+    CurriculumTutorService.saveSettings('child-1', {
+      enabled: true,
+      level: 'KG1',
+      subjects: ['english'],
+    });
+    const response = CurriculumTutorService.answer('child-1', 'Teach me counting', 'Ama');
+
+    expect(response.matched).toBe(false);
+    expect(response.unit).toBeNull();
+    expect(response.text).toContain('Counting 1-10');
+    expect(response.text).toContain('mathematics for KG1');
+    expect(response.text).toContain('Settings');
   });
 
   it('notifies subscribers when parent settings change', () => {
