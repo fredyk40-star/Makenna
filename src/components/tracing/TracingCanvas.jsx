@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useTracing } from '../../hooks/useTracing';
 import { useDrawing } from '../../hooks/useDrawing';
 import { useAccessibility } from '../../context/AccessibilityContext';
@@ -37,7 +37,6 @@ const TracingCanvas = ({
     clearTrace,
     undoLast,
     redoLast,
-    getTraceProgress,
     getEncouragementMessage,
     changeDifficulty,
     difficulty,
@@ -250,10 +249,10 @@ const TracingCanvas = ({
   }, []);
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative flex h-full flex-col ${className}`}>
       {/* Toolbar */}
-      <div className="absolute top-2 left-2 right-2 flex max-w-full flex-wrap items-center justify-between gap-2 z-10 pointer-events-none">
-        <div className="flex items-center gap-2 pointer-events-auto">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-3 py-2 dark:border-gray-700">
+        <div className="flex items-center gap-2">
           {/* Difficulty Selector */}
           <select
             value={difficulty}
@@ -351,7 +350,8 @@ const TracingCanvas = ({
       </div>
 
       {/* Canvas */}
-      <canvas
+      <div className="relative flex-1 min-h-0 p-4 sm:p-6">
+        <canvas
         ref={canvasRef}
         tabIndex={0}
         role="button"
@@ -395,13 +395,17 @@ const TracingCanvas = ({
         />
       )}
 
+      </div>
+
       {/* Trace Validator */}
       {traceResult && mode === 'trace' && (
-        <TraceValidator
-          result={traceResult}
-          message={getEncouragementMessage()}
-          className="absolute bottom-4 left-4 right-4"
-        />
+        <div className="px-4 pb-4">
+          <TraceValidator
+            result={traceResult}
+            message={getEncouragementMessage()}
+            className=""
+          />
+        </div>
       )}
 
       {/* Celebration Overlay */}
@@ -414,16 +418,6 @@ const TracingCanvas = ({
         )}
       </AnimatePresence>
 
-      {/* Progress Bar */}
-      {mode === 'trace' && (
-        <div className="absolute bottom-20 left-4 right-4 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${getTraceProgress() * 100}%` }}
-            className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full transition-all duration-300"
-          />
-        </div>
-      )}
     </div>
   );
 };

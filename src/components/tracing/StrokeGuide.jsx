@@ -61,7 +61,7 @@ const StrokeGuide = memo(({
             )}
 
             {/* Stroke order number */}
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-400 bg-white dark:bg-gray-800 px-2 py-0.5 rounded-full shadow-sm">
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20 text-xs font-bold text-blue-400 bg-white dark:bg-gray-800 px-2 py-0.5 rounded-full shadow-sm">
               {guide.order + 1}
             </div>
           </motion.div>

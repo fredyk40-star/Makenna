@@ -113,7 +113,7 @@ const TracingPage = () => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-4 pb-24"
+      className="space-y-4 pb-28 pt-2 sm:pb-24"
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
