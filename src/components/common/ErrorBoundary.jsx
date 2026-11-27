@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import { motion } from 'framer-motion';
+import errorReporter from '../../services/ErrorReportingService';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -23,11 +24,11 @@ class ErrorBoundary extends Component {
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
 
-    // Log error to console
-    console.error('--- ERROR BOUNDARY CAUGHT AN ERROR ---');
-    console.error('Error:', error);
-    console.error('Error Info:', errorInfo);
-    console.error('--------------------------------------');
+    // Report through the shared queue (console output in dev builds).
+    errorReporter.capture(error, {
+      source: 'ErrorBoundary',
+      componentStack: errorInfo?.componentStack,
+    });
 
     // Check if error is recoverable
     const isNetworkError = error.message.includes('network') || 
@@ -77,7 +78,7 @@ class ErrorBoundary extends Component {
                 : 'Please try refreshing the page.'
               }
             </p>
-            {this.state.error && process.env.NODE_ENV === 'development' && (
+            {this.state.error && import.meta.env.DEV && (
               <details className="text-left mb-4">
                 <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer">
                   Error Details

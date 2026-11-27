@@ -5,6 +5,13 @@ import './index.css';
 import { registerServiceWorker } from './pwa/register';
 import { ChildAccountService } from './services/ChildAccountService';
 import { CloudSyncService } from './services/CloudSyncService';
+import { migrateStorage } from './services/StorageMigrationService';
+import errorReporter from './services/ErrorReportingService';
+
+// Bring saved data up to the current schema before any component reads it.
+migrateStorage();
+errorReporter.installGlobalHandlers();
+window.addEventListener('online', () => errorReporter.flush());
 
 // Register service worker with update handling
 registerServiceWorker();

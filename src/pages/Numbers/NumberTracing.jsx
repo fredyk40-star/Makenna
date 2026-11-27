@@ -60,7 +60,7 @@ const NumberTracing = () => {
     } else {
       navigate('/numbers');
     }
-  }, [numberId, navigate]);
+  }, [numberId, navigate, speak]);
 
   // Get coordinates from pointer events
   const getCoordinates = useCallback((e) => {

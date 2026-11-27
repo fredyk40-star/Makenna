@@ -23,29 +23,14 @@ This document answers the key questions about the Makenna Learning Lab platform 
 
 ### 2. Session Timeout & Inactivity
 
-**Implementation:** `src/services/SessionTimeoutService.js`
+**Status:** Planned (Phase 6 of `IMPLEMENTATION_ROADMAP.md`).
 
-- **Default timeout:** 30 minutes of inactivity
-- **Warning:** Appears 1 minute before timeout
-- **What happens on inactivity:**
-  - User is automatically logged out
-  - They must log in again with their Child ID and PIN
-- **Parent configurable:** Timeout duration can be customized
+`src/services/SessionTimeoutService.js` does **not** exist in the shipped code yet.
+Child accounts are PIN-protected, but there is currently no inactivity timeout.
+The planned service will warn one minute before locking the profile and require
+the child PIN to resume, with a parent-configurable duration in Settings.
 
-**To enable session timeout:**
-```javascript
-import { sessionTimeout } from './services/SessionTimeoutService';
-
-// In App.jsx or a protected route
-useEffect(() => {
-  sessionTimeout.init(30, () => {
-    // Logout callback
-    logout();
-    navigate('/login');
-  });
-  return () => sessionTimeout.stopSession();
-}, []);
-```
+Until then, use the device's own screen-lock policy for unsupervised sessions.
 
 ### 3. Biometric Login (Face ID / Fingerprint)
 
@@ -168,11 +153,11 @@ useEffect(() => {
 - PIN fallback always available
 - Visible on Profile page
 
-### Session Timeout (NEW)
-**Files:** `src/services/SessionTimeoutService.js`
+### Session Timeout (PLANNED)
+**Files:** none yet — see Phase 6 of `IMPLEMENTATION_ROADMAP.md`
 
-- Automatic logout after inactivity
-- Configurable timeout duration
+- Automatic profile lock after inactivity
+- Parent-configurable timeout duration
 - Warning before timeout occurs
 - Activity tracking (mouse, touch, keyboard, scroll)
 

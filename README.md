@@ -21,7 +21,7 @@ A progressive web application designed for children aged 5-8 to explore, learn, 
 - React 18
 - Vite
 - Tailwind CSS
-- React Router v6
+- React Router v7
 - Framer Motion
 - React Icons
 - PWA (Workbox)

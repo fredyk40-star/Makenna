@@ -2,6 +2,7 @@
  * GamificationService - XP, levels, coins, badges, streaks, and rewards
  */
 import { StorageService } from './StorageService';
+import { findReward, resolveAvatarId } from '../data/rewardCatalog';
 
 const GAMIFICATION_KEY = 'makenna_gamification_state';
 
@@ -298,20 +299,21 @@ export class GamificationService {
   }
 
   /**
-   * Unlock avatar
+   * Record an unlocked avatar. Currency is handled by RewardsStore.
    */
   static unlockAvatar(childId, avatarId) {
-    const state = this.getState(childId);
-    const avatar = AVATAR_UNLOCKS.find(a => a.id === avatarId);
-    if (!avatar) return { success: false, reason: 'Invalid avatar' };
-    if (state.unlockedAvatars.includes(avatarId)) return { success: false, reason: 'Already unlocked' };
-    if (state.level < avatar.levelRequired) return { success: false, reason: 'Level too low' };
-    if (state.coins < avatar.coinsRequired) return { success: false, reason: 'Not enough coins' };
+    const reward = findReward(avatarId);
+    if (!reward || reward.type !== 'avatar') return { success: false, reason: 'Invalid avatar' };
 
-    state.coins -= avatar.coinsRequired;
-    state.unlockedAvatars.push(avatarId);
+    const state = this.getState(childId);
+    const id = resolveAvatarId(avatarId);
+    const unlocked = Array.isArray(state.unlockedAvatars) ? state.unlockedAvatars : [];
+
+    if (unlocked.includes(id)) return { success: false, reason: 'Already unlocked' };
+
+    state.unlockedAvatars = [...unlocked, id];
     this.saveState(childId, state);
-    return { success: true };
+    return { success: true, id };
   }
 
   /**
