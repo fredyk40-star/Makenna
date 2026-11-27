@@ -59,6 +59,13 @@ export class GhanaCurriculumService {
         { id: 'g2', title: 'Greetings in Ga', content: 'Greetings: "Good morning" = Mema wo akye, "Thank you" = Asie ɔ', level: 'KG1', lesson: 'greetings', image: '👋' },
         { id: 'g3', title: 'Sea Creatures', content: 'Fish and creatures from the sea in Ga language', level: 'KG2', lesson: 'animals', image: '🐟' },
       ],
+      fante: [
+        { id: 'f1', title: 'Fante Alphabet', content: 'Learning the Fante alphabet letters and their sounds: A, B, D, E, Ɛ, F...', level: 'KG1', lesson: 'alphabet', image: '🔤' },
+        { id: 'f2', title: 'Fante Greetings', content: 'Greetings: "Good morning" = Maakye, "Thank you" = Meda wo ase, "Welcome" = Akwaaba', level: 'KG1', lesson: 'greetings', image: '👋' },
+        { id: 'f3', title: 'Counting in Fante', content: 'Counting: 1 = kor, 2 = mienu, 3 = mensa, 4 = mensan, 5 = menum', level: 'KG2', lesson: 'numbers', image: '🔢' },
+        { id: 'f4', title: 'Market Words', content: 'Words for the market: sika (money), edziban (food), ndzema (goods)', level: 'KG2', lesson: 'vocabulary', image: '🏪' },
+        { id: 'f5', title: 'Family Words', content: 'Family terms: papa (father), mama (mother), nana (grandparent)', level: 'KG1', lesson: 'family', image: '👨‍👩‍👧‍👦' },
+      ],
       
       // English Language
       english: [

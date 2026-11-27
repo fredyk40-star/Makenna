@@ -27,6 +27,7 @@ const GhanaLanguages = () => {
     { id: 'twi', name: 'Twi', color: 'text-yellow-600', icon: FaLanguage },
     { id: 'ewe', name: 'Ewe', color: 'text-green-600', icon: FaLanguage },
     { id: 'ga', name: 'Ga', color: 'text-blue-600', icon: FaLanguage },
+    { id: 'fante', name: 'Fante', color: 'text-orange-600', icon: FaLanguage },
     { id: 'english', name: 'English', color: 'text-red-500', icon: FaBook },
     { id: 'mathematics', name: 'Mathematics', color: 'text-orange-500', icon: FaCalculator },
     { id: 'science', name: 'Science', color: 'text-purple-500', icon: FaFlask },

@@ -59,12 +59,12 @@ Legend: `[ ]` planned · `[~]` in progress · `[x]` done
 - [x] Achievement certificates (canvas/print)
 - [x] Sticker book tied to the unified reward catalog
 
-## Phase 8 — Differentiators `[ ]`
-- [ ] Curriculum-grounded, parent-controlled AI tutor
-- [ ] Camera scavenger hunt
-- [ ] Spaced-repetition revision planner
-- [ ] Two-player local co-op arcade game
-- [ ] Ghana-language content packs
+## Phase 8 — Differentiators `[x]`
+- [x] Curriculum-grounded, parent-controlled AI tutor
+- [x] Camera scavenger hunt
+- [x] Spaced-repetition revision planner
+- [x] Two-player local co-op arcade game
+- [x] Ghana-language content packs
 
 ---
 

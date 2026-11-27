@@ -73,6 +73,9 @@ const NavigationCards = memo(() => {
     { id: 12, title: 'Parent Zone', emoji: '👨‍👧', color: CARD_COLORS[6], path: ROUTES.PARENT_ZONE },
     { id: 13, title: 'Portfolio', emoji: '🖼️', color: CARD_COLORS[1], path: ROUTES.PORTFOLIO },
     { id: 14, title: 'Sticker Book', emoji: '🧩', color: CARD_COLORS[5], path: ROUTES.STICKERS },
+    { id: 15, title: 'Revision', emoji: '🔁', color: CARD_COLORS[7], path: ROUTES.REVISION },
+    { id: 16, title: 'Camera Hunt', emoji: '📷', color: CARD_COLORS[2], path: ROUTES.CAMERA_HUNT },
+    { id: 17, title: 'Languages', emoji: '🗣️', color: CARD_COLORS[1], path: ROUTES.GHANA_LANGUAGES },
   ];
 
   return (

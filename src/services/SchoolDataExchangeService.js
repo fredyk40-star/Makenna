@@ -28,6 +28,12 @@ const DATA_KEYS = [
   'makenna_teacher_data',
   'makenna_class_data',
   'makenna_ghana_curriculum_v1',
+  'makenna_portfolio_v1',
+  'makenna_certificates_v1',
+  'makenna_sticker_book_v1',
+  'makenna_revision_planner_v1',
+  'makenna_parent_tutor_settings_v1',
+  'makenna_camera_hunt_v1',
 ];
 
 const isPlainObject = value => value && typeof value === 'object' && !Array.isArray(value);

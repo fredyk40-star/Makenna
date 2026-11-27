@@ -15,6 +15,7 @@ export const SUBJECT_LABELS = {
   twi: 'Twi',
   ewe: 'Ewe',
   ga: 'Ga',
+  fante: 'Fante',
   english: 'English',
   mathematics: 'Mathematics',
   science: 'Science',

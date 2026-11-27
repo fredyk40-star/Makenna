@@ -6,16 +6,8 @@ import { useAudio } from '../../hooks/useAudio';
 import { useAdaptiveInput } from '../../hooks/useAdaptiveInput';
 import { announceToScreenReader } from '../../utils/accessibility';
 import gameProgressService from '../../services/GameProgressService';
-
-const resultFor = (correct, total, incorrect) => {
-  const score = Math.round((correct / Math.max(total, 1)) * 100);
-  return {
-    score,
-    stars: score >= 90 ? 5 : score >= 70 ? 3 : 1,
-    correct,
-    incorrect,
-  };
-};
+import { resultFor } from '../../utils/gameScoring';
+import CoOpGame from './CoOpGame';
 
 const shuffle = (items) => [...items].sort(() => Math.random() - 0.5);
 
@@ -419,6 +411,7 @@ const MECHANICS = {
   sort: SortGame,
   bingo: BingoGame,
   hunt: HuntGame,
+  coop: CoOpGame,
 };
 
 const ArcadeGame = ({ game }) => {
@@ -504,7 +497,7 @@ const ArcadeGame = ({ game }) => {
               <div className="text-7xl mb-4 animate-bounce" aria-hidden="true">🎉</div>
               <h2 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white">Great Job!</h2>
               <p className="text-gray-600 dark:text-gray-300 mt-2">
-                You scored {result.score}% on {game.title}!
+                {game.mechanic === 'coop' ? 'Together you scored' : 'You scored'} {result.score}% on {game.title}!
               </p>
               <div className="flex justify-center gap-1 mt-3" aria-label={`${result.stars} stars`}>
                 {[...Array(5)].map((_, index) => (

@@ -1,0 +1,35 @@
+{
+  "app": {
+    "title": "Makenna Learning Lab",
+    "subtitle": "Hwɛ • Di agorɔ • Sua • Nkɔsoɔ",
+    "loading": "Mereboɔ..."
+  },
+  "navigation": {
+    "home": "Fie",
+    "learn": "Adzesua",
+    "games": "Agorɔ",
+    "stories": "Anansesɛm",
+    "profile": "Profile",
+    "settings": "Nnyinasosɛm"
+  },
+  "subjects": {
+    "alphabet": "Abɛdiakyiri",
+    "numbers": "Nɔma",
+    "reading": "Akenkan",
+    "maths": "Nkontaabu",
+    "science": "Abɔdeɛ nyansahu",
+    "shapes": "Nsusuwii",
+    "colours": "Ahosuo",
+    "bible": "Bible anansesɛm"
+  },
+  "welcome": {
+    "greeting": "Maakye, {name}!",
+    "welcomeBack": "Maakye bio, {name}!"
+  },
+  "ai": {
+    "greeting": "Maakye {name}! Momma yɛn sua adeɛ nnɔm!",
+    "encouragement": "Wayɛ paa, {name}!",
+    "suggestion": "Momma yɛn to {subject} so!",
+    "revision": "Momma yɛn san hwɛ {subject} bio!"
+  }
+}

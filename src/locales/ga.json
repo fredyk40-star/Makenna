@@ -1,0 +1,35 @@
+{
+  "app": {
+    "title": "Makenna Learning Lab",
+    "subtitle": "Kwɛ • Fo agbagba • Kasee • Nɔ mli",
+    "loading": "Megbe..."
+  },
+  "navigation": {
+    "home": "Shia",
+    "learn": "Kasee",
+    "games": "Agbagba",
+    "stories": "He n folks",
+    "profile": "Profile",
+    "settings": "Gbɛjianɔtoo"
+  },
+  "subjects": {
+    "alphabet": "Alfabɛta",
+    "numbers": "Nɔmba",
+    "reading": "Kanemɔ",
+    "maths": "Akɔntabu",
+    "science": "Sɛnɛti",
+    "shapes": "Bɔɔsu",
+    "colours": "Gbagba",
+    "bible": "Bible he n folks"
+  },
+  "welcome": {
+    "greeting": "Ajɔɛ, {name}!",
+    "welcomeBack": "Ajɔɛ daa, {name}!"
+  },
+  "ai": {
+    "greeting": "Ajɔɛ {name}! Wɔmɛ wɔ kasee mbɔmɔ!",
+    "encouragement": "Ofeɔ nyɛn, {name}!",
+    "suggestion": "Wɔmɛ wɔ {subject} nɔ!",
+    "revision": "Wɔmɛ wɔ san nya {subject}!"
+  }
+}

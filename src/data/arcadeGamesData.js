@@ -281,5 +281,86 @@ export const MUSIC_ARCADE_GAMES = [
     }),
 ];
 
+export const CO_OP_ARCADE_GAMES = [
+  game('team-quest', 'Team Quest', '🤝',
+    'Two players take turns and share one team score!', 'easy', '/games', 'coop', {
+      instruction: 'Take turns — every right answer helps the team!',
+      rounds: [
+        {
+          prompt: 'Which letter starts "Apple"?',
+          speak: 'Which letter starts Apple?',
+          options: [
+            { id: 'a', label: 'A', visual: '🅰️' },
+            { id: 'b', label: 'B', visual: '🅱️' },
+            { id: 'c', label: 'C', visual: '🇨' },
+            { id: 'd', label: 'D', visual: '🇩' },
+          ],
+          answerId: 'a',
+          hint: 'Apple begins with the first letter of the alphabet.',
+        },
+        {
+          prompt: 'How many fingers do you have on one hand?',
+          speak: 'How many fingers on one hand?',
+          options: [
+            { id: '3', label: '3', visual: '3️⃣' },
+            { id: '4', label: '4', visual: '4️⃣' },
+            { id: '5', label: '5', visual: '5️⃣' },
+            { id: '6', label: '6', visual: '6️⃣' },
+          ],
+          answerId: '5',
+          hint: 'Hold up one hand and count.',
+        },
+        {
+          prompt: 'What sound does the letter B make?',
+          speak: 'What sound does B make?',
+          options: [
+            { id: 'buh', label: 'buh', visual: '🎈' },
+            { id: 'ah', label: 'ah', visual: '🍎' },
+            { id: 'sss', label: 'sss', visual: '🐍' },
+            { id: 'mmm', label: 'mmm', visual: '🥛' },
+          ],
+          answerId: 'buh',
+          hint: 'Think of Ball.',
+        },
+        {
+          prompt: 'Which shape has three sides?',
+          speak: 'Which shape has three sides?',
+          options: [
+            { id: 'circle', label: 'Circle', visual: '🔵' },
+            { id: 'square', label: 'Square', visual: '🟦' },
+            { id: 'triangle', label: 'Triangle', visual: '🔺' },
+            { id: 'star', label: 'Star', visual: '⭐' },
+          ],
+          answerId: 'triangle',
+          hint: 'Count the corners.',
+        },
+        {
+          prompt: 'Which colour is the Ghanaian flag’s middle stripe?',
+          speak: 'Which colour is in the middle of the Ghanaian flag?',
+          options: [
+            { id: 'red', label: 'Red', visual: '🔴' },
+            { id: 'yellow', label: 'Yellow', visual: '🟡' },
+            { id: 'green', label: 'Green', visual: '🟢' },
+            { id: 'blue', label: 'Blue', visual: '🔵' },
+          ],
+          answerId: 'yellow',
+          hint: 'Think of the stars on the flag.',
+        },
+        {
+          prompt: 'Which one is a Ghanaian food?',
+          speak: 'Which one is a Ghanaian food?',
+          options: [
+            { id: 'fufu', label: 'Fufu', visual: '🍽️' },
+            { id: 'pizza', label: 'Pizza', visual: '🍕' },
+            { id: 'taco', label: 'Taco', visual: '🌮' },
+            { id: 'sushi', label: 'Sushi', visual: '🍣' },
+          ],
+          answerId: 'fufu',
+          hint: 'It is often eaten with soup.',
+        },
+      ],
+    }),
+];
+
 export const getArcadeGame = (collection, id) =>
   collection.find((entry) => entry.id === id) || null;

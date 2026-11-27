@@ -1,0 +1,35 @@
+{
+  "app": {
+    "title": "Makenna Learning Lab",
+    "subtitle": "Kpɔ • Fe fefe • Srɔ̃ • Dzina",
+    "loading": "Metsɔ..."
+  },
+  "navigation": {
+    "home": "Aƒe",
+    "learn": "Nusrɔ̃su",
+    "games": "Fefe",
+    "stories": "Gɔmesese",
+    "profile": "Profile",
+    "settings": "Dzidzenu"
+  },
+  "subjects": {
+    "alphabet": "Alfabeta",
+    "numbers": "Xexẽ",
+    "reading": "Nuxlẽ̃",
+    "maths": "Xexẽdzikpɔ",
+    "science": "Dzɔdzɔmeŋutinunya",
+    "shapes": "Nɔnɔme",
+    "colours": "Amadefɔ",
+    "bible": "Bible ŋutinya"
+  },
+  "welcome": {
+    "greeting": "Ne fernyɔ, {name}!",
+    "welcomeBack": "Ne fernyɔ ake, {name}!"
+  },
+  "ai": {
+    "greeting": "Ne fernyɔ {name}! Minasrɔ̃ nu nyui aɖe egbe!",
+    "encouragement": " Èwɔ nyuie ŋutɔ, {name}!",
+    "suggestion": "Mina míayi {subject} dzi!",
+    "revision": "Mina míagbugbɔ {subject} srɔ̃!"
+  }
+}

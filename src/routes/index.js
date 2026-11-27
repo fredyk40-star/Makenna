@@ -33,6 +33,8 @@ export const ROUTES = {
   PORTFOLIO: '/portfolio',
   STICKERS: '/stickers',
   REWARDS: '/rewards',
+  REVISION: '/revision',
+  CAMERA_HUNT: '/camera-hunt',
   // Reading Routes
   WORD_BUILDER: '/reading/word-builder',
   SIGHT_WORDS: '/reading/sight-words',
@@ -54,6 +56,7 @@ export const ROUTES = {
 
   // Ghana Explorer Routes
   GHANA_EXPLORER: '/ghana-explorer',
+  GHANA_LANGUAGES: '/ghana-languages',
 
   // Numbers Routes
   NUMBERS: '/numbers',

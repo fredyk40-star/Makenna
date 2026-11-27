@@ -40,6 +40,24 @@ const Games = () => {
       path: '/music',
       color: 'from-pink-500 to-purple-500',
       status: 'available'
+    },
+    {
+      id: 'coop',
+      title: 'Team Quest (2 players)',
+      description: 'Take turns with a friend and share the score!',
+      icon: '🤝',
+      path: '/games/coop/team-quest',
+      color: 'from-indigo-500 to-blue-400',
+      status: 'available'
+    },
+    {
+      id: 'camera-hunt',
+      title: 'Camera Scout',
+      description: 'Find colours and shapes around you with the camera.',
+      icon: '📷',
+      path: '/camera-hunt',
+      color: 'from-teal-500 to-green-400',
+      status: 'available'
     }
   ];
 

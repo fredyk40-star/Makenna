@@ -4,11 +4,27 @@
  */
 import { createContext, useContext, useState, useEffect } from 'react';
 import en from '../locales/en.json';
+import twi from '../locales/twi.json';
+import ga from '../locales/ga.json';
+import ewe from '../locales/ewe.json';
+import fante from '../locales/fante.json';
 
 const I18nContext = createContext();
 
 const translations = {
-  en
+  en,
+  twi,
+  ga,
+  ewe,
+  fante,
+};
+
+export const LANGUAGE_NAMES = {
+  en: 'English',
+  twi: 'Twi (Akan)',
+  ga: 'Ga',
+  ewe: 'Ewe',
+  fante: 'Fante',
 };
 
 export const I18nProvider = ({ children }) => {

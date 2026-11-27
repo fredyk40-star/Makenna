@@ -8,6 +8,7 @@ import LessonScheduler from '../LessonScheduler/LessonScheduler';
 import SyncCenter from '../Sync/SyncCenter';
 import PrivacyPanel from '../privacy/PrivacyPanel';
 import SessionTimeoutSettings from '../session/SessionTimeoutSettings';
+import CurriculumTutorSettings from './CurriculumTutorSettings';
 
 const Section = ({ title, children }) => (
   <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
@@ -36,6 +37,10 @@ const ParentSettingsPanel = () => {
 
         <Section title="Lesson scheduler">
           <LessonScheduler />
+        </Section>
+
+        <Section title="AI tutor (curriculum only)">
+          <CurriculumTutorSettings />
         </Section>
 
         <Section title="Sync & offline data">

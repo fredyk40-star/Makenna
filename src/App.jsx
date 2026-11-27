@@ -26,6 +26,7 @@ import {
   ALPHABET_ARCADE_GAMES,
   SHAPES_ARCADE_GAMES,
   MUSIC_ARCADE_GAMES,
+  CO_OP_ARCADE_GAMES,
 } from './data/arcadeGamesData';
 
 // Lazy load pages with error handling
@@ -97,6 +98,8 @@ const Drawing = lazyWithErrorHandler(() => import('./pages/Drawing/Drawing'));
 const PortfolioPage = lazyWithErrorHandler(() => import('./pages/Portfolio/PortfolioPage'));
 const StickersPage = lazyWithErrorHandler(() => import('./pages/Stickers/StickersPage'));
 const RewardsPage = lazyWithErrorHandler(() => import('./pages/Rewards/RewardsPage'));
+const RevisionPage = lazyWithErrorHandler(() => import('./pages/Revision/RevisionPage'));
+const CameraHuntPage = lazyWithErrorHandler(() => import('./pages/CameraHunt/CameraHuntPage'));
 const NumberStories = lazyWithErrorHandler(() => import('./pages/Numbers/NumberStories'));
 const NumberStoryReader = lazyWithErrorHandler(() => import('./pages/Numbers/NumberStoryReader'));
 const NumbersMastery = lazyWithErrorHandler(() => import('./pages/Numbers/NumbersMastery'));
@@ -225,6 +228,17 @@ const AppContent = () => {
                   <Route path="portfolio" element={<PortfolioPage />} />
                   <Route path="stickers" element={<StickersPage />} />
                   <Route path="rewards" element={<RewardsPage />} />
+                  <Route path="revision" element={<RevisionPage />} />
+                  <Route path="camera-hunt" element={<CameraHuntPage />} />
+                  <Route
+                    path="games/coop/:gameId"
+                    element={
+                      <ArcadeGamePage
+                        collection={CO_OP_ARCADE_GAMES}
+                        fallbackPath="/games"
+                      />
+                    }
+                  />
                   <Route path="reading/word-builder" element={<WordBuilder />} />
                   <Route path="reading/sight-words" element={<SightWords />} />
                   <Route path="stories" element={<StoriesHome />} />

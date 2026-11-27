@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaMicrophone, FaMicrophoneSlash, FaRobot, FaTimes, FaComment, FaPaperPlane, FaMinus, FaPlus } from 'react-icons/fa';
 import { AIAssistantService } from '../../services/AIAssistantService';
+import { CurriculumTutorService } from '../../services/CurriculumTutorService';
 import { useChildAccount } from '../../context/ChildAccountContext';
 
 const AIAssistant = () => {
@@ -14,6 +15,8 @@ const AIAssistant = () => {
   const [transcript, setTranscript] = useState('');
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [tutorEnabled, setTutorEnabled] = useState(() => CurriculumTutorService.isEnabled(child?.childId));
+  const [allowVoice, setAllowVoice] = useState(() => CurriculumTutorService.getSettings(child?.childId).allowVoice);
   const [isMinimized, setIsMinimized] = useState(() => {
     // Load user preference from localStorage
     try {
@@ -42,6 +45,17 @@ const AIAssistant = () => {
       // localStorage not available
     }
   }, [isMinimized]);
+
+  // The tutor is controlled by a parent in Settings.
+  useEffect(() => {
+    const refresh = () => {
+      const settings = CurriculumTutorService.getSettings(child?.childId);
+      setTutorEnabled(settings.enabled);
+      setAllowVoice(settings.allowVoice);
+    };
+    refresh();
+    return CurriculumTutorService.subscribe(refresh);
+  }, [child?.childId]);
 
   // Scroll behavior: hide on scroll down, show on scroll up
   useEffect(() => {
@@ -86,7 +100,7 @@ const AIAssistant = () => {
 
   useEffect(() => {
     // Initialize speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    if (tutorEnabled && allowVoice && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
@@ -110,8 +124,9 @@ const AIAssistant = () => {
 
     // Show initial greeting after a delay
     const timer = setTimeout(() => {
-      if (child?.childId) {
-        const greeting = AIAssistantService.getGreeting(child.childId, child.fullName);
+      if (child?.childId && tutorEnabled) {
+        const suggestion = CurriculumTutorService.getSuggestion(child.childId, child.fullName);
+        const greeting = suggestion?.text || AIAssistantService.getGreeting(child.childId, child.fullName);
         setMessages([{ id: Date.now(), text: greeting, sender: 'assistant' }]);
         setShowBubble(true);
         setIsActive(true);
@@ -124,7 +139,7 @@ const AIAssistant = () => {
         recognitionRef.current.stop();
       }
     };
-  }, [child, transcript]);
+  }, [child, transcript, tutorEnabled, allowVoice]);
 
   // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
@@ -170,10 +185,12 @@ const AIAssistant = () => {
     }
     setIsOpen(!isOpen);
     
-    if (!isOpen && child?.childId) {
+    if (!isOpen && child?.childId && tutorEnabled) {
       if (messages.length === 0) {
-        const suggestion = AIAssistantService.getNextLessonSuggestion(child.childId, child.fullName);
-        setMessages([{ id: Date.now(), text: suggestion, sender: 'assistant' }]);
+        const suggestion = CurriculumTutorService.getSuggestion(child.childId, child.fullName);
+        if (suggestion) {
+          setMessages([{ id: Date.now(), text: suggestion.text, sender: 'assistant' }]);
+        }
       }
     }
   };
@@ -193,7 +210,7 @@ const AIAssistant = () => {
   };
 
   const startListening = () => {
-    if (recognitionRef.current && child?.childId) {
+    if (tutorEnabled && allowVoice && recognitionRef.current && child?.childId) {
       setTranscript('');
       setIsListening(true);
       recognitionRef.current.start();
@@ -208,11 +225,13 @@ const AIAssistant = () => {
   };
 
   const handleVoiceInput = (transcript) => {
+    if (!tutorEnabled || !allowVoice) return;
     const userMessage = { id: Date.now(), text: transcript, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     
-    // Process the query
-    const response = AIAssistantService.processQuery(child?.childId, transcript);
+    // Answer only from the parent-approved curriculum.
+    const result = CurriculumTutorService.answer(child?.childId, transcript, child?.fullName);
+    const response = result?.text || 'I can only answer curriculum questions right now.';
     const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant' };
     setMessages(prev => [...prev, assistantMessage]);
     
@@ -232,12 +251,13 @@ const AIAssistant = () => {
 
   const handleTextSubmit = (e) => {
     e.preventDefault();
-    if (!inputText.trim() || !child?.childId) return;
+    if (!inputText.trim() || !child?.childId || !tutorEnabled) return;
     
     const userMessage = { id: Date.now(), text: inputText, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     
-    const response = AIAssistantService.processQuery(child.childId, inputText);
+    const result = CurriculumTutorService.answer(child.childId, inputText, child.fullName);
+    const response = result?.text || 'I can only answer curriculum questions right now.';
     const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant' };
     setMessages(prev => [...prev, assistantMessage]);
     
@@ -270,7 +290,7 @@ const AIAssistant = () => {
             <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
               <div className="flex items-center gap-2">
                 <FaRobot className="text-xl" />
-                <span className="font-bold">Makenna Assistant</span>
+                <span className="font-bold">Makenna Tutor</span>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -292,7 +312,15 @@ const AIAssistant = () => {
 
             {/* Messages */}
             <div className="h-64 overflow-y-auto p-3 space-y-2 bg-gray-50 dark:bg-gray-900">
-              {messages.map(msg => (
+              {!tutorEnabled ? (
+                <div className="rounded-xl bg-purple-50 dark:bg-purple-900/40 p-4 text-sm text-purple-900 dark:text-purple-100">
+                  <p className="font-semibold">Tutor is locked</p>
+                  <p className="mt-1">
+                    Ask a grown-up to open Settings → AI tutor and switch it on. Answers come only
+                    from your school work stored on this device.
+                  </p>
+                </div>
+              ) : messages.map(msg => (
                 <div
                   key={msg.id}
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -324,12 +352,13 @@ const AIAssistant = () => {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask me anything..."
-                className="flex-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={!tutorEnabled}
+                placeholder={tutorEnabled ? 'Ask about your lessons...' : 'Ask a parent to unlock the tutor'}
+                className="flex-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
               />
               <button
                 type="submit"
-                disabled={!inputText.trim()}
+                disabled={!tutorEnabled || !inputText.trim()}
                 className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50"
               >
                 <FaPaperPlane className="text-xs" />
@@ -338,7 +367,8 @@ const AIAssistant = () => {
                 <button
                   type="button"
                   onClick={isListening ? stopListening : startListening}
-                  disabled={!child?.childId}
+                  disabled={!child?.childId || !tutorEnabled || !allowVoice}
+                  title={allowVoice ? 'Ask with your voice' : 'Voice questions are off in parent settings'}
                   className={`p-2 rounded-lg ${
                     isListening
                       ? 'bg-red-500 hover:bg-red-600'
@@ -355,7 +385,7 @@ const AIAssistant = () => {
 
       {/* Speech Bubble for notifications */}
       <AnimatePresence>
-        {showBubble && !isOpen && isActive && !isMinimized && (
+        {showBubble && !isOpen && isActive && !isMinimized && tutorEnabled && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, x: -20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
