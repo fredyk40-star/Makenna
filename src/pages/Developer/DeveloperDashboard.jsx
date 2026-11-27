@@ -1131,15 +1131,15 @@ const DeveloperDashboard = () => {
       {/* Preview Selection Modal */}
       {previewModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-2xl">
+          <div className="bg-gray-800 rounded-xl p-4 sm:p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4">Select Test Children for Preview</h3>
             <p className="text-sm text-gray-400 mb-4">
               Choose which children should test this preview update before it goes live.
               Preview access expires after 7 days.
             </p>
 
-            <div className="max-h-96 overflow-y-auto">
-              <table className="w-full">
+            <div className="max-h-96 overflow-auto">
+              <table className="w-full min-w-[36rem]">
                 <thead className="bg-gray-700">
                   <tr>
                     <th className="p-3 text-left">

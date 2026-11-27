@@ -46,10 +46,10 @@ const UpdatePreviewBanner = () => {
       initial={{ opacity: 0, y: -50 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -50 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 shadow-lg"
+      className="update-preview-banner fixed top-0 left-0 right-0 z-[70] bg-gradient-to-r from-purple-500 to-pink-500 text-white p-3 shadow-lg sm:p-4"
     >
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="max-w-4xl mx-auto flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
           <span className="text-2xl">🧪</span>
           <div>
             <p className="font-bold">Test Version Available!</p>
@@ -59,7 +59,7 @@ const UpdatePreviewBanner = () => {
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 sm:shrink-0">
           <button
             onClick={() => setShowDetails(!showDetails)}
             className="px-3 py-1 bg-white/20 rounded hover:bg-white/30 text-sm"

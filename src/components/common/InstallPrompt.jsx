@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { usePWADetection } from '../../hooks/usePWADetection';
@@ -7,9 +8,20 @@ import { FaDownload, FaTimes, FaShareAlt } from 'react-icons/fa';
 const InstallPrompt = () => {
   const { isInstallable, isInstalled, installApp } = useInstallPrompt();
   const { platform } = usePWADetection();
+  const { pathname } = useLocation();
   const [dismissed, setDismissed] = useState(false);
   const [showIOSHint, setShowIOSHint] = useState(false);
 
+  useEffect(() => {
+    const visible = !isInstalled && !dismissed && !pathname.startsWith('/music/karaoke/');
+    document.body.dataset.installPrompt = String(visible);
+    return () => {
+      delete document.body.dataset.installPrompt;
+    };
+  }, [isInstalled, dismissed, pathname]);
+
+  // Karaoke owns the bottom of the screen with its own fixed control panel.
+  if (pathname.startsWith('/music/karaoke/')) return null;
   if (isInstalled || dismissed) return null;
 
   const handleInstall = async () => {
@@ -34,7 +46,7 @@ const InstallPrompt = () => {
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
-        className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-50"
+        className="install-prompt fixed bottom-44 left-4 right-4 z-[60] md:left-auto md:right-4 md:max-w-sm"
       >
         <div className="glassmorphism rounded-2xl p-4 shadow-soft border border-white/20">
           <div className="flex items-start gap-3">

@@ -62,6 +62,8 @@ const CaptionDisplay = () => {
     return null;
   }
 
+  const isKaraoke = pathname.startsWith('/music/karaoke/');
+
   return (
     <AnimatePresence>
       {caption && (
@@ -73,7 +75,9 @@ const CaptionDisplay = () => {
           transition={{ duration: 0.2 }}
           role="status"
           aria-live="polite"
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] max-w-xl mx-4 px-5 py-3 rounded-2xl bg-gray-900/90 text-white text-center font-semibold shadow-xl pointer-events-none backdrop-blur-sm"
+          className={`fixed left-4 right-4 z-[90] mx-auto w-auto max-w-xl px-5 py-3 rounded-2xl bg-gray-900/90 text-white text-center font-semibold shadow-xl pointer-events-none backdrop-blur-sm ${
+            isKaraoke ? 'bottom-[19rem]' : 'bottom-24'
+          }`}
         >
           {caption}
         </motion.div>

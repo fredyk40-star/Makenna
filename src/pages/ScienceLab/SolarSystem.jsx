@@ -30,40 +30,41 @@ const SolarSystem = () => {
         </h1>
       </div>
 
-      <div className="relative h-96 flex items-center justify-center">
-        <div className="w-48 h-48 bg-yellow-400 rounded-full flex items-center justify-center shadow-sun">
-          <span className="font-bold text-white text-2xl">Sun</span>
-        </div>
-        {planets.map((planet, index) => (
-          <motion.div
-            key={planet.name}
-            className="absolute"
-            animate={{
-              rotate: 360,
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: 20 + index * 10,
-              ease: "linear",
-            }}
-            style={{
-              transformOrigin: 'center center',
-            }}
-          >
-            <div
-              className="absolute w-8 h-8 rounded-full -translate-x-1/2 -translate-y-1/2"
+      <div className="relative h-[19rem] overflow-hidden sm:h-[27rem] lg:h-[37.5rem]">
+        <div className="absolute left-1/2 top-1/2 h-[800px] w-[800px] origin-center -translate-x-1/2 -translate-y-1/2 scale-[0.34] sm:scale-[0.51] lg:scale-[0.72]">
+          <div className="absolute left-1/2 top-1/2 flex h-48 w-48 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-yellow-400 shadow-sun">
+            <span className="font-bold text-white text-2xl">Sun</span>
+          </div>
+          {planets.map((planet, index) => (
+            <motion.div
+              key={planet.name}
+              className="absolute inset-0"
+              animate={{
+                rotate: 360,
+              }}
+              transition={{
+                repeat: Infinity,
+                duration: 20 + index * 10,
+                ease: "linear",
+              }}
               style={{
-                transform: `translate(${120 + index * 40}px) rotate(${index * 45}deg) `,
+                transformOrigin: 'center center',
               }}
             >
               <div
-                className={`w-full h-full rounded-full ${planet.color} shadow-planet`}
-                title={planet.name}
-              />
-            </div>
-
-          </motion.div>
-        ))}
+                className="absolute left-1/2 top-1/2 h-8 w-8 rounded-full"
+                style={{
+                  transform: `translate(-50%, -50%) translate(${120 + index * 40}px) rotate(${index * 45}deg)`,
+                }}
+              >
+                <div
+                  className={`w-full h-full rounded-full ${planet.color} shadow-planet`}
+                  title={planet.name}
+                />
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-10">
         {planets.map((planet) => (

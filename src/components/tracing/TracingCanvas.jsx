@@ -252,7 +252,7 @@ const TracingCanvas = ({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Toolbar */}
-      <div className="absolute top-2 left-2 right-2 flex flex-wrap items-center justify-between gap-2 z-10 pointer-events-none">
+      <div className="absolute top-2 left-2 right-2 flex max-w-full flex-wrap items-center justify-between gap-2 z-10 pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           {/* Difficulty Selector */}
           <select
@@ -280,7 +280,7 @@ const TracingCanvas = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-2 pointer-events-auto">
           {/* Color picker (practice mode only) */}
           {mode === 'practice' && (
             <div className="flex flex-wrap items-center gap-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-1 border border-gray-200 dark:border-gray-700 max-w-[180px] sm:max-w-none">

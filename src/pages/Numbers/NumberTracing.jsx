@@ -416,7 +416,7 @@ const NumberTracing = () => {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
         {/* Colors */}
-        <div className="flex items-center gap-1">
+        <div className="flex max-w-full flex-wrap items-center gap-1">
           {colors.slice(0, 6).map((c) => (
             <button
               key={c}

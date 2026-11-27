@@ -304,15 +304,15 @@ const ParentZone = () => {
           </div>
 
           {/* Weekly Activity Chart */}
-          <motion.div variants={itemVariants} className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
+          <motion.div variants={itemVariants} className="p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
             <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
               <FaRegCalendarAlt /> Weekly Activity
             </h3>
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
               {weeklyData.map((day, idx) => (
-                <div key={idx} className="text-center">
-                  <p className="text-xs text-gray-500 mb-1">{day.day}</p>
-                  <div className="bg-blue-100 dark:bg-blue-900/30 rounded h-16 flex items-end justify-center p-1">
+                <div key={idx} className="min-w-0 text-center">
+                  <p className="text-[10px] sm:text-xs text-gray-500 mb-1 truncate">{day.day}</p>
+                  <div className="bg-blue-100 dark:bg-blue-900/30 rounded h-14 sm:h-16 flex items-end justify-center p-1">
                     <div
                       className="bg-blue-500 rounded w-full"
                       style={{ height: `${Math.min(100, day.alphabet * 20)}%` }}
@@ -409,16 +409,16 @@ const ParentZone = () => {
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
+          <motion.div variants={itemVariants} className="p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
             <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
               <FaCalendar /> Locked Days
             </h3>
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                 <button
                   key={day}
                   onClick={() => toggleLockDay(day)}
-                  className={`p-3 rounded-lg transition-all ${
+                  className={`p-2 sm:p-3 text-sm sm:text-base rounded-lg transition-all ${
                     lockedDays.includes(day)
                       ? 'bg-red-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'

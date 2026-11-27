@@ -135,7 +135,7 @@ const KaraokePlayer = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-blue-600 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-blue-600">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-black/20 backdrop-blur-sm">
         <Link
@@ -145,14 +145,14 @@ const KaraokePlayer = () => {
         >
           <FaArrowLeft className="text-2xl" />
         </Link>
-        <h1 className="font-baloo text-2xl md:text-3xl font-bold text-white text-center flex-1">
+        <h1 className="font-baloo text-xl sm:text-2xl md:text-3xl font-bold text-white text-center flex-1 min-w-0 break-words">
           🎤 {song.title} - Karaoke Mode
         </h1>
         <div className="w-10"></div>
       </div>
 
       {/* Karaoke Display */}
-      <div className="flex flex-col items-center justify-center min-h-[70vh] p-4">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 pb-80 sm:pb-96">
         {/* Progress */}
         <div className="w-full max-w-2xl mb-6">
           <div className="flex justify-between text-white text-sm mb-2">
@@ -233,7 +233,7 @@ const KaraokePlayer = () => {
       </div>
 
       {/* Controls */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-6">
+      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-black/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
         <div className="flex flex-col items-center gap-4">
           {/* Main Controls */}
           <div className="flex items-center gap-6">

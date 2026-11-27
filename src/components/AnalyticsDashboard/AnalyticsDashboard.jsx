@@ -146,17 +146,17 @@ const AnalyticsDashboardComponent = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-6 space-y-8"
+      className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4 sm:p-6 space-y-8"
     >
-      <h1 className="text-4xl font-extrabold text-center font-baloo">
+      <h1 className="text-2xl font-extrabold text-center font-baloo sm:text-4xl">
         Your Learning Journey 🚀
       </h1>
 
       {/* Tab Navigation */}
-      <div className="flex justify-center gap-4 mb-6">
+      <div className="flex flex-wrap justify-center gap-2 mb-6 sm:gap-4">
         <button
           onClick={() => setActiveTab('overall')}
-          className={`px-5 py-2 rounded-full text-lg font-medium transition-all ${
+          className={`px-4 py-2 rounded-full text-base font-medium transition-all sm:px-5 sm:text-lg ${
             activeTab === 'overall' ? 'bg-primary text-white shadow-lg' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
           }`}
         >
@@ -164,7 +164,7 @@ const AnalyticsDashboardComponent = () => {
         </button>
         <button
           onClick={() => setActiveTab('trends')}
-          className={`px-5 py-2 rounded-full text-lg font-medium transition-all ${
+          className={`px-4 py-2 rounded-full text-base font-medium transition-all sm:px-5 sm:text-lg ${
             activeTab === 'trends' ? 'bg-primary text-white shadow-lg' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
           }`}
         >

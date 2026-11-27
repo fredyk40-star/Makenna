@@ -41,6 +41,13 @@ const NotificationBell = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  useEffect(() => {
+    document.body.dataset.notificationOpen = String(isOpen);
+    return () => {
+      delete document.body.dataset.notificationOpen;
+    };
+  }, [isOpen]);
+
   const loadNotifications = () => {
     const bellNotifications = NotificationBellService.getAllNotifications();
     setNotifications(bellNotifications);
@@ -119,7 +126,7 @@ const NotificationBell = () => {
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute right-0 top-12 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
+            className="notification-dropdown fixed left-4 right-4 top-36 z-[95] mx-auto w-auto max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 max-h-[calc(100vh-14rem)] overflow-y-auto sm:left-auto sm:right-4 sm:top-20 sm:mx-0 sm:w-80 sm:max-h-96"
           >
             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <h3 className="font-semibold text-gray-800 dark:text-white">Notifications</h3>

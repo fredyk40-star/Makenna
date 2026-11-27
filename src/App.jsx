@@ -133,7 +133,11 @@ const DeveloperProtectedRoute = ({ children }) => {
 
 const AssistantGate = () => {
   const location = useLocation();
-  if (location.pathname === '/login' || location.pathname === '/register') return null;
+  if (
+    location.pathname === '/login'
+    || location.pathname === '/register'
+    || location.pathname.startsWith('/music/karaoke/')
+  ) return null;
   return <AIAssistant />;
 };
 

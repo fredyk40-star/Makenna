@@ -4,6 +4,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep the assistant and install prompt from covering each other on phones. */
+body[data-install-prompt='true'] .assistant-bubble {
+  display: none;
+}
+
+body[data-assistant-open='true'] .install-prompt {
+  display: none;
+}
+
+body[data-assistant-open='true'] .update-preview-banner {
+  display: none;
+}
+
+body[data-notification-open='true'] .assistant-root,
+body[data-notification-open='true'] .install-prompt {
+  display: none;
+}
+
 @layer base {
   * {
     @apply box-border;

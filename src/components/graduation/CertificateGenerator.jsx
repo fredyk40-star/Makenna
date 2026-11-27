@@ -75,11 +75,10 @@ const CertificateGenerator = ({
   return (
     <div className={`${className}`}>
       {/* Certificate Preview */}
-      <div className="certificate-print bg-white rounded-2xl shadow-soft overflow-hidden p-8">
+      <div className="certificate-print bg-white rounded-2xl shadow-soft overflow-hidden p-4 sm:p-8">
         <div
           ref={certificateRef}
-          className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-12"
-          style={{ minHeight: '600px' }}
+          className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 sm:p-12 min-h-[420px] sm:min-h-[600px]"
         >
           {/* Decorative border */}
           <div className="absolute inset-4 border-4 border-primary/20 rounded-xl" />
@@ -87,24 +86,24 @@ const CertificateGenerator = ({
 
           {/* Content */}
           <div className="relative text-center">
-            <div className="text-6xl mb-4">🎓</div>
-            <h1 className="font-baloo text-4xl font-bold text-primary dark:text-blue-400">
+            <div className="text-4xl mb-3 sm:text-6xl sm:mb-4">🎓</div>
+            <h1 className="font-baloo text-2xl font-bold text-primary dark:text-blue-400 break-words sm:text-4xl">
               Alphabet Adventure Graduate!
             </h1>
 
-            <div className="my-6">
-              <p className="text-lg text-gray-600 dark:text-gray-300">
+            <div className="my-5 sm:my-6">
+              <p className="text-base text-gray-600 dark:text-gray-300 sm:text-lg">
                 This certificate is proudly presented to
               </p>
-              <h2 className="font-baloo text-5xl font-bold text-gray-800 dark:text-white my-2">
+              <h2 className="font-baloo text-3xl font-bold text-gray-800 dark:text-white my-2 break-words sm:text-5xl">
                 {childName}
               </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300">
+              <p className="text-base text-gray-600 dark:text-gray-300 sm:text-lg">
                 for {achievement}!
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 my-8 max-w-md mx-auto">
+            <div className="my-6 grid grid-cols-1 gap-2 max-w-md mx-auto xs:grid-cols-3 xs:gap-4 sm:my-8">
               <div className="bg-white/80 dark:bg-gray-800/80 rounded-xl p-3">
                 <div className="text-2xl">⭐</div>
                 <div className="text-sm font-bold text-gray-700 dark:text-gray-200">
@@ -125,22 +124,22 @@ const CertificateGenerator = ({
               </div>
             </div>
 
-            <div className="flex justify-center gap-8 mt-8">
+            <div className="mt-6 flex flex-col items-center gap-6 xs:flex-row xs:justify-center sm:mt-8 sm:gap-8">
               <div>
-                <div className="w-32 h-12 border-b-2 border-gray-400" />
+                <div className="w-full h-10 border-b-2 border-gray-400 xs:w-32 sm:h-12" />
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Teacher's Signature
                 </p>
               </div>
               <div>
-                <div className="w-32 h-12 border-b-2 border-gray-400" />
+                <div className="w-full h-10 border-b-2 border-gray-400 xs:w-32 sm:h-12" />
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Parent's Signature
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 text-sm text-gray-400 dark:text-gray-500">
+            <div className="mt-6 text-xs text-gray-400 dark:text-gray-500 sm:text-sm">
               Makenna Learning Lab • Watch • Play • Learn • Grow
             </div>
           </div>

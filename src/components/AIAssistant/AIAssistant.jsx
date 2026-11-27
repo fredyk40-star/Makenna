@@ -49,6 +49,14 @@ const AIAssistant = () => {
     }
   }, [isMinimized]);
 
+  // Let the install prompt and assistant share the bottom of the screen.
+  useEffect(() => {
+    document.body.dataset.assistantOpen = String(isOpen && !isMinimized);
+    return () => {
+      delete document.body.dataset.assistantOpen;
+    };
+  }, [isOpen, isMinimized]);
+
   // The tutor is controlled by a parent in Settings.
   useEffect(() => {
     const refresh = () => {
@@ -328,14 +336,14 @@ const AIAssistant = () => {
   const isSpeechSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
 
   return (
-    <div className="fixed bottom-24 left-4 z-40 pointer-events-none">
+    <div className="assistant-root fixed bottom-24 left-4 z-[80] pointer-events-none">
       <AnimatePresence>
         {isOpen && !isMinimized && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="absolute bottom-20 left-0 mb-2 w-80 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-white/30 rounded-2xl shadow-xl pointer-events-auto overflow-hidden"
+            className="assistant-panel absolute bottom-20 left-0 mb-2 w-[calc(100vw-2rem)] max-w-xs bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-white/30 rounded-2xl shadow-xl pointer-events-auto overflow-hidden sm:w-80"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
@@ -441,9 +449,9 @@ const AIAssistant = () => {
             initial={{ opacity: 0, scale: 0.8, x: -20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.8, x: -20 }}
-            className="absolute bottom-20 left-0 mb-2 pointer-events-auto"
+            className="assistant-bubble absolute bottom-20 left-0 mb-2 w-[calc(100vw-2rem)] max-w-xs pointer-events-auto"
           >
-            <div className="relative bg-white rounded-2xl px-4 py-3 shadow-lg max-w-xs">
+            <div className="relative bg-white rounded-2xl px-4 py-3 shadow-lg max-w-full">
               <p className="text-sm text-gray-800 font-medium">
                 {messages.length > 0 ? messages[messages.length - 1].text : 'Hi there!'}
               </p>

@@ -487,8 +487,8 @@ const BookReader = ({ storyId, onClose = null }) => {
       className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-soft overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <Link
             to="/stories"
             className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -496,16 +496,16 @@ const BookReader = ({ storyId, onClose = null }) => {
           >
             <FaArrowLeft className="text-xl" />
           </Link>
-          <div>
-            <h2 className="font-baloo text-lg font-bold text-gray-800 dark:text-white">
+          <div className="min-w-0">
+            <h2 className="font-baloo text-lg font-bold text-gray-800 dark:text-white truncate" title={story.title}>
               {story.title}
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
               Page {pageNumber + 1} of {totalPages}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
           {/* Speed Control */}
           <div className="relative">
             <button

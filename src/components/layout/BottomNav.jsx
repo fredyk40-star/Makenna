@@ -6,6 +6,9 @@ import { ROUTES, NAV_ITEMS, isActiveRoute } from '../../routes';
 const BottomNav = () => {
   const location = useLocation();
 
+  // Karaoke uses a full-height control panel; the global nav would cover it.
+  if (location.pathname.startsWith('/music/karaoke/')) return null;
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 px-2 pb-4 pt-2"
@@ -13,7 +16,7 @@ const BottomNav = () => {
       aria-label="Main navigation"
     >
       <div className="max-w-md mx-auto">
-        <div className="glassmorphism rounded-2xl px-2 py-2 flex items-center justify-around shadow-soft">
+        <div className="glassmorphism rounded-2xl px-1 py-2 flex items-stretch justify-between gap-1 shadow-soft sm:px-2">
           {NAV_ITEMS.map(({ path, label, icon: Icon, ariaLabel }) => {
             const isActive = isActiveRoute(location.pathname, path);
 
@@ -21,7 +24,7 @@ const BottomNav = () => {
               <NavLink
                 key={path}
                 to={path}
-                className="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                className="relative flex min-w-0 flex-1 flex-col items-center justify-center h-14 rounded-xl px-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:px-1"
                 aria-label={ariaLabel || label}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -62,7 +65,7 @@ const BottomNav = () => {
           {/* Teacher Portal Button */}
           <NavLink
             to={ROUTES.TEACHER}
-            className="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            className="relative flex min-w-0 flex-1 flex-col items-center justify-center h-14 rounded-xl px-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:px-1"
             aria-label="Teacher"
             aria-current={isActiveRoute(location.pathname, ROUTES.TEACHER) ? 'page' : undefined}
           >
