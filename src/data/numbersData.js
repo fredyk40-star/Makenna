@@ -300,6 +300,68 @@ export const NUMBERS_DATA = [
   }
 ];
 
+// Numbers 21-100 generated to extend the Number Kingdom curriculum "to
+// infinity" for ages 5-8. Each entry keeps the Ghana-friendly style.
+(() => {
+  const TENS_WORDS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const ONES_WORDS = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+  const TEENS_WORDS = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const COLORS = [
+    'from-blue-500 to-blue-400', 'from-green-500 to-green-400', 'from-yellow-500 to-yellow-400',
+    'from-pink-500 to-pink-400', 'from-orange-500 to-orange-400', 'from-red-500 to-red-400',
+    'from-indigo-500 to-indigo-400', 'from-teal-500 to-teal-400', 'from-purple-500 to-purple-400'
+  ];
+  const OBJECT_EMOJIS = ['🥭', '🐔', '🐟', '🥥', '🍌', '⭐', '🥁', '🥭', '🐔', '🐟'];
+  const DIGIT_EMOJI = {
+    '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
+    '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
+  };
+
+  const numberToWord = (n) => {
+    if (n === 100) return 'One hundred';
+    if (n < 10) return ONES_WORDS[n];
+    if (n < 20) return TEENS_WORDS[n - 10];
+    const ten = TENS_WORDS[Math.floor(n / 10)];
+    const one = ONES_WORDS[n % 10];
+    return one ? `${ten}-${one}` : ten;
+  };
+
+  const numberToPhonics = (n) => {
+    if (n === 100) return 'wun-hun-dred';
+    if (n < 10) return ONES_WORDS[n].toLowerCase();
+    if (n < 20) return TEENS_WORDS[n - 10].toLowerCase();
+    const ten = TENS_WORDS[Math.floor(n / 10)].toLowerCase();
+    const one = ONES_WORDS[n % 10];
+    return one ? `${ten}-${one.toLowerCase()}` : ten;
+  };
+
+  for (let n = 21; n <= 100; n += 1) {
+    const word = numberToWord(n);
+    const id = String(n);
+    const exampleNoun = n % 3 === 0 ? 'mangoes' : n % 3 === 1 ? 'fish' : 'eggs';
+    const objEmoji = OBJECT_EMOJIS[(n - 1) % OBJECT_EMOJIS.length];
+    const objectCount = Math.min(n, 25);
+    NUMBERS_DATA.push({
+      id,
+      number: id,
+      word,
+      phonics: numberToPhonics(n),
+      sentence: `I have ${word.toLowerCase()} ${exampleNoun}.`,
+      examples: [
+        `${word} ${exampleNoun}`,
+        `${word} drums`,
+        `${word} flowers`
+      ],
+      emoji: id.split('').map((d) => DIGIT_EMOJI[d] || d).join(''),
+      difficulty: n === 100 ? 3 : 2,
+      category: 'advanced',
+      color: COLORS[(n - 21) % COLORS.length],
+      reward: n === 100 ? 15 : 10,
+      objects: Array(objectCount).fill(objEmoji)
+    });
+  }
+})();
+
 export const getNumberById = (id) => {
   return NUMBERS_DATA.find(num => num.id === id);
 };

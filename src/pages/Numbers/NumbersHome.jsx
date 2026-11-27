@@ -59,7 +59,7 @@ const NumbersHome = () => {
             </h1>
           </div>
           <p className="text-gray-600 dark:text-gray-300 mt-1">
-            Learn numbers 0 to 20 with fun activities!
+            Learn numbers 0 to 100 with fun activities!
           </p>
 
           {/* Progress Rings */}

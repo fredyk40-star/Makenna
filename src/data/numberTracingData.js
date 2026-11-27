@@ -208,9 +208,56 @@ export const NUMBER_TRACING_DATA = {
       }
     ]
   }
-  // Additional numbers 11-20 would follow the same pattern
-  // For brevity, I'm including 0-10 as samples
 };
+
+// Numbers 11-100 are composed from digit glyphs (0-9) laid out
+// side-by-side within the 0-100 guide box, so guided tracing works
+// for every number in the curriculum.
+
+/**
+ * Compose a multi-digit number's trace from its digit glyphs.
+ * Each digit occupies an equal horizontal section of the 0-100 box.
+ */
+const buildMultiDigitTrace = (numberString) => {
+  const digits = String(numberString).split('');
+  const sectionWidth = 100 / digits.length;
+  const strokes = [];
+  let order = 0;
+
+  digits.forEach((digit, digitIndex) => {
+    const glyph = NUMBER_TRACING_DATA[digit];
+    if (!glyph) return;
+    const offset = digitIndex * sectionWidth;
+    const scale = sectionWidth / 100;
+
+    glyph.strokes.forEach((stroke) => {
+      strokes.push({
+        id: `${numberString}-${order}`,
+        points: stroke.points.map((p) => ({
+          x: offset + p.x * scale,
+          y: p.y
+        })),
+        startPoint: {
+          x: offset + stroke.startPoint.x * scale,
+          y: stroke.startPoint.y
+        },
+        endPoint: {
+          x: offset + stroke.endPoint.x * scale,
+          y: stroke.endPoint.y
+        },
+        direction: stroke.direction,
+        order: order++
+      });
+    });
+  });
+
+  return { strokes };
+};
+
+// Build guided stroke paths for 11-100 from the 0-9 digit glyphs.
+for (let n = 11; n <= 100; n += 1) {
+  NUMBER_TRACING_DATA[String(n)] = buildMultiDigitTrace(String(n));
+}
 
 export const getNumberTracingData = (number) => {
   return NUMBER_TRACING_DATA[String(number)] || null;

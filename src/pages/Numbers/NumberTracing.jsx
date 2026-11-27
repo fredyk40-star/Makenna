@@ -22,6 +22,13 @@ const COLOR_NAMES = {
   '#FB923C': 'Orange',
 };
 
+/** Validation tolerance per difficulty, mirroring the alphabet TracingEngine. */
+const DIFFICULTY_SETTINGS = {
+  easy: { tolerance: 17, label: 'Easy' },
+  medium: { tolerance: 13, label: 'Medium' },
+  hard: { tolerance: 9, label: 'Hard' }
+};
+
 const NumberTracing = () => {
   const { numberId } = useParams();
   const navigate = useNavigate();
@@ -37,6 +44,9 @@ const NumberTracing = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [accuracy, setAccuracy] = useState(0);
   const [traceResult, setTraceResult] = useState(null);
+  const [difficulty, setDifficulty] = useState('medium'); // 'easy' | 'medium' | 'hard'
+  const [liveProgress, setLiveProgress] = useState(0);
+  const progressFrameRef = useRef(null);
 
   const { markSkill } = useNumbersProgress();
   const { speak } = useAudio();
@@ -68,10 +78,11 @@ const NumberTracing = () => {
     setNumber(found);
     const tracing = getNumberTracingData(numberId);
     setTracingData(tracing);
-    // Guided strokes exist for 0-10. Larger numbers use free practice with an
-    // explicit completion action instead of pretending a guide is available.
+    // Guided strokes exist for 0-100. Numbers without stroke data fall back to
+    // free practice with an explicit completion action.
     setMode(tracing ? 'guided' : 'free');
     setCurrentStroke(0);
+    setLiveProgress(0);
     setIsComplete(false);
     setTraceResult(null);
 
@@ -81,7 +92,13 @@ const NumberTracing = () => {
         : `Practice writing the number ${found.number}`, { rate: 0.8, pitch: 1.1 });
     }, 500);
 
-    return () => clearTimeout(speechTimeoutRef.current);
+    return () => {
+      clearTimeout(speechTimeoutRef.current);
+      if (progressFrameRef.current !== null) {
+        cancelAnimationFrame(progressFrameRef.current);
+        progressFrameRef.current = null;
+      }
+    };
   }, [numberId, navigate, speak]);
 
   // Get coordinates from pointer events
@@ -104,6 +121,21 @@ const NumberTracing = () => {
     };
   }, []);
 
+  // Live coverage of the stroke currently being traced (0 to 1).
+  const computeStrokeProgress = useCallback(() => {
+    if (!tracingData) return 0;
+    const stroke = tracingData.strokes[currentStroke];
+    if (!stroke) return 0;
+    const points = tracePointsRef.current;
+    if (points.length === 0) return 0;
+    const tolerance = DIFFICULTY_SETTINGS[difficulty].tolerance;
+    const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const covered = stroke.points.filter((point) =>
+      points.some((tracePoint) => distance(tracePoint, point) <= tolerance)
+    ).length;
+    return stroke.points.length ? covered / stroke.points.length : 0;
+  }, [tracingData, currentStroke, difficulty]);
+
   // Validate only the stroke currently highlighted in the guide.
   const validateTrace = useCallback(() => {
     if (!canvasEngine || !tracingData) return;
@@ -112,7 +144,7 @@ const NumberTracing = () => {
     const stroke = tracingData.strokes[currentStroke];
     if (!stroke || points.length < 6) return;
 
-    const tolerance = 14;
+    const tolerance = DIFFICULTY_SETTINGS[difficulty].tolerance;
     const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     const covered = stroke.points.filter(point => (
       points.some(tracePoint => distance(tracePoint, point) <= tolerance)
@@ -152,11 +184,16 @@ const NumberTracing = () => {
       attempts: 1,
     });
     speak('You traced the number perfectly!', { rate: 0.9, pitch: 1.2 });
-  }, [canvasEngine, tracingData, currentStroke, markSkill, numberId, speak]);
+  }, [canvasEngine, tracingData, currentStroke, difficulty, markSkill, numberId, speak]);
 
   // Handle pointer events for tracing
   const handlePointerDown = useCallback((e) => {
     e.preventDefault();
+    if (progressFrameRef.current !== null) {
+      cancelAnimationFrame(progressFrameRef.current);
+      progressFrameRef.current = null;
+    }
+    setLiveProgress(0);
     e.currentTarget.setPointerCapture?.(e.pointerId);
     const coords = getCoordinates(e);
     tracePointsRef.current = [{ x: coords.nx, y: coords.ny }];
@@ -170,7 +207,13 @@ const NumberTracing = () => {
     const coords = getCoordinates(e);
     tracePointsRef.current.push({ x: coords.nx, y: coords.ny });
     continueDrawing(coords.x, coords.y);
-  }, [continueDrawing, getCoordinates]);
+    if (mode === 'guided' && progressFrameRef.current === null) {
+      progressFrameRef.current = requestAnimationFrame(() => {
+        progressFrameRef.current = null;
+        setLiveProgress(computeStrokeProgress());
+      });
+    }
+  }, [continueDrawing, getCoordinates, mode, computeStrokeProgress]);
 
   const handlePointerUp = useCallback((e) => {
     e.preventDefault();
@@ -184,9 +227,14 @@ const NumberTracing = () => {
 
   // Reset the tracing
   const handleReset = useCallback(() => {
+    if (progressFrameRef.current !== null) {
+      cancelAnimationFrame(progressFrameRef.current);
+      progressFrameRef.current = null;
+    }
     tracePointsRef.current = [];
     clearCanvas();
     setCurrentStroke(0);
+    setLiveProgress(0);
     setIsComplete(false);
     setTraceResult(null);
     setAccuracy(0);
@@ -406,9 +454,20 @@ const NumberTracing = () => {
         {/* Stroke indicator */}
         {mode === 'guided' && tracingData && (
           <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-soft">
-            <span className="text-sm text-gray-600 dark:text-gray-300">
+            <span className="text-sm text-gray-600 dark:text-gray-300 block">
               Stroke {Math.min(currentStroke + 1, tracingData.strokes.length)} of {tracingData.strokes.length}
             </span>
+            <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden mt-1">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-100"
+                style={{ width: `${Math.round(liveProgress * 100)}%` }}
+                role="progressbar"
+                aria-valuenow={Math.round(liveProgress * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Stroke progress"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -461,6 +520,23 @@ const NumberTracing = () => {
         >
           {isEraser ? <FaPencilAlt /> : <FaEraser />}
         </button>
+
+        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
+        {/* Difficulty */}
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Difficulty</span>
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="bg-gray-100 dark:bg-gray-700 rounded-lg px-2 py-1 text-xs text-gray-700 dark:text-gray-200"
+            aria-label="Tracing difficulty"
+          >
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
 
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
 
