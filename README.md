@@ -50,6 +50,8 @@ CHILD_SESSION_SECRET=<another random 48-byte base64url value>
 
 Child registration, login, credential reset, cloud sync and support requests are handled by `api/child-auth.js`, `api/child-sync.js` and `api/support.js`. Browser calls carry signed device tokens or developer session tokens.
 
+A staged TiDB Cloud migration plan is recorded in [`docs/tidb-migration-plan.md`](docs/tidb-migration-plan.md). Supabase remains active until the TiDB-backed deployment is verified.
+
 ## 🔐 Accounts, Recovery, and Developer Access
 
 - New accounts get a `kid########` Child ID, require a parent email, and are written to Supabase by the server at registration.
