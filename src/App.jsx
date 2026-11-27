@@ -94,6 +94,9 @@ const KaraokePlayer = lazyWithErrorHandler(() => import('./pages/Music/KaraokePl
 const MusicGames = lazyWithErrorHandler(() => import('./pages/Music/MusicGames'));
 const RecordVoice = lazyWithErrorHandler(() => import('./pages/Music/RecordVoice'));
 const Drawing = lazyWithErrorHandler(() => import('./pages/Drawing/Drawing'));
+const PortfolioPage = lazyWithErrorHandler(() => import('./pages/Portfolio/PortfolioPage'));
+const StickersPage = lazyWithErrorHandler(() => import('./pages/Stickers/StickersPage'));
+const RewardsPage = lazyWithErrorHandler(() => import('./pages/Rewards/RewardsPage'));
 const NumberStories = lazyWithErrorHandler(() => import('./pages/Numbers/NumberStories'));
 const NumberStoryReader = lazyWithErrorHandler(() => import('./pages/Numbers/NumberStoryReader'));
 const NumbersMastery = lazyWithErrorHandler(() => import('./pages/Numbers/NumbersMastery'));
@@ -219,6 +222,9 @@ const AppContent = () => {
                     }
                   />
                   <Route path="drawing" element={<Drawing />} />
+                  <Route path="portfolio" element={<PortfolioPage />} />
+                  <Route path="stickers" element={<StickersPage />} />
+                  <Route path="rewards" element={<RewardsPage />} />
                   <Route path="reading/word-builder" element={<WordBuilder />} />
                   <Route path="reading/sight-words" element={<SightWords />} />
                   <Route path="stories" element={<StoriesHome />} />

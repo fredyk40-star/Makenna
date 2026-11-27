@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FaShieldAlt, FaStar, FaBook, FaSignOutAlt, FaLock, FaChild } from 'react-icons/fa';
+import { FaShieldAlt, FaStar, FaBook, FaSignOutAlt, FaLock, FaChild, FaFolderOpen, FaPuzzlePiece, FaGift } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { useChildAccount } from '../../context/ChildAccountContext';
 
@@ -134,6 +134,22 @@ const Profile = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">No favorite numbers yet.</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Collections */}
+      <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-soft">
+        <h2 className="font-baloo text-xl font-bold text-gray-800 dark:text-white mb-4">My collections</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Link to="/portfolio" className="flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200 font-semibold">
+            <FaFolderOpen /> Portfolio
+          </Link>
+          <Link to="/stickers" className="flex items-center justify-center gap-2 p-3 rounded-xl bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-200 font-semibold">
+            <FaPuzzlePiece /> Sticker book
+          </Link>
+          <Link to="/rewards" className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 font-semibold">
+            <FaGift /> Rewards store
+          </Link>
         </div>
       </div>
 

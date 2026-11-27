@@ -5,14 +5,18 @@ import { FaArrowLeft } from 'react-icons/fa';
 import AlphabetReview from '../../components/graduation/AlphabetReview';
 import MasteryDashboard from '../../components/graduation/MasteryDashboard';
 import CertificateGenerator from '../../components/graduation/CertificateGenerator';
+import CertificateShelf from '../../components/certificates/CertificateShelf';
 import AchievementGallery from '../../components/graduation/AchievementGallery';
 import ModuleUnlock from '../../components/graduation/ModuleUnlock';
 import CelebrationScreen from '../../components/graduation/CelebrationScreen';
 import { useMastery } from '../../hooks/useMastery';
+import { useChildAccount } from '../../context/ChildAccountContext';
+import { CertificateService } from '../../services/CertificateService';
 
 const GraduationPage = () => {
   const navigate = useNavigate();
   const { isAllLettersMastered, progressSummary } = useMastery();
+  const { childId, childName } = useChildAccount();
   const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
@@ -80,12 +84,21 @@ const GraduationPage = () => {
             🎓 Your Certificate
           </h2>
           <CertificateGenerator
-            childName="Makenna"
+            childName={childName || 'Learner'}
             stars={progressSummary?.mastered || 0}
             readingLevel="Growing Reader"
+            achievement="successfully completing the Alphabet Adventure"
+            onSave={(spec) => CertificateService.issue(childId, spec)}
           />
         </div>
       )}
+
+      <div className="mt-8">
+        <h2 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white mb-4">
+          📜 My saved certificates
+        </h2>
+        <CertificateShelf />
+      </div>
 
       {/* Module Unlock */}
       <ModuleUnlock

@@ -1,12 +1,13 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  FaUndo, FaRedo, FaEraser, FaPencilAlt, FaTrash, FaDownload
+  FaUndo, FaRedo, FaEraser, FaPencilAlt, FaTrash, FaDownload, FaSave
 } from 'react-icons/fa';
 import { useDrawing } from '../../hooks/useDrawing';
 
-const DrawingPad = () => {
+const DrawingPad = ({ onSave = null }) => {
   const canvasRef = useRef(null);
+  const [saving, setSaving] = useState(false);
   const {
     color,
     colors,
@@ -67,6 +68,19 @@ const DrawingPad = () => {
     }
   };
 
+  const handleSave = async () => {
+    if (!onSave) return;
+    const image = exportDrawing();
+    if (!image || saving) return;
+
+    setSaving(true);
+    try {
+      await onSave({ image });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="w-full h-[70vh] flex flex-col items-center gap-4">
       {/* Toolbar */}
@@ -109,6 +123,11 @@ const DrawingPad = () => {
             </ActionButton>
             <ActionButton onClick={clearCanvas} label="Clear"><FaTrash /></ActionButton>
             {hasDrawing && <ActionButton onClick={handleDownload} label="Download"><FaDownload /></ActionButton>}
+            {hasDrawing && onSave && (
+              <ActionButton onClick={handleSave} disabled={saving} label={saving ? 'Saving' : 'Save to portfolio'}>
+                <FaSave />
+              </ActionButton>
+            )}
         </div>
       </div>
 
@@ -128,12 +147,13 @@ const DrawingPad = () => {
   );
 };
 
-const ActionButton = ({ onClick, label, active = false, children }) => (
+const ActionButton = ({ onClick, label, active = false, disabled = false, children }) => (
     <motion.button
         onClick={onClick}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className={`p-3 rounded-full text-gray-700 dark:text-gray-200 transition-colors ${
+        disabled={disabled}
+        whileHover={disabled ? undefined : { scale: 1.1 }}
+        whileTap={disabled ? undefined : { scale: 0.9 }}
+        className={`p-3 rounded-full text-gray-700 dark:text-gray-200 transition-colors disabled:opacity-50 ${
             active ? 'bg-blue-500/20 text-blue-500' : 'bg-gray-100 dark:bg-gray-700'
         }`}
         aria-label={label}

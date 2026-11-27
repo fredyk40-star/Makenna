@@ -69,8 +69,10 @@ const NavigationCards = memo(() => {
     { id: 8, title: 'Science Lab', emoji: '🔬', color: CARD_COLORS[7], path: ROUTES.SCIENCE_LAB },
     { id: 9, title: 'Ghana Explorer', emoji: '🌍', color: CARD_COLORS[0], path: ROUTES.GHANA_EXPLORER },
     { id: 10, title: 'Games', emoji: '🎮', color: CARD_COLORS[2], path: ROUTES.GAMES },
-    { id: 11, title: 'Rewards', emoji: '🎁', color: CARD_COLORS[4], path: ROUTES.GRADUATION },
+    { id: 11, title: 'Rewards', emoji: '🎁', color: CARD_COLORS[4], path: ROUTES.REWARDS },
     { id: 12, title: 'Parent Zone', emoji: '👨‍👧', color: CARD_COLORS[6], path: ROUTES.PARENT_ZONE },
+    { id: 13, title: 'Portfolio', emoji: '🖼️', color: CARD_COLORS[1], path: ROUTES.PORTFOLIO },
+    { id: 14, title: 'Sticker Book', emoji: '🧩', color: CARD_COLORS[5], path: ROUTES.STICKERS },
   ];
 
   return (

@@ -30,6 +30,9 @@ export const ROUTES = {
   ALPHABET_GAMES: '/games/alphabet',
   ANIMAL_SAFARI: '/animal-safari',
   DRAWING: '/drawing',
+  PORTFOLIO: '/portfolio',
+  STICKERS: '/stickers',
+  REWARDS: '/rewards',
   // Reading Routes
   WORD_BUILDER: '/reading/word-builder',
   SIGHT_WORDS: '/reading/sight-words',

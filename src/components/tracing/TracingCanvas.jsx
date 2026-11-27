@@ -8,7 +8,7 @@ import StrokeGuide from './StrokeGuide';
 import StrokeAnimator from './StrokeAnimator';
 import TraceValidator from './TraceValidator';
 import CelebrationOverlay from './CelebrationOverlay';
-import { FaUndo, FaRedo, FaEraser, FaPencilAlt } from 'react-icons/fa';
+import { FaUndo, FaRedo, FaEraser, FaPencilAlt, FaSave } from 'react-icons/fa';
 
 const TracingCanvas = ({
   letter,
@@ -16,6 +16,7 @@ const TracingCanvas = ({
   mode = 'trace', // 'trace' or 'practice'
   onComplete = null,
   onProgress = null,
+  onSave = null,
   className = ''
 }) => {
   const canvasRef = useRef(null);
@@ -49,6 +50,7 @@ const TracingCanvas = ({
     isEraser,
     color,
     colors,
+    hasDrawing,
     startDrawing,
     continueDrawing,
     endDrawing,
@@ -109,13 +111,29 @@ const TracingCanvas = ({
     if (mode === 'trace' && onProgress) onProgress(liveProgress);
   }, [liveProgress, mode, onProgress]);
 
+  const captureAndSave = useCallback((extra = {}) => {
+    if (!onSave || !canvasRef.current?.toDataURL) return;
+    const image = canvasRef.current.toDataURL('image/png');
+    if (!image) return;
+
+    onSave({
+      image,
+      guide: mode === 'trace' && guideData ? guideData : [],
+      letter,
+      caseType,
+      accuracy: traceResult?.accuracy || 0,
+      ...extra,
+    });
+  }, [onSave, mode, guideData, letter, caseType, traceResult]);
+
   useEffect(() => {
     if (traceResult?.valid && !completedRef.current) {
       completedRef.current = true;
       setShowCelebration(true);
       if (onComplete) onComplete(traceResult);
+      if (onSave) captureAndSave({ accuracy: traceResult.accuracy });
     }
-  }, [traceResult, onComplete]);
+  }, [traceResult, onComplete, onSave, captureAndSave]);
 
   const handlePointerUp = useCallback((e) => {
     e.preventDefault();
@@ -319,6 +337,16 @@ const TracingCanvas = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
+          {onSave && ((mode === 'practice' && hasDrawing) || (mode === 'trace' && traceResult)) && (
+            <button
+              type="button"
+              onClick={() => captureAndSave({ manual: true })}
+              className="p-2 rounded-xl transition-colors bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30"
+              aria-label="Save to portfolio"
+            >
+              <FaSave className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

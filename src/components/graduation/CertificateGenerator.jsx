@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaDownload, FaPrint } from 'react-icons/fa';
+import { FaBookmark, FaDownload, FaPrint } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 
 const CertificateGenerator = ({
@@ -8,12 +8,16 @@ const CertificateGenerator = ({
   date = new Date(),
   stars = 0,
   readingLevel = 'Emerging Reader',
+  achievement = 'successfully completing the Alphabet Adventure',
+  onSave = null,
   className = ''
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const certificateRef = useRef(null);
 
-  const formatDate = (date) => {
+  const formatDate = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Today';
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -54,10 +58,24 @@ const CertificateGenerator = ({
     window.print();
   };
 
+  const handleSave = () => {
+    if (onSave) {
+      const issuedAt = new Date(date);
+      onSave({
+        title: 'Alphabet Adventure Graduate',
+        childName,
+        date: Number.isNaN(issuedAt.getTime()) ? new Date().toISOString() : issuedAt.toISOString(),
+        stars,
+        readingLevel,
+        achievement,
+      });
+    }
+  };
+
   return (
     <div className={`${className}`}>
       {/* Certificate Preview */}
-      <div className="bg-white rounded-2xl shadow-soft overflow-hidden p-8">
+      <div className="certificate-print bg-white rounded-2xl shadow-soft overflow-hidden p-8">
         <div
           ref={certificateRef}
           className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-12"
@@ -82,7 +100,7 @@ const CertificateGenerator = ({
                 {childName}
               </h2>
               <p className="text-lg text-gray-600 dark:text-gray-300">
-                for successfully completing the Alphabet Adventure!
+                for {achievement}!
               </p>
             </div>
 
@@ -150,6 +168,17 @@ const CertificateGenerator = ({
           <FaPrint />
           Print
         </motion.button>
+        {onSave && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleSave}
+            className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors"
+          >
+            <FaBookmark />
+            Save to my certificates
+          </motion.button>
+        )}
       </div>
 
       {/* Print styles */}

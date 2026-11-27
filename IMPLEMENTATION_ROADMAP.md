@@ -54,10 +54,10 @@ Legend: `[ ]` planned · `[~]` in progress · `[x]` done
 - [x] Privacy disclosure and data-deletion flow
 - [x] Session timeout wired to actual service
 
-## Phase 7 — Portfolio, certificates & sticker book `[ ]`
-- [ ] Saved tracing/drawing portfolio with before/after view
-- [ ] Achievement certificates (canvas/print)
-- [ ] Sticker book tied to the unified reward catalog
+## Phase 7 — Portfolio, certificates & sticker book `[x]`
+- [x] Saved tracing/drawing portfolio with before/after view
+- [x] Achievement certificates (canvas/print)
+- [x] Sticker book tied to the unified reward catalog
 
 ## Phase 8 — Differentiators `[ ]`
 - [ ] Curriculum-grounded, parent-controlled AI tutor

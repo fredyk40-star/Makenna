@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaArrowRight, FaBook, FaPen } from 'react-icons/fa';
@@ -6,6 +6,9 @@ import TracingCanvas from '../../components/tracing/TracingCanvas';
 import { ALPHABET_DATA } from '../../data/alphabetData';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
 import { useProfiles } from '../../context/ProfileContext';
+import { useChildAccount } from '../../context/ChildAccountContext';
+import { PortfolioService } from '../../services/PortfolioService';
+import { createThumbnail } from '../../utils/imageStorage';
 
 const TracingPage = () => {
   const { letterId, mode = 'trace' } = useParams();
@@ -16,6 +19,7 @@ const TracingPage = () => {
   const [traceProgress, setTraceProgress] = useState(0);
   const { markOpened, addTimeSpent } = useAlphabetProgress();
   const { getProfileData, setProfileData } = useProfiles();
+  const { childId } = useChildAccount();
 
   useEffect(() => {
     const foundLetter = ALPHABET_DATA.find(l => l.id === letterId);
@@ -35,6 +39,20 @@ const TracingPage = () => {
       }
     };
   }, [letterId, navigate, markOpened, addTimeSpent]);
+
+  const handleSave = useCallback(async ({ image, guide, letter: tracedLetter, caseType, accuracy }) => {
+    if (!childId || !image) return;
+    const thumbnail = await createThumbnail(image);
+    PortfolioService.save(childId, {
+      kind: 'trace',
+      title: `Letter ${tracedLetter || letter?.letter || ''} (${caseType || selectedCase})`.trim(),
+      image: thumbnail,
+      guide,
+      letter: tracedLetter || letter?.letter || null,
+      caseType: caseType || selectedCase,
+      accuracy,
+    });
+  }, [childId, letter, selectedCase]);
 
   if (!letter) {
     return (
@@ -166,6 +184,7 @@ const TracingPage = () => {
           mode={selectedMode}
           onComplete={handleComplete}
           onProgress={handleProgress}
+          onSave={handleSave}
         />
       </div>
 

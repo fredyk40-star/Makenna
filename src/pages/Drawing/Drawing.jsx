@@ -1,29 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaPaintBrush, FaStar, FaFolder, FaPalette } from 'react-icons/fa';
+import { FaArrowLeft, FaFolder, FaPaintBrush, FaStar, FaTrash } from 'react-icons/fa';
 import DrawingPad from './DrawingPad';
+import { useChildAccount } from '../../context/ChildAccountContext';
+import { PortfolioService } from '../../services/PortfolioService';
+import { createThumbnail } from '../../utils/imageStorage';
+
+const PROMPTS = ['Draw a rainbow', 'Sketch your pet', 'Color the sun', 'Draw yourself!'];
 
 const Drawing = () => {
+  const { childId } = useChildAccount();
   const [savedDrawings, setSavedDrawings] = useState([]);
   const [showGallery, setShowGallery] = useState(false);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('drawing_gallery') || '[]');
-    setSavedDrawings(stored);
-  }, []);
+    const refresh = () => setSavedDrawings(PortfolioService.listByKind(childId, 'drawing'));
+    refresh();
+    return PortfolioService.subscribe(refresh);
+  }, [childId]);
 
-  const saveDrawing = () => {
-    const newDrawing = {
-      id: Date.now(),
-      name: `My Drawing ${(savedDrawings.length + 1)}`,
-      date: new Date().toISOString(),
-      bg: `hsl(${Math.random() * 360}, 70%, 85%)`
-    };
-    const updated = [newDrawing, ...savedDrawings].slice(0, 12);
-    setSavedDrawings(updated);
-    localStorage.setItem('drawing_gallery', JSON.stringify(updated));
-  };
+  const saveDrawing = useCallback(async ({ image }) => {
+    if (!childId || !image) return;
+    const thumbnail = await createThumbnail(image);
+    PortfolioService.save(childId, {
+      kind: 'drawing',
+      title: `My Drawing ${savedDrawings.length + 1}`,
+      image: thumbnail,
+    });
+  }, [childId, savedDrawings.length]);
+
+  const handleDelete = useCallback((entryId) => {
+    if (window.confirm('Delete this drawing?')) {
+      PortfolioService.remove(childId, entryId);
+    }
+  }, [childId]);
 
   return (
     <motion.div
@@ -33,7 +44,7 @@ const Drawing = () => {
     >
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link to="/games" className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700">
+          <Link to="/games" className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Back to games">
             <FaArrowLeft className="text-xl" />
           </Link>
           <h1 className="font-baloo text-3xl md:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -42,7 +53,6 @@ const Drawing = () => {
           </h1>
         </div>
 
-        {/* Stats Bar */}
         <div className="flex gap-3 flex-wrap">
           <div className="bg-purple-100 dark:bg-purple-900/30 px-4 py-2 rounded-xl flex items-center gap-2">
             <FaFolder className="text-purple-600" />
@@ -52,85 +62,122 @@ const Drawing = () => {
             <FaStar className="text-pink-600" />
             <span className="font-semibold">Creative!</span>
           </div>
+          <Link
+            to="/portfolio"
+            className="px-4 py-2 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-semibold shadow-soft"
+          >
+            My portfolio
+          </Link>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Drawing Canvas */}
         <div className="lg:col-span-2">
           <DrawingPad onSave={saveDrawing} />
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
-          {/* Drawing Prompts */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-soft">
-            <h3 className="font-baloo text-lg font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-              <FaPalette />
-              Today's Prompts
+            <h3 className="font-baloo text-lg font-bold text-gray-800 dark:text-white mb-3">
+              Today&apos;s Prompts
             </h3>
             <div className="space-y-2">
-              {['Draw a rainbow', 'Sketch your pet', 'Color the sun', 'Draw yourself!'].map((prompt, idx) => (
-                <div key={idx} className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-sm cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-800/40 transition-colors">
+              {PROMPTS.map((prompt) => (
+                <div key={prompt} className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-sm">
                   ✏️ {prompt}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Gallery Preview */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-soft">
-            <h3 className="font-baloo text-lg font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-              <FaFolder />
-              Your Gallery
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-baloo text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <FaFolder />
+                Your Gallery
+              </h3>
+              {savedDrawings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowGallery(true)}
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400"
+                >
+                  View all
+                </button>
+              )}
+            </div>
             {savedDrawings.length > 0 ? (
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {savedDrawings.slice(0, 6).map((drawing) => (
-                  <div
+                  <img
                     key={drawing.id}
-                    className="aspect-square rounded-lg flex items-center justify-center text-2xl"
-                    style={{ background: drawing.bg }}
-                  >
-                    🎨
-                  </div>
+                    src={drawing.image}
+                    alt={drawing.title}
+                    className="aspect-square rounded-lg object-cover bg-purple-100 dark:bg-purple-900/30"
+                  />
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">Your drawings will appear here!</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Save your drawing with the 💾 button and it will appear here!
+              </p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Full Gallery Modal */}
       {showGallery && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowGallery(false)}
-        >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto" role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") e.currentTarget.click(); }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close drawing gallery"
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowGallery(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="My drawing gallery"
+            className="relative z-10 bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-baloo text-2xl font-bold">My Drawing Gallery</h3>
-              <button onClick={() => setShowGallery(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+              <h3 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white">My Drawing Gallery</h3>
+              <button
+                type="button"
+                onClick={() => setShowGallery(false)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+                aria-label="Close gallery"
+              >
+                ✕
+              </button>
             </div>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {savedDrawings.map((drawing) => (
-                <motion.div
-                  key={drawing.id}
-                  whileHover={{ scale: 1.05 }}
-                  className="aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer shadow-soft"
-                  style={{ background: drawing.bg }}
-                >
-                  <span className="text-3xl mb-1">🎨</span>
-                  <span className="text-xs font-medium">{drawing.name}</span>
-                </motion.div>
+                <div key={drawing.id} className="rounded-xl bg-gray-50 dark:bg-gray-900 p-2 shadow-soft">
+                  <img src={drawing.image} alt={drawing.title} className="w-full aspect-square object-cover rounded-lg" />
+                  <div className="flex items-center justify-between mt-2 gap-1">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{drawing.title}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(drawing.id)}
+                      className="p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
+                      aria-label={`Delete ${drawing.title}`}
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
-        </motion.div>
+            <div className="mt-4 text-center">
+              <Link to="/portfolio" className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                Open full portfolio →
+              </Link>
+            </div>
+          </motion.div>
+        </div>
       )}
     </motion.div>
   );
