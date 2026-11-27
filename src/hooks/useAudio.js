@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import audioService from '../services/AudioService';
 import AccessibilityService from '../services/AccessibilityService';
 
@@ -17,6 +17,7 @@ export const useAudio = (options = {}) => {
   const [currentTime, ] = useState(0);
   const [duration, ] = useState(0);
   const [error, setError] = useState(null);
+  const speechRunRef = useRef(0);
 
   useEffect(() => {
     // Update playing state from service
@@ -38,6 +39,7 @@ export const useAudio = (options = {}) => {
   }, []);
 
   const speak = useCallback(async (text, options = {}) => {
+    const runId = ++speechRunRef.current;
     setIsLoading(true);
     setError(null);
     AccessibilityService.announceCaption(text);
@@ -46,31 +48,41 @@ export const useAudio = (options = {}) => {
       : volume;
 
     try {
-      const result = await audioService.speak(text, {
+      const speech = audioService.speak(text, {
         rate: options.rate || 0.9,
         pitch: options.pitch || 1.1,
         volume: safeVolume,
         onEnd: () => {
-          setIsPlaying(false);
-          if (onEnd) onEnd();
+          if (speechRunRef.current === runId) {
+            setIsPlaying(false);
+            if (onEnd) onEnd();
+          }
         },
         onStart: () => {
-          setIsPlaying(true);
-          if (onStart) onStart();
+          if (speechRunRef.current === runId) {
+            setIsPlaying(true);
+            if (onStart) onStart();
+          }
         },
         onError: (err) => {
-          setError(err);
-          setIsPlaying(false);
-          if (onError) onError(err);
+          if (speechRunRef.current === runId) {
+            setError(err);
+            setIsPlaying(false);
+            if (onError) onError(err);
+          }
         }
       });
 
       setIsLoading(false);
+      const result = await speech;
+      if (speechRunRef.current === runId) setIsPlaying(false);
       return result;
     } catch (err) {
-      setError(err);
-      setIsLoading(false);
-      if (onError) onError(err);
+      if (speechRunRef.current === runId) {
+        setError(err);
+        setIsLoading(false);
+        if (onError) onError(err);
+      }
       return false;
     }
   }, [volume, onEnd, onStart, onError]);
@@ -80,6 +92,7 @@ export const useAudio = (options = {}) => {
       return speak(options.text || source, options);
     }
 
+    const runId = ++speechRunRef.current;
     setIsLoading(true);
     setError(null);
     const safeVolume = AccessibilityService.getSettings().soundSensitive
@@ -92,18 +105,24 @@ export const useAudio = (options = {}) => {
         volume: safeVolume,
         playbackRate,
         onEnd: () => {
-          setIsPlaying(false);
-          if (onEnd) onEnd();
+          if (speechRunRef.current === runId) {
+            setIsPlaying(false);
+            if (onEnd) onEnd();
+          }
         },
         onStart: () => {
-          setIsPlaying(true);
-          setIsPaused(false);
-          if (onStart) onStart();
+          if (speechRunRef.current === runId) {
+            setIsPlaying(true);
+            setIsPaused(false);
+            if (onStart) onStart();
+          }
         },
         onError: (err) => {
-          setError(err);
-          setIsPlaying(false);
-          if (onError) onError(err);
+          if (speechRunRef.current === runId) {
+            setError(err);
+            setIsPlaying(false);
+            if (onError) onError(err);
+          }
         }
       });
 
@@ -133,6 +152,7 @@ export const useAudio = (options = {}) => {
   }, []);
 
   const stop = useCallback(() => {
+    speechRunRef.current += 1;
     audioService.stop();
     setIsPlaying(false);
     setIsPaused(false);

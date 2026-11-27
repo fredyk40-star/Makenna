@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import readingEngine from '../services/ReadingEngine';
 import { useAudio } from './useAudio';
 
@@ -10,7 +10,8 @@ export const useReading = () => {
   const [isReading, setIsReading] = useState(false);
   const [highlightedWord, setHighlightedWord] = useState('');
 
-  const { speak, isPlaying } = useAudio();
+  const { speak, stop, isPlaying } = useAudio();
+  const readingRunRef = useRef(0);
 
   useEffect(() => {
     // Generate practice sentences
@@ -18,56 +19,70 @@ export const useReading = () => {
     setPracticeSentences(sentences);
   }, []);
 
+  const cancelReading = useCallback(() => {
+    readingRunRef.current += 1;
+    stop();
+    setIsReading(false);
+    setHighlightedWord('');
+  }, [stop]);
+
+  useEffect(() => () => {
+    readingRunRef.current += 1;
+    stop();
+  }, [stop]);
+
   const startReading = useCallback((sentenceIndex = 0) => {
     if (practiceSentences.length === 0) return;
 
-    setIsReading(true);
+    cancelReading();
     setCurrentIndex(sentenceIndex);
     setCurrentSentence(practiceSentences[sentenceIndex]);
-    setHighlightedWord('');
-  }, [practiceSentences]);
+  }, [cancelReading, practiceSentences]);
 
   const nextSentence = useCallback(() => {
     if (currentIndex < practiceSentences.length - 1) {
+      cancelReading();
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
       setCurrentSentence(practiceSentences[nextIndex]);
-      setHighlightedWord('');
       return true;
     }
     return false;
-  }, [currentIndex, practiceSentences]);
+  }, [cancelReading, currentIndex, practiceSentences]);
 
   const previousSentence = useCallback(() => {
     if (currentIndex > 0) {
+      cancelReading();
       const prevIndex = currentIndex - 1;
       setCurrentIndex(prevIndex);
       setCurrentSentence(practiceSentences[prevIndex]);
-      setHighlightedWord('');
       return true;
     }
     return false;
-  }, [currentIndex, practiceSentences]);
+  }, [cancelReading, currentIndex, practiceSentences]);
 
   const readSentence = useCallback(async (sentence) => {
     if (!sentence) return;
 
+    const runId = ++readingRunRef.current;
     const words = sentence.sentence.split(' ');
     setHighlightedWord('');
+    setIsReading(true);
 
-    // Read each word with highlighting
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      setHighlightedWord(word);
-      await speak(word, {
-        rate: 0.7,
-        pitch: 1.1
-      });
-      // Wait a bit between words
-      await new Promise(resolve => setTimeout(resolve, 300));
+    try {
+      for (const word of words) {
+        if (readingRunRef.current !== runId) return;
+        setHighlightedWord(word);
+        const spoken = await speak(word, { rate: 0.7, pitch: 1.1 });
+        if (!spoken || readingRunRef.current !== runId) return;
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    } finally {
+      if (readingRunRef.current === runId) {
+        setHighlightedWord('');
+        setIsReading(false);
+      }
     }
-
-    setHighlightedWord('');
   }, [speak]);
 
   const readWord = useCallback(async (word) => {
@@ -83,18 +98,13 @@ export const useReading = () => {
     if (!data) return;
 
     // Read family sound
-    await speak(data.sound, {
-      rate: 0.7,
-      pitch: 1.1
-    });
+    const soundSpoken = await speak(data.sound, { rate: 0.7, pitch: 1.1 });
+    if (!soundSpoken) return;
 
     // Read examples
     for (const word of data.words.slice(0, 3)) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      await speak(word, {
-        rate: 0.7,
-        pitch: 1.1
-      });
+      if (!await speak(word, { rate: 0.7, pitch: 1.1 })) return;
     }
   }, [speak]);
 
@@ -112,11 +122,10 @@ export const useReading = () => {
   }, [currentIndex]);
 
   const resetReading = useCallback(() => {
-    setIsReading(false);
+    cancelReading();
     setCurrentSentence(null);
     setCurrentIndex(0);
-    setHighlightedWord('');
-  }, []);
+  }, [cancelReading]);
 
   const getWordFamilyExamples = useCallback((family) => {
     return readingEngine.getWordFamily(family);
@@ -134,6 +143,7 @@ export const useReading = () => {
     isReading,
     highlightedWord,
     startReading,
+    stopReading: cancelReading,
     nextSentence,
     previousSentence,
     readSentence,

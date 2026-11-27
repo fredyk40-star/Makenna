@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ALPHABET_DATA } from '../data/alphabetData';
 import alphabetSpeech from '../services/AlphabetSpeechService';
 
@@ -10,15 +10,35 @@ export const usePhonics = () => {
   const [currentWord, setCurrentWord] = useState(null);
   const [listeningMode, setListeningMode] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const runRef = useRef(0);
 
   const run = useCallback(async (task) => {
+    const runId = ++runRef.current;
     setIsPlaying(true);
     try {
-      return await task();
+      const result = await task();
+      return runRef.current === runId ? result : false;
     } finally {
-      setIsPlaying(false);
+      if (runRef.current === runId) setIsPlaying(false);
     }
   }, []);
+
+  const stop = useCallback(() => {
+    runRef.current += 1;
+    alphabetSpeech.cancel();
+    setIsPlaying(false);
+  }, []);
+
+  useEffect(() => () => {
+    runRef.current += 1;
+    alphabetSpeech.cancel();
+  }, []);
+
+  const startListeningMode = useCallback(() => setListeningMode(true), []);
+  const stopListeningMode = useCallback(() => {
+    stop();
+    setListeningMode(false);
+  }, [stop]);
 
   /** Say the letter name. */
   const playLetterName = useCallback(async (letterId) => {
@@ -94,11 +114,6 @@ export const usePhonics = () => {
     ], { gap: 420 }));
   }, [run]);
 
-  const stop = useCallback(() => {
-    alphabetSpeech.cancel();
-    setIsPlaying(false);
-  }, []);
-
   const getPhonicsData = useCallback((letterId) => {
     const letter = findLetter(letterId);
     if (!letter) return null;
@@ -127,8 +142,8 @@ export const usePhonics = () => {
     playNormal,
     playBeginningSounds,
     stop,
-    startListeningMode: () => setListeningMode(true),
-    stopListeningMode: () => setListeningMode(false),
+    startListeningMode,
+    stopListeningMode,
     getPhonicsData,
     currentLetter,
     currentWord,

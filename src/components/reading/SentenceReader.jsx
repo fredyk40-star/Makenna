@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaPlay, FaStop, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { useReading } from '../../hooks/useReading';
@@ -14,6 +14,7 @@ const SentenceReader = ({
     highlightedWord,
     isReading,
     startReading,
+    stopReading,
     nextSentence,
     previousSentence,
     readSentence,
@@ -23,8 +24,6 @@ const SentenceReader = ({
     isFirstSentence
   } = useReading();
 
-  const [, ] = useState(false);
-
   useEffect(() => {
     if (sentences.length > 0) {
       // Set the practice sentences
@@ -33,6 +32,11 @@ const SentenceReader = ({
   }, [sentences]);
 
   const handleReadSentence = async () => {
+    if (isReading) {
+      stopReading();
+      return;
+    }
+
     if (currentSentence) {
       await readSentence(currentSentence);
     }
@@ -137,7 +141,6 @@ const SentenceReader = ({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleReadSentence}
-          disabled={isReading}
           className={`p-3 rounded-xl transition-colors ${
             isReading
               ? 'bg-red-500 text-white'

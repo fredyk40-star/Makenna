@@ -64,4 +64,25 @@ describe('PhonicsPlayer', () => {
 
     expect(mocks.stop).toHaveBeenCalled();
   });
+
+  it('keeps the stop control enabled while speech is playing', async () => {
+    let finishPlayback;
+    mocks.playLetterName.mockImplementation(() => {
+      mocks.isPlaying = true;
+      return new Promise(resolve => {
+        finishPlayback = resolve;
+      });
+    });
+
+    const user = userEvent.setup();
+    render(<PhonicsPlayer letterId="a" showWaveform={false} />);
+    await user.click(screen.getByRole('button', { name: 'Play Letter Name' }));
+
+    const stopButton = screen.getByRole('button', { name: 'Stop audio' });
+    expect(stopButton).toBeEnabled();
+    await user.click(stopButton);
+    expect(mocks.stop).toHaveBeenCalled();
+
+    finishPlayback(false);
+  });
 });

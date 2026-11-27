@@ -55,7 +55,10 @@ const ListeningActivity = ({
 
   useEffect(() => {
     generateQuestion();
-    return clearTimers;
+    return () => {
+      clearTimers();
+      alphabetSpeech.cancel();
+    };
   }, [letterId, generateQuestion, clearTimers]);
 
   const handleLetterSelect = useCallback((letter) => {
@@ -109,6 +112,7 @@ const ListeningActivity = ({
 
   const handleReset = useCallback(() => {
     clearTimers();
+    alphabetSpeech.cancel();
     setScore(0);
     setTotalAttempts(0);
     setActivityComplete(false);

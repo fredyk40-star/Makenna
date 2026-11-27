@@ -14,7 +14,9 @@ export class VoiceGuideService {
   }
 
   constructor() {
-    this.synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+    this.synth = typeof window !== 'undefined'
+      ? window.speechSynthesis || window.webkitSpeechSynthesis
+      : null;
     this.utterance = null;
     this._muted = false;
     this._rate = 0.9;
@@ -28,6 +30,9 @@ export class VoiceGuideService {
     this._queued = [];
     this._speaking = false;
     this._initialized = false;
+    this._speechGeneration = 0;
+    this._repeatGeneration = 0;
+    this._repeatTimer = null;
   }
 
   /**
@@ -40,7 +45,7 @@ export class VoiceGuideService {
     }
     // Load voices
     const loadVoices = () => {
-      const voices = this.synth.getVoices();
+      const voices = typeof this.synth.getVoices === 'function' ? this.synth.getVoices() : [];
       if (voices.length > 0) {
         // Prefer a friendly female voice
         this._voice = voices.find(v => 
@@ -59,78 +64,141 @@ export class VoiceGuideService {
    * Speak text with optional callback
    */
   speak(text, options = {}) {
-    if (!this.synth || this._muted || !text) return;
+    if (!this.synth || this._muted || !String(text || '').trim()) return false;
+    this._cancelRepeat();
+    return this._startSpeech(text, options);
+  }
 
+  _startSpeech(text, options = {}, processQueue = true) {
     const {
       rate = this._rate,
       pitch = this._pitch,
       volume = this._volume,
-      onEnd,
-      onStart,
-      onError,
     } = options;
 
-    // Cancel any current speech
+    const generation = ++this._speechGeneration;
+    this.utterance = null;
+    this._speaking = false;
     this.synth.cancel();
 
-    const SpeechSynthesisUtterance = window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance;
-    this.utterance = new SpeechSynthesisUtterance(text);
-    this.utterance.rate = rate;
-    this.utterance.pitch = pitch;
-    this.utterance.volume = volume;
-    if (this._voice) this.utterance.voice = this._voice;
-    this.utterance.lang = 'en-US';
+    const Utterance = window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance;
+    if (!Utterance) {
+      const error = new Error('Speech synthesis is not supported');
+      reportSpeechError(error);
+      options.onError?.(error);
+      return false;
+    }
 
-    this.utterance.onend = () => {
+    const utterance = new Utterance(text);
+    utterance.rate = rate;
+    utterance.pitch = pitch;
+    utterance.volume = volume;
+    if (this._voice) utterance.voice = this._voice;
+    utterance.lang = 'en-US';
+    this.utterance = utterance;
+
+    const isCurrent = () =>
+      generation === this._speechGeneration && this.utterance === utterance;
+
+    utterance.onend = () => {
+      if (!isCurrent()) return;
       this._speaking = false;
-      if (onEnd) onEnd();
-      if (this._onEnd) this._onEnd();
-      this._processQueue();
+      this.utterance = null;
+      try {
+        options.onEnd?.();
+        this._onEnd?.();
+      } finally {
+        if (processQueue && generation === this._speechGeneration) this._processQueue();
+      }
     };
 
-    this.utterance.onstart = () => {
+    utterance.onstart = () => {
+      if (!isCurrent()) return;
       this._speaking = true;
-      if (onStart) onStart();
-      if (this._onStart) this._onStart();
+      options.onStart?.();
+      this._onStart?.();
     };
 
-     this.utterance.onerror = (e) => {
-       this._speaking = false;
-       reportSpeechError(e);
-       if (!isBenignSpeechError(e)) {
-         if (onError) onError(e);
-         if (this._onError) this._onError(e);
-       }
-       this._processQueue();
-     };
+    utterance.onerror = (errorEvent) => {
+      if (!isCurrent()) return;
+      this._speaking = false;
+      this.utterance = null;
+      reportSpeechError(errorEvent);
+      try {
+        if (!isBenignSpeechError(errorEvent)) {
+          options.onError?.(errorEvent);
+          this._onError?.(errorEvent);
+        }
+      } finally {
+        if (processQueue && generation === this._speechGeneration) this._processQueue();
+      }
+    };
 
-    this.synth.speak(this.utterance);
+    try {
+      this.synth.speak(utterance);
+      return true;
+    } catch (error) {
+      if (isCurrent()) {
+        this._speaking = false;
+        this.utterance = null;
+      }
+      reportSpeechError(error);
+      options.onError?.(error);
+      if (processQueue && generation === this._speechGeneration) this._processQueue();
+      return false;
+    }
   }
 
   /**
    * Speak text multiple times (for celebration announcements)
    */
   speakRepeated(text, times = 3, options = {}) {
+    const repeatCount = Math.floor(Number(times));
+    if (!this.synth || this._muted || !String(text || '').trim() || repeatCount < 1) return false;
+
+    this._cancelRepeat();
+    const repeatGeneration = this._repeatGeneration;
     let count = 0;
     const speakNext = () => {
-      if (count < times) {
-        count++;
-        this.speak(text, {
+      if (repeatGeneration !== this._repeatGeneration) return;
+      count += 1;
+      this._startSpeech(text, {
           ...options,
           onEnd: () => {
-            if (count < times) {
-              setTimeout(speakNext, 500);
+            if (repeatGeneration !== this._repeatGeneration) return;
+            if (count < repeatCount) {
+              this._repeatTimer = setTimeout(() => {
+                this._repeatTimer = null;
+                speakNext();
+              }, 500);
             } else {
-              if (options.onEnd) options.onEnd();
+              try {
+                options.onEnd?.();
+              } finally {
+                if (repeatGeneration === this._repeatGeneration) this._processQueue();
+              }
             }
           },
           onError: (e) => {
-            if (options.onError) options.onError(e);
+            this._cancelRepeat();
+            try {
+              options.onError?.(e);
+            } finally {
+              this._processQueue();
+            }
           },
-        });
-      }
+        }, false);
     };
     speakNext();
+    return true;
+  }
+
+  _cancelRepeat() {
+    this._repeatGeneration += 1;
+    if (this._repeatTimer !== null) {
+      clearTimeout(this._repeatTimer);
+      this._repeatTimer = null;
+    }
   }
 
   /**
@@ -138,7 +206,7 @@ export class VoiceGuideService {
    */
   queue(text, options = {}) {
     this._queued.push({ text, options });
-    if (!this._speaking) {
+    if (!this.isSpeaking()) {
       this._processQueue();
     }
   }
@@ -147,7 +215,7 @@ export class VoiceGuideService {
    * Process queued messages
    */
   _processQueue() {
-    if (this._queued.length > 0 && !this._speaking) {
+    if (this._queued.length > 0 && !this.isSpeaking()) {
       const next = this._queued.shift();
       this.speak(next.text, next.options);
     }
@@ -175,6 +243,9 @@ export class VoiceGuideService {
    * Cancel all speech
    */
   cancel() {
+    this._speechGeneration += 1;
+    this._cancelRepeat();
+    this.utterance = null;
     if (this.synth) {
       this.synth.cancel();
     }
@@ -216,7 +287,9 @@ export class VoiceGuideService {
    * Check if currently speaking
    */
   isSpeaking() {
-    return this._speaking || (this.synth && this.synth.speaking);
+    return this._speaking || this._repeatTimer !== null || Boolean(
+      this.synth && (this.synth.speaking || this.synth.pending || this.synth.paused),
+    );
   }
 
   /**
@@ -236,20 +309,20 @@ export class VoiceGuideService {
   /**
    * Greet a child by name
    */
-  greetChild(name) {
+  greetChild(name, options = {}) {
     const greetings = [
       `Hello ${name}! Welcome to Makenna Learning Lab!`,
       `Hi ${name}! Are you ready to learn something fun today?`,
       `Hey ${name}! Let's have some fun learning!`,
     ];
     const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-    this.speak(greeting);
+    return this.speak(greeting, options);
   }
 
   /**
    * Encourage a child
    */
-  encourage() {
+  encourage(options = {}) {
     const messages = [
       'Great job! Keep going!',
       'You are doing amazing!',
@@ -260,21 +333,21 @@ export class VoiceGuideService {
       'Brilliant! Well done!',
     ];
     const message = messages[Math.floor(Math.random() * messages.length)];
-    this.speak(message);
+    return this.speak(message, options);
   }
 
   /**
    * Play error sound/voice
    */
-  playError() {
-    this.speak('Oops! Let me try again.', { pitch: 0.8, rate: 0.8 });
+  playError(options = {}) {
+    return this.speak('Oops! Let me try again.', { pitch: 0.8, rate: 0.8, ...options });
   }
 
   /**
    * Play success sound/voice
    */
-  playSuccess() {
-    this.speak('Yay! That is correct!', { pitch: 1.2, rate: 1.1 });
+  playSuccess(options = {}) {
+    return this.speak('Yay! That is correct!', { pitch: 1.2, rate: 1.1, ...options });
   }
 
   /**

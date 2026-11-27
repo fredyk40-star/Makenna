@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FaPlay, FaStop } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';
@@ -12,6 +12,7 @@ const BlendingPlayer = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const { speak, stop } = useAudio();
+  const runRef = useRef(0);
 
   useEffect(() => {
     if (word) {
@@ -19,7 +20,11 @@ const BlendingPlayer = ({
       setSequence(seq);
       setCurrentStep(0);
     }
-  }, [word]);
+    return () => {
+      runRef.current += 1;
+      stop();
+    };
+  }, [stop, word]);
 
   const generateBlendingSequence = (word) => {
     const letters = word.toLowerCase().split('');
@@ -40,37 +45,45 @@ const BlendingPlayer = ({
   const playBlend = async () => {
     if (!sequence.length || isPlaying) return;
 
+    const runId = ++runRef.current;
     setIsPlaying(true);
     setCurrentStep(0);
+    let completed = true;
 
     for (let i = 0; i < sequence.length; i++) {
+      if (runRef.current !== runId) return;
       setCurrentStep(i);
 
       // Speak each letter separately for blending
       if (i < sequence[i].letters.length) {
-        await speak(sequence[i].letters[i], {
-          rate: 0.6,
-          pitch: 1.1
-        });
+        const spoken = await speak(sequence[i].letters[i], { rate: 0.6, pitch: 1.1 });
+        if (!spoken || runRef.current !== runId) {
+          completed = false;
+          break;
+        }
         await new Promise(resolve => setTimeout(resolve, 300));
+        if (runRef.current !== runId) return;
       }
 
       // Then speak the partial word
       if (i > 0) {
-        await speak(sequence[i].word, {
-          rate: 0.7,
-          pitch: 1.1
-        });
+        const spoken = await speak(sequence[i].word, { rate: 0.7, pitch: 1.1 });
+        if (!spoken || runRef.current !== runId) {
+          completed = false;
+          break;
+        }
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
+    if (runRef.current !== runId) return;
     setIsPlaying(false);
-    if (onComplete) onComplete();
+    if (completed) onComplete?.();
   };
 
   const stopBlend = () => {
+    runRef.current += 1;
     stop();
     setIsPlaying(false);
     setCurrentStep(0);

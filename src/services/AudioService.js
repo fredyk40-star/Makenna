@@ -15,6 +15,8 @@ class AudioService {
     this.muted = false;
     this.playbackRate = 1;
     this.currentSource = null;
+    this.currentUtterance = null;
+    this.speechFinish = null;
     this.analyser = null;
     this.dataArray = null;
     this.audioCache = new Map();
@@ -162,15 +164,15 @@ class AudioService {
       return false;
     }
 
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-
     const Utterance = window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance;
     if (!Utterance) {
       const error = new Error('Speech synthesis is not supported');
       if (onError) onError(error);
       return false;
     }
+
+    this.stop();
+    window.speechSynthesis.cancel();
 
     const utterance = new Utterance(text);
     utterance.rate = rate;
@@ -189,30 +191,68 @@ class AudioService {
       utterance.voice = kidFriendlyVoice;
     }
 
-    utterance.onstart = () => {
-      this.isPlaying = true;
-      if (onStart) onStart();
-    };
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (success, error = null) => {
+        if (settled) return;
+        settled = true;
+        if (this.currentUtterance === utterance) {
+          this.currentUtterance = null;
+          this.speechFinish = null;
+          this.isPlaying = false;
+          this.isPaused = false;
+        }
 
-    utterance.onend = () => {
-      this.isPlaying = false;
-      if (onEnd) onEnd();
-    };
+        try {
+          if (success) onEnd?.();
+          else if (!isBenignSpeechError(error)) onError?.(error);
+        } finally {
+          resolve(success);
+        }
+      };
 
-    utterance.onerror = (error) => {
-      this.isPlaying = false;
-      if (isBenignSpeechError(error)) return;
-      if (onError) onError(error);
-    };
+      this.currentUtterance = utterance;
+      this.speechFinish = finish;
+      utterance.onstart = () => {
+        if (this.currentUtterance !== utterance) return;
+        this.isPlaying = true;
+        this.isPaused = false;
+        onStart?.();
+      };
+      utterance.onend = () => finish(true);
+      utterance.onerror = (error) => finish(false, error);
 
-    window.speechSynthesis.speak(utterance);
-    return true;
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch (error) {
+        finish(false, error);
+      }
+    });
+  }
+
+  cancelSpeech() {
+    if (!this.currentUtterance) return;
+
+    const finish = this.speechFinish;
+    this.currentUtterance = null;
+    this.speechFinish = null;
+    this.isPlaying = false;
+    this.isPaused = false;
+    window.speechSynthesis.cancel();
+    finish?.(false, { error: 'canceled' });
   }
 
   /**
    * Pause current audio
    */
   pause() {
+    if (this.currentUtterance) {
+      window.speechSynthesis.pause();
+      this.isPaused = true;
+      this.isPlaying = false;
+      return;
+    }
+
     if (this.isPlaying && this.currentSource) {
       this.currentSource.stop();
       this.isPaused = true;
@@ -224,6 +264,13 @@ class AudioService {
    * Resume paused audio
    */
   resume() {
+    if (this.currentUtterance && window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+      this.isPaused = false;
+      this.isPlaying = true;
+      return;
+    }
+
     if (this.isPaused && this.currentAudio) {
       // Recreate source from buffer
       const { audioBuffer, options } = this.currentAudio;
@@ -239,6 +286,7 @@ class AudioService {
    * Stop current audio
    */
   stop() {
+    this.cancelSpeech();
     if (this.currentSource) {
       try {
         this.currentSource.stop();

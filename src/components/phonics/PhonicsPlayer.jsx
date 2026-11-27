@@ -102,7 +102,7 @@ const PhonicsPlayer = ({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handlePlay}
-          disabled={isLoading}
+          disabled={isLoading && !isPlaying}
           className={`relative w-16 h-16 shrink-0 rounded-full flex items-center justify-center text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
             isPlaying
               ? 'bg-red-500 shadow-soft'
@@ -110,7 +110,7 @@ const PhonicsPlayer = ({
           } ${isLoading ? 'opacity-70 cursor-wait' : ''}`}
           aria-label={isPlaying ? 'Stop audio' : MODE_TEXT[activeMode]}
         >
-          {isLoading ? (
+          {isLoading && !isPlaying ? (
             <FaSpinner className="text-2xl animate-spin" />
           ) : isPlaying ? (
             <FaStop className="text-2xl" />

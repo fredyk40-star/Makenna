@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FaArrowLeft, FaArrowRight, FaPlay, FaPause,
+  FaArrowLeft, FaArrowRight, FaPlay, FaStop,
   FaBook, FaHeadphones,
   FaList, FaTimes
 } from 'react-icons/fa';
@@ -36,6 +36,7 @@ const NumberStoryReader = () => {
   } = useNumbersProgress();
   const isFavorite = isStoryFavorited(storyId);
   const startTimeRef = useRef(Date.now());
+  const readingRunRef = useRef(0);
 
   useEffect(() => {
     const found = getStoryById(storyId);
@@ -52,6 +53,11 @@ const NumberStoryReader = () => {
     };
   }, [storyId, navigate]);
 
+  useEffect(() => () => {
+    readingRunRef.current += 1;
+    stop();
+  }, [stop]);
+
   const toggleFavorite = useCallback(() => {
     toggleFavoriteStory(storyId);
     if (isFavorite) {
@@ -67,21 +73,35 @@ const NumberStoryReader = () => {
     const page = story.pages[pageIndex];
     if (!page) return;
 
+    const runId = ++readingRunRef.current;
     setIsPlaying(true);
     const words = page.text.split(' ');
 
-    for (const word of words) {
-      setHighlightedWord(word);
-      await speak(word, { rate: 0.7, pitch: 1.1 });
-      // Speech synthesis resolves immediately in some browsers; hold each
-      // highlight long enough for a child to follow along.
-      const letters = word.replace(/[^a-zA-Z]/g, '').length;
-      await new Promise(resolve => setTimeout(resolve, Math.min(900, Math.max(260, letters * 110))));
-    }
+    try {
+      for (const word of words) {
+        if (readingRunRef.current !== runId) return;
+        setIsPlaying(true);
+        setHighlightedWord(word);
+        const spoken = await speak(word, { rate: 0.7, pitch: 1.1 });
+        if (!spoken || readingRunRef.current !== runId) return;
 
+        const letters = word.replace(/[^a-zA-Z]/g, '').length;
+        await new Promise(resolve => setTimeout(resolve, Math.min(900, Math.max(260, letters * 110))));
+      }
+    } finally {
+      if (readingRunRef.current === runId) {
+        setHighlightedWord('');
+        setIsPlaying(false);
+      }
+    }
+  }, [story, speak]);
+
+  const stopReading = useCallback(() => {
+    readingRunRef.current += 1;
+    stop();
     setHighlightedWord('');
     setIsPlaying(false);
-  }, [story, speak]);
+  }, [stop]);
 
   const handlePageTurn = useCallback(async (direction) => {
     if (!story) return;
@@ -89,6 +109,7 @@ const NumberStoryReader = () => {
     const newPage = direction === 'next' ? currentPage + 1 : currentPage - 1;
     if (newPage < 0 || newPage >= story.pages.length) {
       if (direction === 'next' && newPage === story.pages.length) {
+        stopReading();
         // Story complete
         setShowCelebration(true);
         completeStory(story.id, story.number);
@@ -98,13 +119,14 @@ const NumberStoryReader = () => {
       return;
     }
 
+    stopReading();
     setCurrentPage(newPage);
     setHighlightedWord('');
 
     if (readingMode === 'read-to-me') {
       await readPage(newPage);
     }
-  }, [story, currentPage, readingMode, completeStory, readPage, storyId]);
+  }, [story, currentPage, readingMode, completeStory, readPage, stopReading, storyId]);
 
   const handleWordClick = useCallback(async (word) => {
     if (readingMode === 'read-myself') {
@@ -127,14 +149,12 @@ const NumberStoryReader = () => {
 
   const toggleMode = useCallback(() => {
     const newMode = readingMode === 'read-to-me' ? 'read-myself' : 'read-to-me';
+    stopReading();
     setReadingMode(newMode);
     if (newMode === 'read-to-me') {
       readPage(currentPage);
-    } else {
-      stop();
-      setIsPlaying(false);
     }
-  }, [readingMode, currentPage, readPage, stop]);
+  }, [readingMode, currentPage, readPage, stopReading]);
 
   const renderPageContent = () => {
     if (!story) return null;
@@ -278,8 +298,7 @@ const NumberStoryReader = () => {
             <button
               onClick={() => {
                 if (isPlaying) {
-                  stop();
-                  setIsPlaying(false);
+                  stopReading();
                 } else {
                   readPage(currentPage);
                 }
@@ -289,9 +308,9 @@ const NumberStoryReader = () => {
                   ? 'bg-orange-500 text-white hover:bg-orange-600'
                   : 'bg-primary text-white hover:bg-primary-dark'
               }`}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
+              aria-label={isPlaying ? 'Stop' : 'Play'}
             >
-              {isPlaying ? <FaPause /> : <FaPlay />}
+              {isPlaying ? <FaStop /> : <FaPlay />}
             </button>
           )}
           <span className="text-sm text-gray-500 dark:text-gray-400">

@@ -33,6 +33,10 @@ const BibleStoryReader = () => {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
   const utteranceRef = useRef(null);
+  const autoPlayRef = useRef(autoPlay);
+  const isPlayingRef = useRef(isPlaying);
+  autoPlayRef.current = autoPlay;
+  isPlayingRef.current = isPlaying;
   const totalPages = pages.length;
 
   // Reset when story changes
@@ -41,9 +45,10 @@ const BibleStoryReader = () => {
     setIsPlaying(false);
     setIsComplete(false);
     setHighlightRange({ start: 0, end: 0 });
-    // Cancel any ongoing speech
+    utteranceRef.current = null;
     window.speechSynthesis.cancel();
     return () => {
+      utteranceRef.current = null;
       window.speechSynthesis.cancel();
     };
   }, [storyId]);
@@ -57,6 +62,7 @@ const BibleStoryReader = () => {
   const readPageSmooth = useCallback(() => {
     if (!currentPage) return;
 
+    utteranceRef.current = null;
     window.speechSynthesis.cancel();
 
     setIsPlaying(true);
@@ -78,7 +84,7 @@ const BibleStoryReader = () => {
     }
 
     utterance.onboundary = (event) => {
-      if (event.name === 'word') {
+      if (utteranceRef.current === utterance && event.name === 'word') {
         setHighlightRange({
           start: event.charIndex,
           end: event.charIndex + (event.charLength || 1),
@@ -87,12 +93,13 @@ const BibleStoryReader = () => {
     };
 
     utterance.onend = () => {
+      if (utteranceRef.current !== utterance) return;
       setHighlightRange({ start: 0, end: 0 });
       setIsPlaying(false);
       utteranceRef.current = null;
 
       // Auto-play: advance to next page
-      if (autoPlay) {
+      if (autoPlayRef.current) {
         if (currentPageIndex < totalPages - 1) {
           setCurrentPageIndex(prev => prev + 1);
         } else {
@@ -102,6 +109,7 @@ const BibleStoryReader = () => {
     };
 
     utterance.onerror = (event) => {
+      if (utteranceRef.current !== utterance) return;
       reportSpeechError(event);
       setHighlightRange({ start: 0, end: 0 });
       setIsPlaying(false);
@@ -110,16 +118,17 @@ const BibleStoryReader = () => {
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  }, [currentPage, speed, autoPlay, currentPageIndex, totalPages]);
+  }, [currentPage, speed, currentPageIndex, totalPages]);
 
   // Auto-read new page when in read-to-me mode
   useEffect(() => {
-    if (readingMode === 'read-to-me' && currentPage && !isPlaying && !isComplete) {
+    if (readingMode === 'read-to-me' && currentPageIndex < totalPages && !isPlayingRef.current && !isComplete) {
       readPageSmooth();
     }
-  }, [currentPageIndex, readingMode, isComplete, readPageSmooth]);
+  }, [currentPageIndex, readingMode, isComplete, readPageSmooth, totalPages]);
 
   const handleNext = () => {
+    utteranceRef.current = null;
     window.speechSynthesis.cancel();
     setIsPlaying(false);
     if (currentPageIndex < totalPages - 1) {
@@ -130,6 +139,7 @@ const BibleStoryReader = () => {
   };
 
   const handlePrevious = () => {
+    utteranceRef.current = null;
     window.speechSynthesis.cancel();
     setIsPlaying(false);
     if (currentPageIndex > 0) {
@@ -141,6 +151,7 @@ const BibleStoryReader = () => {
     const newMode = readingMode === 'read-to-me' ? 'read-by-myself' : 'read-to-me';
     setReadingMode(newMode);
     if (newMode === 'read-by-myself') {
+      utteranceRef.current = null;
       window.speechSynthesis.cancel();
       setIsPlaying(false);
       setHighlightRange({ start: 0, end: 0 });
@@ -167,10 +178,18 @@ const BibleStoryReader = () => {
     utterance.rate = speed;
     utterance.lang = 'en-US';
     window.speechSynthesis.cancel();
+    utteranceRef.current = utterance;
+    utterance.onend = () => {
+      if (utteranceRef.current === utterance) utteranceRef.current = null;
+    };
+    utterance.onerror = () => {
+      if (utteranceRef.current === utterance) utteranceRef.current = null;
+    };
     window.speechSynthesis.speak(utterance);
   };
 
   const handleReset = () => {
+    utteranceRef.current = null;
     window.speechSynthesis.cancel();
     setCurrentPageIndex(0);
     setIsPlaying(false);
@@ -403,6 +422,7 @@ const BibleStoryReader = () => {
                 <button
                   key={idx}
                   onClick={() => {
+                    utteranceRef.current = null;
                     window.speechSynthesis.cancel();
                     setIsPlaying(false);
                     setCurrentPageIndex(idx);

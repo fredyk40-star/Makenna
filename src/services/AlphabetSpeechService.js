@@ -8,12 +8,13 @@
  */
 import { isBenignSpeechError } from '../utils/speech';
 
-const delay = ms => new Promise(resolve => { setTimeout(resolve, ms); });
-
-class AlphabetSpeechService {
+export class AlphabetSpeechService {
   constructor() {
     this._voice = null;
     this._initialized = false;
+    this._activeSpeech = null;
+    this._sequenceId = 0;
+    this._sequenceWait = null;
     this.init();
   }
 
@@ -52,14 +53,43 @@ class AlphabetSpeechService {
     return this._voice;
   }
 
+  _clearSequenceWait() {
+    if (!this._sequenceWait) return;
+    clearTimeout(this._sequenceWait.timer);
+    this._sequenceWait.resolve();
+    this._sequenceWait = null;
+  }
+
+  _cancelActive() {
+    const synth = typeof window !== 'undefined'
+      ? window.speechSynthesis || window.webkitSpeechSynthesis
+      : null;
+    const active = this._activeSpeech;
+    this._activeSpeech = null;
+    if (active) {
+      clearTimeout(active.timer);
+      active.finish(false);
+    }
+    if (typeof synth?.cancel === 'function') synth.cancel();
+  }
+
   cancel() {
-    if (!this.isSupported()) return;
-    const synth = window.speechSynthesis || window.webkitSpeechSynthesis;
-    if (typeof synth.cancel === 'function') synth.cancel();
+    this._sequenceId += 1;
+    this._clearSequenceWait();
+    this._cancelActive();
   }
 
   speak(text, options = {}) {
     const content = String(text || '').trim();
+    if (!content || !this.isSupported()) return Promise.resolve(false);
+    this._sequenceId += 1;
+    this._clearSequenceWait();
+    this._cancelActive();
+
+    return this._speak(content, options);
+  }
+
+  _speak(content, options = {}) {
     if (!content || !this.isSupported()) return Promise.resolve(false);
 
     const {
@@ -70,10 +100,14 @@ class AlphabetSpeechService {
     } = options;
 
     return new Promise((resolve) => {
+      let active;
       try {
-        this.cancel();
         const synth = window.speechSynthesis || window.webkitSpeechSynthesis;
         const Utterance = window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance;
+        if (!synth || !Utterance) {
+          resolve(false);
+          return;
+        }
         const utterance = new Utterance(content);
 
         utterance.rate = rate;
@@ -84,17 +118,26 @@ class AlphabetSpeechService {
         if (voice) utterance.voice = voice;
 
         let settled = false;
-        // Some mobile browsers never fire onend for short utterances. A bounded
-        // fallback keeps the UI responsive and still lets progress be recorded.
-        const fallbackMs = Math.min(12000, Math.max(2500, (content.length * 110) / rate + 900));
-        const timer = setTimeout(() => finish(true), fallbackMs);
-
         const finish = (ok) => {
           if (settled) return;
           settled = true;
-          clearTimeout(timer);
+          clearTimeout(active.timer);
+          if (this._activeSpeech === active) this._activeSpeech = null;
           resolve(ok);
         };
+
+        active = { utterance, timer: null, finish };
+        this._activeSpeech = active;
+        const fallbackMs = Math.min(120000, Math.max(2500, (content.length * 110) / rate + 900));
+        active.timer = setTimeout(() => {
+          if (this._activeSpeech !== active) return;
+          if (synth.speaking || synth.pending) {
+            console.warn('Alphabet speech did not finish before timeout');
+            this._cancelActive();
+          } else {
+            finish(true);
+          }
+        }, fallbackMs);
 
         utterance.onend = () => finish(true);
         utterance.onerror = (event) => {
@@ -107,25 +150,40 @@ class AlphabetSpeechService {
         synth.speak(utterance);
       } catch (error) {
         console.warn('Alphabet speech unavailable:', error);
-        resolve(false);
+        if (active) active.finish(false);
+        else resolve(false);
       }
     });
   }
 
   async speakSequence(items, options = {}) {
+    if (!this.isSupported()) return false;
     const { gap = 250 } = options;
     const parts = Array.isArray(items) ? items : [items];
-    let allSpoken = true;
+    this.cancel();
+    const sequenceId = this._sequenceId;
 
     for (let index = 0; index < parts.length; index += 1) {
+      if (sequenceId !== this._sequenceId) return false;
       const item = parts[index];
       const text = typeof item === 'string' ? item : item?.text;
-      const spoken = await this.speak(text, typeof item === 'string' ? options : item);
-      if (!spoken) allSpoken = false;
-      if (index < parts.length - 1 && gap > 0) await delay(gap);
+      const spoken = await this._speak(String(text || '').trim(), typeof item === 'string' ? options : item);
+      if (!spoken || sequenceId !== this._sequenceId) return false;
+      if (index < parts.length - 1 && gap > 0) {
+        await new Promise(resolve => {
+          const wait = {
+            timer: setTimeout(() => {
+              if (this._sequenceWait === wait) this._sequenceWait = null;
+              resolve();
+            }, gap),
+            resolve,
+          };
+          this._sequenceWait = wait;
+        });
+      }
     }
 
-    return allSpoken;
+    return sequenceId === this._sequenceId;
   }
 
   pronounceWord(word, options = {}) {
