@@ -1,6 +1,11 @@
 import crypto from 'node:crypto';
 import { HttpError } from './http.js';
 import { requireServerClient } from './supabase-server.js';
+import {
+  isRateLimited as sharedIsRateLimited,
+  recordFailure as sharedRecordFailure,
+  clearFailures as sharedClearFailures,
+} from './rate-limit.js';
 
 export const CHILD_ID_PATTERN = /^kid\d{8}$/i;
 export const LEGACY_CHILD_ID_PATTERN = /^kid-\d+$/i;
@@ -10,13 +15,7 @@ const HASH_SALT = 'makenna-salt-v2';
 const CHILD_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const TEMP_PASSWORD_MINUTES = 30;
 const TEMP_PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';
-const MAX_LOGIN_FAILURES = 5;
-const FAILURE_WINDOW_MS = 15 * 60 * 1000;
-
-// Process-local throttling. Serverless instances are short-lived, so this is a
-// speed bump rather than a distributed control; Supabase audit logs remain the
-// authoritative record. A shared store can replace this without changing callers.
-const failures = new Map();
+const STRONG_HASH_PREFIX = 'scrypt$';
 
 export const normalizeChildId = (childId) => (
   typeof childId === 'string' ? childId.trim().toLowerCase() : null
@@ -46,10 +45,57 @@ export const validateEmail = (email) => (
  * keep working. Verification now happens here and the hash never leaves the
  * database or the serverless function.
  */
+/** Legacy SHA-256 digest, retained only to verify and upgrade old accounts. */
 export const hashCredential = (credential) => crypto
   .createHash('sha256')
   .update(`${String(credential)}${HASH_SALT}`)
   .digest('hex');
+
+/** New credentials use a per-credential random salt and scrypt. */
+export const hashCredentialStrong = (credential) => {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const digest = crypto.scryptSync(String(credential), salt, 64).toString('hex');
+  return `${STRONG_HASH_PREFIX}${salt}$${digest}`;
+};
+
+export const credentialNeedsUpgrade = (hash) => (
+  typeof hash !== 'string' || !hash.startsWith(STRONG_HASH_PREFIX)
+);
+
+/**
+ * Verifies both formats and reports whether a legacy hash should be replaced.
+ * Verification is centralised here so every credential check migrates old
+ * accounts on successful use instead of requiring an offline password reset.
+ */
+export const verifyStoredCredential = (credential, storedHash) => {
+  if (!storedHash || typeof storedHash !== 'string') {
+    return { valid: false, needsUpgrade: false };
+  }
+  if (storedHash.startsWith(STRONG_HASH_PREFIX)) {
+    const [, salt, digest] = storedHash.split('$');
+    if (!salt || !digest) return { valid: false, needsUpgrade: false };
+    const actual = crypto.scryptSync(String(credential), salt, 64).toString('hex');
+    return { valid: safeEqual(actual, digest), needsUpgrade: false };
+  }
+  return {
+    valid: safeEqual(storedHash, hashCredential(credential)),
+    needsUpgrade: true,
+  };
+};
+
+/** Replaces a verified legacy hash with the strong format. */
+export async function upgradeCredential(client, childId, field, credential) {
+  if (!client) return;
+  try {
+    const { error } = await client
+      .from('child_accounts')
+      .update({ [field]: hashCredentialStrong(credential) })
+      .eq('child_id', normalizeChildId(childId));
+    if (error) throw error;
+  } catch (error) {
+    console.error('Credential hash upgrade failed:', error.message);
+  }
+}
 
 export const safeEqual = (a, b) => {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
@@ -80,6 +126,7 @@ export function createChildToken(childId) {
   const encoded = b64url(JSON.stringify({
     type: 'child',
     childId: id,
+    iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + CHILD_TOKEN_TTL_SECONDS,
   }));
   const signature = crypto.createHmac('sha256', getChildSecret()).update(encoded).digest('base64url');
@@ -105,6 +152,34 @@ export function verifyChildToken(token) {
   }
 }
 
+/** Issue time used to detect devices signed out via token revocation. */
+export function childTokenIssuedAt(token) {
+  try {
+    const [encoded] = String(token || '').split('.');
+    const payload = JSON.parse(Buffer.from(encoded || '', 'base64url').toString('utf8'));
+    return Number(payload.iat) > 0 ? Number(payload.iat) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Authoritative device check: a correctly signed token is not enough if the
+ * account was deleted or all devices were signed out after the token was issued.
+ */
+export async function requireActiveChild(client, token, childId) {
+  const id = requireChildToken(token, childId);
+  const row = await getAccountRow(client, id);
+  if (!row || row.deleted_at) {
+    throw new HttpError(403, 'This child account is no longer active.');
+  }
+  const revokedAt = row.token_revoked_at ? Date.parse(row.token_revoked_at) : 0;
+  if (revokedAt && childTokenIssuedAt(token) * 1000 <= revokedAt) {
+    throw new HttpError(401, 'This device has been signed out. Please log in again.');
+  }
+  return { childId: id, row };
+}
+
 /** Only child IDs with a valid, matching device token may be synced. */
 export function authorizedChildIds(tokens) {
   const authorized = new Set();
@@ -124,35 +199,15 @@ export function requireChildToken(token, childId) {
   return verified;
 }
 
-export const clientIp = (req) => String(
-  req?.headers?.['x-forwarded-for'] || req?.headers?.['x-real-ip'] || 'local',
-).split(',')[0].trim();
-
-const failureKey = (req, childId) => `${clientIp(req)}:${normalizeChildId(childId) || ''}`;
-
-export function isRateLimited(req, childId) {
-  const entry = failures.get(failureKey(req, childId));
-  if (!entry) return false;
-  if (Date.now() - entry.firstAt > FAILURE_WINDOW_MS) {
-    failures.delete(failureKey(req, childId));
-    return false;
-  }
-  return entry.count >= MAX_LOGIN_FAILURES;
-}
-
-export function recordFailure(req, childId) {
-  const key = failureKey(req, childId);
-  const entry = failures.get(key) || { count: 0, firstAt: Date.now() };
-  entry.count += 1;
-  failures.set(key, entry);
-  if (entry.count >= MAX_LOGIN_FAILURES) {
-    throw new HttpError(429, 'Too many attempts. Please wait a few minutes and try again.');
-  }
-}
-
-export function clearFailures(req, childId) {
-  failures.delete(failureKey(req, childId));
-}
+export const isRateLimited = (req, childId, client, scope = 'child') => (
+  sharedIsRateLimited(scope, req, childId, client)
+);
+export const recordFailure = (req, childId, client, scope = 'child') => (
+  sharedRecordFailure(scope, req, childId, client)
+);
+export const clearFailures = (req, childId, client, scope = 'child') => (
+  sharedClearFailures(scope, req, childId, client)
+);
 
 export const getAccountRow = async (client, childId) => {
   const { data, error } = await client
@@ -184,6 +239,24 @@ export function newTemporaryPassword() {
 export const tempPasswordExpiry = () => new Date(
   Date.now() + TEMP_PASSWORD_MINUTES * 60 * 1000,
 ).toISOString();
+
+/**
+ * A temporary password may only be issued after a parent completed email
+ * verification and the support team reviewed the resulting request.
+ */
+export async function hasVerifiedRecoveryRequest(client, childId, parentEmail, maxAgeMs = 24 * 60 * 60 * 1000) {
+  const since = new Date(Date.now() - maxAgeMs).toISOString();
+  const { data, error } = await client
+    .from('support_requests')
+    .select('id')
+    .eq('child_id', normalizeChildId(childId))
+    .eq('parent_email', String(parentEmail || '').trim().toLowerCase())
+    .eq('parent_verified', true)
+    .gte('created_at', since)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return !!data?.length;
+}
 
 /** Public account shape. Credential hashes are deliberately never returned. */
 export function toClientAccount(row) {

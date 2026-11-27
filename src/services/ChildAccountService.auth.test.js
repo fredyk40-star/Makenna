@@ -4,6 +4,20 @@ import { StorageService } from './StorageService';
 import SyncQueueService from './SyncQueueService';
 import { hashCredential } from '../../api/_lib/child-auth.js';
 import { apiState } from '../test/apiMock.js';
+import { SupportService } from './SupportService.js';
+
+const verifyRecoveryRequest = async (child) => {
+  const verification = await SupportService.requestVerification({
+    childId: child.childId,
+    parentEmail: child.parentEmail,
+  });
+  await SupportService.submitRequest({
+    childId: child.childId,
+    parentEmail: child.parentEmail,
+    message: 'I forgot my PIN.',
+    verificationCode: verification.devCode,
+  });
+};
 
 describe('ChildAccountService account creation', () => {
   beforeEach(() => {
@@ -105,6 +119,7 @@ describe('ChildAccountService temporary-password recovery', () => {
 
   it('forces a credential reset after a temporary-password login', async () => {
     const registered = await ChildAccountService.registerChild('Kofi', '1234', 'parent@example.com');
+    await verifyRecoveryRequest(registered);
     const credential = await ChildAccountService.issueTemporaryPassword(
       registered.childId,
       registered.parentEmail,
@@ -134,6 +149,7 @@ describe('ChildAccountService temporary-password recovery', () => {
 
   it('allows a parent to choose a password instead of a new PIN', async () => {
     const registered = await ChildAccountService.registerChild('Ama', '1234', 'parent@example.com');
+    await verifyRecoveryRequest(registered);
     await ChildAccountService.issueTemporaryPassword(registered.childId, registered.parentEmail, 'developer-token');
     await ChildAccountService.loginChild(registered.childId, 'TempPassword1!');
     await ChildAccountService.resetCredential(registered.childId, 'StrongPass1!', 'password');

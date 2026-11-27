@@ -11,6 +11,7 @@ const normalize = value => String(value || '').trim().toLowerCase();
 export const apiState = {
   accounts: new Map(),
   requests: new Map(),
+  verifications: new Map(),
   developerSession: 'developer-token',
   calls: [],
 };
@@ -18,6 +19,7 @@ export const apiState = {
 export function resetApiMock() {
   apiState.accounts.clear();
   apiState.requests.clear();
+  apiState.verifications.clear();
   apiState.calls.length = 0;
 }
 
@@ -128,9 +130,15 @@ const dispatch = (endpoint, body) => {
     if (body.action === 'issue_temp_password') {
       if (!requireDev(body)) return fail('Developer session is invalid.', 401);
       const id = normalize(body.childId);
+      const email = normalize(body.parentEmail);
       const row = apiState.accounts.get(id);
-      if (!row || row.parent_email !== normalize(body.parentEmail)) {
+      if (!row || row.parent_email !== email) {
         return fail('No account was found for that Child ID and parent email.', 404);
+      }
+      const hasVerifiedRequest = Array.from(apiState.requests.values())
+        .some(request => request.childId === id && request.parentEmail === email && request.parentVerified);
+      if (!hasVerifiedRequest) {
+        return fail('A verified recovery request is required before a temporary password can be issued.', 409);
       }
 
       const tempPassword = 'TempPassword1!';
@@ -261,21 +269,47 @@ const dispatch = (endpoint, body) => {
   }
 
   if (endpoint === 'support') {
+    if (body.action === 'send_verification') {
+      const id = normalize(body.childId);
+      const email = normalize(body.parentEmail);
+      const row = apiState.accounts.get(id);
+      const response = { message: 'If those details match an account, a code has been sent.' };
+      if (row && row.parent_email === email && !row.deleted_at) {
+        const code = '123456';
+        apiState.verifications.set(`${id}:${email}`, code);
+        response.devCode = code;
+      }
+      return ok(response);
+    }
+
     if (body.action === 'submit') {
       const id = normalize(body.childId);
+      const email = normalize(body.parentEmail);
       const row = apiState.accounts.get(id);
-      if (!row || row.parent_email !== normalize(body.parentEmail)) {
-        return fail('No account was found with that Child ID and parent email.', 404);
-      }
-
-      const now = new Date().toISOString();
-      const request = {
+      const placeholder = {
         id: `request-${apiState.requests.size + 1}`,
         childId: id,
-        parentEmail: row.parent_email,
+        parentEmail: email,
         message: body.message,
         status: 'open',
         developerNote: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      // A non-matching identity never receives a code, so it fails with the
+      // same generic error as a wrong code instead of revealing account state.
+      if (!row || row.parent_email !== email || row.deleted_at
+        || apiState.verifications.get(`${id}:${email}`) !== String(body.verificationCode)) {
+        return fail('That verification code is invalid or has expired. Request a new one.', 400);
+      }
+      apiState.verifications.delete(`${id}:${email}`);
+
+      const now = new Date().toISOString();
+      const request = {
+        ...placeholder,
+        id: `request-${apiState.requests.size + 1}`,
+        parentEmail: row.parent_email,
+        parentVerified: true,
         createdAt: now,
         updatedAt: now,
       };

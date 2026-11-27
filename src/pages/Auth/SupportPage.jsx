@@ -12,13 +12,35 @@ const SupportPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [codeMessage, setCodeMessage] = useState('');
+
+  const handleSendCode = async () => {
+    setError('');
+    setCodeMessage('');
+    try {
+      const result = await SupportService.requestVerification({ childId, parentEmail });
+      setCodeSent(true);
+      // Local development has no SMTP server; the API returns the code there.
+      setCodeMessage(
+        result.devCode
+          ? `Development code: ${result.devCode}`
+          : 'If those details match an account, a 6-digit code has been sent to the parent email.',
+      );
+      playSuccess();
+    } catch (err) {
+      setError(err.message || 'The code could not be sent. Please try again.');
+      playError();
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
     setIsSubmitting(true);
     try {
-      await SupportService.submitRequest({ childId, parentEmail, message });
+      await SupportService.submitRequest({ childId, parentEmail, message, verificationCode });
       setSubmitted(true);
       playSuccess();
     } catch (err) {
@@ -47,7 +69,7 @@ const SupportPage = () => {
               Forgot your PIN? 🤝
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Ask a parent to enter your Child ID and the email used when the account was created.
+              Ask a parent to enter your Child ID and the email used when the account was created, then verify the code sent to that email.
             </p>
           </div>
 
@@ -125,9 +147,44 @@ const SupportPage = () => {
                 />
               </div>
 
+              <div>
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  className="w-full py-2 rounded-xl border-2 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 font-semibold hover:bg-purple-50 dark:hover:bg-purple-900/30"
+                >
+                  {codeSent ? 'Send a new code' : 'Email me a verification code'}
+                </button>
+                {codeMessage && (
+                  <p className="mt-2 text-sm text-center text-gray-600 dark:text-gray-300" role="status">
+                    {codeMessage}
+                  </p>
+                )}
+              </div>
+
+              {codeSent && (
+                <div>
+                  <label htmlFor="verificationCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Verification code
+                  </label>
+                  <input
+                    id="verificationCode"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="6-digit code"
+                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none tracking-widest"
+                    required
+                  />
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !codeSent}
                 className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-xl transition-all disabled:opacity-50"
               >
                 {isSubmitting ? 'Sending request...' : 'Request PIN Help 🚀'}

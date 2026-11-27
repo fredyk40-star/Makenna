@@ -1,39 +1,69 @@
 import { verifySessionToken, DEVELOPER_EMAIL } from './_lib/developer-auth.js';
+import {
+  getAccountRow,
+  hasVerifiedRecoveryRequest,
+  normalizeChildId,
+  requireServerClient,
+  validateChildId,
+  verifyStoredCredential,
+} from './_lib/child-auth.js';
 import { sendMail } from './_lib/mailer.js';
+import { HttpError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const json = (res, status, body) => res.status(status).json(body);
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return json(res, 405, { success: false, error: 'Method not allowed' });
-  }
-
-  const { action, childId, parentEmail, tempPassword, sessionToken } = req.body || {};
+const handler = async (req, res) => {
+  requirePost(req, res);
+  const { action, childId, parentEmail, tempPassword, sessionToken } = readBody(req);
 
   if (action !== 'send_temp_password') {
     return json(res, 400, { success: false, error: 'Unknown action' });
   }
 
-  // Only an authenticated developer session can issue a one-time password.
+  // Only an authenticated developer session can mail a recovery credential.
   const session = verifySessionToken(sessionToken);
   if (!session || session.email !== DEVELOPER_EMAIL.toLowerCase()) {
-    return json(res, 401, { success: false, error: 'Developer session is invalid. Please sign in again.' });
+    throw new HttpError(401, 'Developer session is invalid. Please sign in again.');
   }
 
-  if (!EMAIL_PATTERN.test(String(parentEmail || '').trim())) {
-    return json(res, 400, { success: false, error: 'A valid parent email is required.' });
+  const normalizedChildId = normalizeChildId(childId);
+  const normalizedEmail = typeof parentEmail === 'string' ? parentEmail.trim().toLowerCase() : '';
+  if (!validateChildId(normalizedChildId) || !EMAIL_PATTERN.test(normalizedEmail)) {
+    throw new HttpError(400, 'A valid Child ID and parent email are required.');
+  }
+  if (typeof tempPassword !== 'string' || tempPassword.length < 8 || tempPassword.length > 128) {
+    throw new HttpError(400, 'That temporary password is invalid.');
+  }
+
+  // The mail endpoint must not become a shortcut around parent verification:
+  // confirm the credential was actually issued for this verified child/parent
+  // pair before sending it anywhere.
+  const client = requireServerClient();
+  const row = await getAccountRow(client, normalizedChildId);
+  if (!row || row.deleted_at || row.parent_email?.toLowerCase() !== normalizedEmail) {
+    throw new HttpError(404, 'No verified recovery request was found for that Child ID and parent email.');
+  }
+  const temp = verifyStoredCredential(tempPassword, row.temp_password_hash);
+  if (
+    !temp.valid
+    || !row.temp_password_expires_at
+    || Date.parse(row.temp_password_expires_at) <= Date.now()
+  ) {
+    throw new HttpError(400, 'That temporary password is invalid or has expired.');
+  }
+  const verified = await hasVerifiedRecoveryRequest(client, normalizedChildId, normalizedEmail);
+  if (!verified) {
+    throw new HttpError(409, 'A verified recovery request is required before a temporary password can be mailed.');
   }
 
   try {
     await sendMail({
-      to: parentEmail.trim().toLowerCase(),
-      subject: `Makenna Lab login help for ${childId}`,
+      to: normalizedEmail,
+      subject: `Makenna Lab login help for ${normalizedChildId}`,
       text: [
         'Hello,',
         '',
-        `A developer approved your support request for child ID ${childId}.`,
+        `A developer approved your support request for child ID ${normalizedChildId}.`,
         `Your one-time password is: ${tempPassword}`,
         '',
         'Log in with this child ID and the one-time password. You will be asked to choose a new PIN or password before continuing.',
@@ -50,4 +80,6 @@ export default async function handler(req, res) {
       error: 'Email could not be sent. Please try again later.',
     });
   }
-}
+};
+
+export default withErrors(handler);

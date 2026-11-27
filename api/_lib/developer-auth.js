@@ -1,34 +1,22 @@
 import crypto from 'node:crypto';
 import { getServerClient } from './supabase-server.js';
+import {
+  isRateLimited as sharedIsRateLimited,
+  recordFailure as sharedRecordFailure,
+  clearFailures as sharedClearFailures,
+} from './rate-limit.js';
 
 export const DEVELOPER_EMAIL =
   process.env.DEVELOPER_EMAIL || 'addaifrederick72@gmail.com';
 
 const SESSION_TTL_SECONDS = 30 * 60;
 const RESET_TTL_SECONDS = 60 * 60;
-const AUTH_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const AUTH_LIMIT_MAX = 10;
-const authAttempts = new Map();
+const localResetTokens = new Set();
 
-/**
- * Best-effort per-instance throttle for sign-in and reset requests.
- * Vercel functions are short-lived, so this stops obvious brute-force bursts
- * without turning the developer portal into a database-backed auth system.
- */
-export function checkDeveloperAuthRateLimit(key) {
-  const now = Date.now();
-  const bucket = authAttempts.get(key);
-  if (!bucket || bucket.resetAt <= now) {
-    authAttempts.set(key, { count: 1, resetAt: now + AUTH_LIMIT_WINDOW_MS });
-    return true;
-  }
-  bucket.count += 1;
-  return bucket.count <= AUTH_LIMIT_MAX;
-}
-
-export function resetDeveloperAuthRateLimit(key) {
-  authAttempts.delete(key);
-}
+/** Shared throttle for developer sign-in and reset requests. */
+export const isDeveloperRateLimited = (req, scope, id) => sharedIsRateLimited(scope, req, id);
+export const recordDeveloperFailure = (req, scope, id) => sharedRecordFailure(scope, req, id);
+export const clearDeveloperFailures = (req, scope, id) => sharedClearFailures(scope, req, id);
 
 function getSecret() {
   const isProduction = process.env.NODE_ENV === 'production'
@@ -86,12 +74,74 @@ export function createResetToken() {
   return sign({
     type: 'reset',
     email: DEVELOPER_EMAIL.toLowerCase(),
+    jti: crypto.randomUUID(),
+    iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + RESET_TTL_SECONDS,
   });
 }
 
 export function verifyResetToken(token) {
   return verifySignedToken(token, 'reset');
+}
+
+/**
+ * Persist a reset token id so it can be consumed exactly once. Without a
+ * database (local development) a process-local set provides the same guard.
+ */
+export async function recordResetToken(token) {
+  const payload = verifyResetToken(token);
+  if (!payload?.jti) return false;
+  const client = getServerClient();
+  if (!client) {
+    localResetTokens.add(payload.jti);
+    return true;
+  }
+  try {
+    const { error } = await client.from('developer_reset_tokens').upsert({
+      jti: payload.jti,
+      email: payload.email,
+      expires_at: new Date(payload.exp * 1000).toISOString(),
+      used_at: null,
+      created_at: new Date().toISOString(),
+    }, { onConflict: 'jti' });
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Reset token record failed:', error.message);
+    localResetTokens.add(payload.jti);
+    return true;
+  }
+}
+
+/** Atomically marks a reset token used; false means replayed or unknown. */
+export async function consumeResetToken(token) {
+  const payload = verifyResetToken(token);
+  if (!payload?.jti) return false;
+  const client = getServerClient();
+  if (!client) {
+    if (!localResetTokens.has(payload.jti)) return false;
+    localResetTokens.delete(payload.jti);
+    return true;
+  }
+  try {
+    const { data, error } = await client
+      .from('developer_reset_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('jti', payload.jti)
+      .is('used_at', null)
+      .select('jti')
+      .maybeSingle();
+    if (error) throw error;
+    // If token recording fell back to memory while the database was briefly
+    // unavailable, honour that local record once the database recovers.
+    if (!data && localResetTokens.delete(payload.jti)) return true;
+    return !!data;
+  } catch (error) {
+    console.error('Reset token consumption failed:', error.message);
+    if (!localResetTokens.has(payload.jti)) return false;
+    localResetTokens.delete(payload.jti);
+    return true;
+  }
 }
 
 export function validateStrongPassword(password) {

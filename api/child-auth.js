@@ -3,33 +3,33 @@ import {
   createChildToken,
   createUniqueChildId,
   getAccountRow,
-  hashCredential,
+  hashCredentialStrong,
+  hasVerifiedRecoveryRequest,
   isRateLimited,
   newTemporaryPassword,
   normalizeChildId,
   recordFailure,
-  requireChildToken,
+  requireActiveChild,
   requireServerClient,
-  safeEqual,
   tempPasswordExpiry,
   toClientAccount,
+  upgradeCredential,
   validateChildId,
   validateEmail,
   validateName,
   validatePassword,
   validatePin,
+  verifyStoredCredential,
 } from './_lib/child-auth.js';
 import { verifySessionToken } from './_lib/developer-auth.js';
 import { HttpError as ApiError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
-const registerFailure = (req, childId) => {
-  try {
-    recordFailure(req, childId);
-  } catch (error) {
-    if (error.status === 429) throw error;
-  }
-  if (isRateLimited(req, childId)) {
-    throw new ApiError(429, 'Too many attempts. Please wait a few minutes and try again.');
+const VERIFIED_REQUEST_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const registerFailure = async (req, client, childId) => {
+  await recordFailure(req, childId, client);
+  if (await isRateLimited(req, childId, client)) {
+    throw new ApiError(429, 'Too many attempts. Please wait 15 minutes and try again.');
   }
 };
 
@@ -56,14 +56,13 @@ async function register(client, body) {
 
   const childId = await createUniqueChildId(client);
   const now = new Date().toISOString();
-  const passwordHash = hashCredential(pin);
 
   const { data, error } = await client
     .from('child_accounts')
     .insert({
       child_id: childId,
       full_name: fullName.trim(),
-      pin_hash: passwordHash,
+      pin_hash: hashCredentialStrong(pin),
       pin_set: true,
       password_hash: null,
       password_set: false,
@@ -78,6 +77,7 @@ async function register(client, body) {
       settings: {},
       updated_at: now,
       deleted_at: null,
+      token_revoked_at: null,
       version: 1,
     })
     .select('*')
@@ -97,20 +97,19 @@ async function login(req, client, body) {
   if (!validateChildId(childId)) {
     throw new ApiError(400, 'Enter a valid Child ID.');
   }
-  if (isRateLimited(req, childId)) {
-    throw new ApiError(429, 'Too many attempts. Please wait a few minutes and try again.');
+  if (await isRateLimited(req, childId, client)) {
+    throw new ApiError(429, 'Too many attempts. Please wait 15 minutes and try again.');
   }
 
   const row = await getAccountRow(client, childId);
   if (!row || row.deleted_at) {
-    registerFailure(req, childId);
+    await registerFailure(req, client, childId);
     throw new ApiError(401, 'Invalid Child ID or password. Please try again.');
   }
 
-  const hash = hashCredential(credential);
+  const temp = verifyStoredCredential(credential, row.temp_password_hash);
   const tempValid = !!(
-    row.temp_password_hash
-    && safeEqual(row.temp_password_hash, hash)
+    temp.valid
     && row.temp_password_expires_at
     && Date.parse(row.temp_password_expires_at) > Date.now()
   );
@@ -119,17 +118,24 @@ async function login(req, client, body) {
     throw new ApiError(403, 'A temporary password is active. Ask your parent to use it to set a new PIN or password.');
   }
 
-  const regularValid = (
-    (!!row.password_set && safeEqual(row.password_hash, hash))
-    || (!!row.pin_set && safeEqual(row.pin_hash, hash))
-  );
+  const password = verifyStoredCredential(credential, row.password_hash);
+  const pin = verifyStoredCredential(credential, row.pin_hash);
+  const regularValid = (!!row.password_set && password.valid) || (!!row.pin_set && pin.valid);
 
   if (!tempValid && !regularValid) {
-    registerFailure(req, childId);
+    await registerFailure(req, client, childId);
     throw new ApiError(401, 'Invalid Child ID or password. Please try again.');
   }
 
-  clearFailures(req, childId);
+  await clearFailures(req, childId, client);
+
+  // Migrate legacy SHA-256 hashes on the first successful use of a credential.
+  const upgrades = [];
+  if (tempValid && temp.needsUpgrade) upgrades.push(['temp_password_hash', credential]);
+  if (row.password_set && password.valid && password.needsUpgrade) upgrades.push(['password_hash', credential]);
+  if (row.pin_set && pin.valid && pin.needsUpgrade) upgrades.push(['pin_hash', credential]);
+  await Promise.all(upgrades.map(([field, value]) => upgradeCredential(client, childId, field, value)));
+
   const now = new Date().toISOString();
   const { error } = await client
     .from('child_accounts')
@@ -144,7 +150,19 @@ async function login(req, client, body) {
   };
 }
 
-async function issueTemporaryPassword(client, body) {
+async function requireVerifiedRecoveryRequest(client, childId, parentEmail) {
+  const verified = await hasVerifiedRecoveryRequest(
+    client,
+    childId,
+    parentEmail,
+    VERIFIED_REQUEST_WINDOW_MS,
+  );
+  if (!verified) {
+    throw new ApiError(409, 'A verified recovery request is required before a temporary password can be issued.');
+  }
+}
+
+async function issueTemporaryPassword(req, client, body) {
   requireDeveloper(body.developerToken || body.sessionToken);
   const childId = normalizeChildId(body.childId);
   const parentEmail = typeof body.parentEmail === 'string' ? body.parentEmail.trim().toLowerCase() : '';
@@ -152,25 +170,32 @@ async function issueTemporaryPassword(client, body) {
   if (!validateChildId(childId) || !validateEmail(parentEmail)) {
     throw new ApiError(400, 'Enter a valid Child ID and parent email.');
   }
+  if (await isRateLimited(req, parentEmail, client, 'recovery')) {
+    throw new ApiError(429, 'Too many recovery requests. Please wait 15 minutes and try again.');
+  }
 
   const row = await getAccountRow(client, childId);
   if (!row || row.deleted_at || !row.parent_email || row.parent_email.toLowerCase() !== parentEmail) {
+    await recordFailure(req, parentEmail, client, 'recovery');
     throw new ApiError(404, 'No account was found for that Child ID and parent email.');
   }
+  await requireVerifiedRecoveryRequest(client, childId, parentEmail);
 
   const tempPassword = newTemporaryPassword();
   const expiresAt = tempPasswordExpiry();
   const { error } = await client
     .from('child_accounts')
     .update({
-      temp_password_hash: hashCredential(tempPassword),
+      temp_password_hash: hashCredentialStrong(tempPassword),
       temp_password_expires_at: expiresAt,
       requires_credential_reset: true,
+      token_revoked_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('child_id', childId);
   if (error) throw new Error(error.message);
 
+  await clearFailures(req, parentEmail, client, 'recovery');
   return {
     childId: row.child_id,
     fullName: row.full_name,
@@ -181,7 +206,11 @@ async function issueTemporaryPassword(client, body) {
 }
 
 async function resetCredential(client, body) {
-  const childId = requireChildToken(body.token || body.sessionToken, body.childId);
+  const { childId } = await requireActiveChild(
+    client,
+    body.token || body.sessionToken,
+    body.childId,
+  );
   const type = body.type === 'password' ? 'password' : 'pin';
   const credential = requireCredential(body.newCredential ?? body.credential);
 
@@ -198,7 +227,7 @@ async function resetCredential(client, body) {
     throw new ApiError(409, 'No credential reset is pending for this account.');
   }
 
-  const hash = hashCredential(credential);
+  const hash = hashCredentialStrong(credential);
   const updates = type === 'password'
     ? { password_hash: hash, password_set: true, pin_hash: null, pin_set: false }
     : { pin_hash: hash, pin_set: true, password_hash: null, password_set: false };
@@ -228,19 +257,31 @@ async function resetCredential(client, body) {
 }
 
 async function verifyPin(req, client, body) {
-  const childId = requireChildToken(body.token || body.sessionToken, body.childId);
-  if (isRateLimited(req, childId)) {
-    throw new ApiError(429, 'Too many attempts. Please wait a few minutes and try again.');
+  const { childId } = await requireActiveChild(
+    client,
+    body.token || body.sessionToken,
+    body.childId,
+  );
+  if (await isRateLimited(req, childId, client)) {
+    throw new ApiError(429, 'Too many attempts. Please wait 15 minutes and try again.');
   }
   const pin = requireCredential(body.pin);
   const row = await getAccountRow(client, childId);
   if (!row || row.deleted_at) return { valid: false };
 
-  const hash = hashCredential(pin);
-  const valid = (!!row.pin_set && safeEqual(row.pin_hash, hash))
-    || (!!row.password_set && safeEqual(row.password_hash, hash));
-  if (valid) clearFailures(req, childId);
-  else recordFailure(req, childId);
+  const password = verifyStoredCredential(pin, row.password_hash);
+  const legacyPin = verifyStoredCredential(pin, row.pin_hash);
+  const valid = (!!row.password_set && password.valid) || (!!row.pin_set && legacyPin.valid);
+
+  if (valid) {
+    await clearFailures(req, childId, client);
+    const upgrades = [];
+    if (row.password_set && password.valid && password.needsUpgrade) upgrades.push(['password_hash', pin]);
+    if (row.pin_set && legacyPin.valid && legacyPin.needsUpgrade) upgrades.push(['pin_hash', pin]);
+    await Promise.all(upgrades.map(([field, value]) => upgradeCredential(client, childId, field, value)));
+  } else {
+    await recordFailure(req, childId, client);
+  }
   return { valid };
 }
 
@@ -259,7 +300,7 @@ const handler = async (req, res) => {
       return json(res, 200, { success: true, ...result });
     }
     case 'issue_temp_password': {
-      const result = await issueTemporaryPassword(client, body);
+      const result = await issueTemporaryPassword(req, client, body);
       return json(res, 200, { success: true, ...result });
     }
     case 'reset_credential': {

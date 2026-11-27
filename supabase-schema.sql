@@ -13,7 +13,8 @@
 --
 -- Required Vercel server env vars:
 --   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, DEVELOPER_JWT_SECRET,
---   CHILD_SESSION_SECRET (or DEVELOPER_JWT_SECRET as fallback)
+--   CHILD_SESSION_SECRET, APP_URL,
+--   GMAIL_USER, GMAIL_APP_PASSWORD (for parent verification and recovery mail)
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.child_accounts (
   settings JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted_at TIMESTAMPTZ,
+  token_revoked_at TIMESTAMPTZ,
   parent_id UUID REFERENCES auth.users(id),
   version BIGINT NOT NULL DEFAULT 0
 );
@@ -63,6 +65,7 @@ ALTER TABLE public.child_accounts
   ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'::jsonb,
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS token_revoked_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES auth.users(id),
   ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
 
@@ -107,6 +110,7 @@ CREATE TABLE IF NOT EXISTS public.support_requests (
   message TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'open',
   developer_note TEXT NOT NULL DEFAULT '',
+  parent_verified BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -118,6 +122,7 @@ ALTER TABLE public.support_requests
   ADD COLUMN IF NOT EXISTS message TEXT,
   ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open',
   ADD COLUMN IF NOT EXISTS developer_note TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS parent_verified BOOLEAN NOT NULL DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -193,6 +198,71 @@ CREATE TABLE IF NOT EXISTS public.parent_profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Shared throttling counters. Serverless functions are short-lived, so the
+-- authoritative failure counts must live in the database.
+CREATE TABLE IF NOT EXISTS public.auth_rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL DEFAULT 0,
+  first_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_first_at
+  ON public.auth_rate_limits (first_at);
+
+-- Single-use developer password reset links.
+CREATE TABLE IF NOT EXISTS public.developer_reset_tokens (
+  jti TEXT PRIMARY KEY,
+  email TEXT,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- One-time parent email verification codes for account recovery.
+CREATE TABLE IF NOT EXISTS public.parent_email_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  child_id TEXT NOT NULL,
+  parent_email TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (child_id, parent_email)
+);
+
+-- Atomic, race-safe failure counter used by api/_lib/rate-limit.js.
+CREATE OR REPLACE FUNCTION public.bump_auth_failure(p_key TEXT, p_window_seconds INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_count INTEGER;
+BEGIN
+  INSERT INTO public.auth_rate_limits (key, count, first_at, last_at)
+  VALUES (p_key, 1, NOW(), NOW())
+  ON CONFLICT (key) DO UPDATE
+    SET count = CASE
+          WHEN public.auth_rate_limits.first_at < NOW() - (p_window_seconds || ' seconds')::interval
+            THEN 1
+          ELSE public.auth_rate_limits.count + 1
+        END,
+        first_at = CASE
+          WHEN public.auth_rate_limits.first_at < NOW() - (p_window_seconds || ' seconds')::interval
+            THEN NOW()
+          ELSE public.auth_rate_limits.first_at
+        END,
+        last_at = NOW()
+  RETURNING count INTO v_count;
+  RETURN v_count;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bump_auth_failure(TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.bump_auth_failure(TEXT, INTEGER) TO service_role;
+
 -- ---------------------------------------------------------------------------
 -- 2. Least-privilege access
 -- ---------------------------------------------------------------------------
@@ -205,6 +275,9 @@ ALTER TABLE public.developer_updates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.developer_trash ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sync_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parent_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auth_rate_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.developer_reset_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.parent_email_verifications ENABLE ROW LEVEL SECURITY;
 
 -- Remove every legacy policy, including permissive anon and PUBLIC policies.
 -- Permissive policies combine with OR, so a single broad policy defeats the
@@ -220,8 +293,9 @@ BEGIN
        AND tablename IN (
          'child_accounts', 'support_requests', 'developer_auth',
          'feature_flags', 'developer_updates', 'developer_trash',
-         'sync_state', 'parent_profiles'
-       )
+         'sync_state', 'parent_profiles', 'auth_rate_limits',
+          'developer_reset_tokens', 'parent_email_verifications'
+        )
   LOOP
     EXECUTE format('DROP POLICY %I ON %I.%I', policy_record.policyname, policy_record.schemaname, policy_record.tablename);
   END LOOP;
@@ -229,12 +303,14 @@ END $$;
 
 REVOKE ALL ON TABLE public.child_accounts, public.support_requests,
   public.developer_auth, public.feature_flags, public.developer_updates,
-  public.developer_trash, public.sync_state, public.parent_profiles
+  public.developer_trash, public.sync_state, public.parent_profiles,
+  public.auth_rate_limits, public.developer_reset_tokens, public.parent_email_verifications
   FROM PUBLIC, anon, authenticated;
 
 GRANT ALL ON TABLE public.child_accounts, public.support_requests,
   public.developer_auth, public.feature_flags, public.developer_updates,
-  public.developer_trash, public.sync_state, public.parent_profiles
+  public.developer_trash, public.sync_state, public.parent_profiles,
+  public.auth_rate_limits, public.developer_reset_tokens, public.parent_email_verifications
   TO service_role;
 
 -- Note: the anon key is no longer needed by the app. Remove

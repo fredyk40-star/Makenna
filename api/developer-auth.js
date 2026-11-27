@@ -7,37 +7,35 @@ import {
   verifyDeveloperPassword,
   saveDeveloperPassword,
   validateStrongPassword,
-  checkDeveloperAuthRateLimit,
-  resetDeveloperAuthRateLimit,
+  recordResetToken,
+  consumeResetToken,
+  isDeveloperRateLimited,
+  recordDeveloperFailure,
+  clearDeveloperFailures,
 } from './_lib/developer-auth.js';
 import { sendMail } from './_lib/mailer.js';
+import { json, readBody, requirePost, withErrors } from './_lib/http.js';
 
-const json = (res, status, body) => res.status(status).json(body);
+const rateLimited = (res, message) => json(res, 429, {
+  success: false,
+  error: `${message} Please wait 15 minutes and try again.`,
+});
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return json(res, 405, { success: false, error: 'Method not allowed' });
-  }
-
-  const { action, email, password, token, newPassword } = req.body || {};
-  const clientKey = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-    || req.socket?.remoteAddress
-    || 'unknown';
+const handler = async (req, res) => {
+  requirePost(req, res);
+  const { action, email, password, token, newPassword } = readBody(req);
 
   try {
     if (action === 'login') {
-      if (!checkDeveloperAuthRateLimit(`login:${clientKey}`)) {
-        return json(res, 429, {
-          success: false,
-          error: 'Too many sign-in attempts. Please wait 15 minutes and try again.',
-        });
+      if (await isDeveloperRateLimited(req, 'dev-login', DEVELOPER_EMAIL)) {
+        return rateLimited(res, 'Too many sign-in attempts.');
       }
       const valid = await verifyDeveloperPassword(email, password);
       if (!valid) {
+        await recordDeveloperFailure(req, 'dev-login', DEVELOPER_EMAIL);
         return json(res, 401, { success: false, error: 'Invalid developer email or password.' });
       }
-      resetDeveloperAuthRateLimit(`login:${clientKey}`);
+      await clearDeveloperFailures(req, 'dev-login', DEVELOPER_EMAIL);
       return json(res, 200, {
         success: true,
         token: createSessionToken(),
@@ -51,16 +49,14 @@ export default async function handler(req, res) {
     }
 
     if (action === 'request-reset') {
-      if (!checkDeveloperAuthRateLimit(`reset:${clientKey}`)) {
-        return json(res, 429, {
-          success: false,
-          error: 'Too many reset requests. Please wait 15 minutes and try again.',
-        });
+      if (await isDeveloperRateLimited(req, 'dev-reset', DEVELOPER_EMAIL)) {
+        return rateLimited(res, 'Too many reset requests.');
       }
       // A reset link is only ever generated and mailed for the configured mailbox.
       const normalizedEmail = String(email || '').trim().toLowerCase();
       if (normalizedEmail === DEVELOPER_EMAIL.toLowerCase() && process.env.APP_URL) {
         const resetToken = createResetToken();
+        await recordResetToken(resetToken);
         const origin = process.env.APP_URL;
         const link = `${origin.replace(/\/$/, '')}/developer-reset-password?token=${encodeURIComponent(resetToken)}`;
         try {
@@ -74,6 +70,7 @@ export default async function handler(req, res) {
           console.error('Developer reset mail failed:', error.message);
         }
       }
+      await recordDeveloperFailure(req, 'dev-reset', DEVELOPER_EMAIL);
       return json(res, 200, {
         success: true,
         message: 'If that email is registered, a reset link has been sent.',
@@ -81,8 +78,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'reset') {
-      const reset = verifyResetToken(token);
-      if (!reset) {
+      if (!verifyResetToken(token)) {
         return json(res, 400, { success: false, error: 'This reset link is invalid or has expired.' });
       }
       if (!validateStrongPassword(newPassword)) {
@@ -91,7 +87,17 @@ export default async function handler(req, res) {
           error: 'Use at least 12 characters with upper case, lower case, a number and a symbol.',
         });
       }
-      await saveDeveloperPassword(newPassword);
+      // Consume atomically before saving so concurrent replays cannot reuse the
+      // link. If saving fails, restore the token for a clean retry.
+      if (!(await consumeResetToken(token))) {
+        return json(res, 400, { success: false, error: 'This reset link is invalid or has expired.' });
+      }
+      try {
+        await saveDeveloperPassword(newPassword);
+      } catch (error) {
+        await recordResetToken(token);
+        throw error;
+      }
       return json(res, 200, { success: true });
     }
 
@@ -100,4 +106,6 @@ export default async function handler(req, res) {
     console.error('Developer auth error:', error.message);
     return json(res, 500, { success: false, error: 'Developer authentication is temporarily unavailable.' });
   }
-}
+};
+
+export default withErrors(handler);

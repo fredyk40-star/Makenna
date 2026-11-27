@@ -14,11 +14,16 @@ describe('SupportService', () => {
 
   it('stores a parent message from a verified child ID and email pair', async () => {
     const child = await ChildAccountService.registerChild('Ama', '1234', 'parent@example.com');
+    const verification = await SupportService.requestVerification({
+      childId: child.childId,
+      parentEmail: child.parentEmail,
+    });
 
     const request = await SupportService.submitRequest({
       childId: child.childId.toUpperCase(),
       parentEmail: 'PARENT@EXAMPLE.COM',
       message: 'I forgot my PIN.',
+      verificationCode: verification.devCode,
     });
 
     expect(request.status).toBe('open');
@@ -29,10 +34,15 @@ describe('SupportService', () => {
 
   it('allows the developer to review and resolve a request', async () => {
     const child = await ChildAccountService.registerChild('Kofi', '1234', 'parent@example.com');
+    const verification = await SupportService.requestVerification({
+      childId: child.childId,
+      parentEmail: child.parentEmail,
+    });
     const request = await SupportService.submitRequest({
       childId: child.childId,
       parentEmail: child.parentEmail,
       message: 'Please help me log in.',
+      verificationCode: verification.devCode,
     });
 
     const reviewed = await SupportService.markStatus(request.id, 'reviewing', 'Identity checked.');
@@ -44,12 +54,28 @@ describe('SupportService', () => {
     expect(resolved.status).toBe('resolved');
   });
 
-  it('rejects requests that do not match an account', async () => {
+  it('does not reveal whether an unknown account exists', async () => {
+    // A non-matching identity has no issued code, so it gets the same generic
+    // error as a wrong code rather than an account-not-found response.
     await expect(SupportService.submitRequest({
       childId: 'kid00000000',
       parentEmail: 'parent@example.com',
       message: 'This account does not exist.',
-    })).rejects.toThrow(/No account was found/i);
+      verificationCode: '123456',
+    })).rejects.toThrow(/verification code/i);
+    expect(StorageService.get(SUPPORT_KEY, [])).toHaveLength(0);
+  });
+
+  it('rejects an invalid verification code', async () => {
+    const child = await ChildAccountService.registerChild('Ama', '1234', 'parent@example.com');
+    await SupportService.requestVerification({ childId: child.childId, parentEmail: child.parentEmail });
+
+    await expect(SupportService.submitRequest({
+      childId: child.childId,
+      parentEmail: child.parentEmail,
+      message: 'I forgot my PIN.',
+      verificationCode: '000000',
+    })).rejects.toThrow(/verification code/i);
   });
 
   it('validates the message length', async () => {

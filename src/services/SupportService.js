@@ -37,7 +37,21 @@ export class SupportService {
     this._save(requests);
   }
 
-  static async submitRequest({ childId, parentEmail, message }) {
+  /** Send a one-time code to the parent email before a recovery request. */
+  static async requestVerification({ childId, parentEmail }) {
+    const normalizedChildId = ChildAccountService.normalizeChildId(childId);
+    const normalizedEmail = typeof parentEmail === 'string' ? parentEmail.trim().toLowerCase() : '';
+    if (!normalizedChildId || !ChildAccountService.validateEmail(normalizedEmail)) {
+      throw new Error('Enter a valid Child ID and parent email.');
+    }
+    return postApi('support', {
+      action: 'send_verification',
+      childId: normalizedChildId,
+      parentEmail: normalizedEmail,
+    });
+  }
+
+  static async submitRequest({ childId, parentEmail, message, verificationCode }) {
     const normalizedChildId = ChildAccountService.normalizeChildId(childId);
     const normalizedEmail = typeof parentEmail === 'string' ? parentEmail.trim().toLowerCase() : '';
 
@@ -49,12 +63,16 @@ export class SupportService {
     if (trimmedMessage.length < 5 || trimmedMessage.length > MAX_MESSAGE_LENGTH) {
       throw new Error(`Please write a short message (5-${MAX_MESSAGE_LENGTH} characters).`);
     }
+    if (!/^\d{6}$/.test(String(verificationCode || ''))) {
+      throw new Error('Enter the 6-digit code sent to the parent email.');
+    }
 
     const result = await postApi('support', {
       action: 'submit',
       childId: normalizedChildId,
       parentEmail: normalizedEmail,
       message: trimmedMessage,
+      verificationCode,
     });
 
     this._merge(result.request);

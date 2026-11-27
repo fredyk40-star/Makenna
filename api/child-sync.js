@@ -2,7 +2,7 @@ import {
   authorizedChildIds,
   getAccountRow,
   normalizeChildId,
-  requireChildToken,
+  requireActiveChild,
   requireServerClient,
   syncPatch,
   validateChildId,
@@ -12,14 +12,31 @@ import {
 import { verifySessionToken } from './_lib/developer-auth.js';
 import { HttpError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
+const tokenFor = (tokens, childId) => (
+  tokens?.[childId] || tokens?.[normalizeChildId(childId)] || null
+);
+
 async function pull(client, body) {
   const childIds = authorizedChildIds(body.tokens);
   if (!childIds.length) return { accounts: [] };
 
+  // A signed token is not enough: skip deleted accounts and devices signed out
+  // after the token was issued rather than returning their protected data.
+  const activeIds = [];
+  for (const childId of childIds) {
+    try {
+      await requireActiveChild(client, tokenFor(body.tokens, childId), childId);
+      activeIds.push(childId);
+    } catch {
+      // Revoked or deleted account: the device simply sees no cloud account.
+    }
+  }
+  if (!activeIds.length) return { accounts: [] };
+
   const { data, error } = await client
     .from('child_accounts')
     .select('*')
-    .in('child_id', childIds)
+    .in('child_id', activeIds)
     .is('deleted_at', null);
   if (error) throw new Error(error.message);
 
@@ -31,10 +48,9 @@ async function push(client, body) {
   const tokens = body.tokens || {};
 
   // Reject the whole batch before writing anything if any device is unauthorised.
-  const tokenFor = childId => tokens[childId] || tokens[normalizeChildId(childId)];
-  accounts.forEach((account) => {
-    requireChildToken(tokenFor(account?.childId), account?.childId);
-  });
+  for (const account of accounts) {
+    await requireActiveChild(client, tokenFor(tokens, account?.childId), account?.childId);
+  }
 
   const failures = [];
   let applied = 0;
@@ -77,14 +93,17 @@ async function softDelete(client, body) {
     if (!validateChildId(requestedId)) throw new HttpError(400, 'Invalid child ID.');
     childId = requestedId;
   } else {
-    const tokens = body.tokens || {};
-    const token = tokens[body.childId] || tokens[requestedId];
-    childId = requireChildToken(token, body.childId);
+    ({ childId } = await requireActiveChild(
+      client,
+      tokenFor(body.tokens, body.childId),
+      body.childId,
+    ));
   }
 
+  const now = new Date().toISOString();
   const { error } = await client
     .from('child_accounts')
-    .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({ deleted_at: now, token_revoked_at: now, updated_at: now })
     .eq('child_id', childId);
   if (error) throw new Error(error.message);
   return { childId };
@@ -101,6 +120,7 @@ async function restore(client, body) {
 
   const patch = syncPatch(body.account || {});
   patch.deleted_at = null;
+  patch.token_revoked_at = null;
   const { error } = await client
     .from('child_accounts')
     .update(patch)

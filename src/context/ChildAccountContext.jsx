@@ -48,8 +48,11 @@ export const ChildAccountProvider = ({ children }) => {
       // Replay queued writes and merge cloud changes when the app starts.
       if (CloudSyncService.isEnabled()) {
         try {
-          const result = await CloudSyncService.requestSync('startup');
-          if (!result.success) console.warn('Cloud sync pending:', result.error);
+          void CloudSyncService.requestSync('startup').then(result => {
+            if (result && !result.success) console.warn('Cloud sync pending:', result.error);
+          }).catch(syncErr => {
+            console.warn('Cloud sync skipped (offline or unavailable):', syncErr.message);
+          });
         } catch (syncErr) {
           console.warn('Cloud sync skipped (offline or unavailable):', syncErr.message);
         }
@@ -98,10 +101,16 @@ export const ChildAccountProvider = ({ children }) => {
       }
       AnalyticsService.trackLogin();
       
-      // The account is queued by ChildAccountService; flush it when possible.
+      // The account is queued by ChildAccountService; flush it in the background.
       if (CloudSyncService.isEnabled()) {
         try {
-          await CloudSyncService.requestSync('registration');
+          void CloudSyncService.requestSync('registration').then(syncResult => {
+            if (syncResult && !syncResult.success) {
+              console.warn('Registration sync pending:', syncResult.error);
+            }
+          }).catch(syncErr => {
+            console.warn('Supabase sync pending (account saved locally):', syncErr.message);
+          });
         } catch (syncErr) {
           console.warn('Supabase sync pending (account saved locally):', syncErr.message);
         }

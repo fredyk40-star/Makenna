@@ -55,8 +55,9 @@ Child registration, login, credential reset, cloud sync and support requests are
 - New accounts get a `kid########` Child ID, require a parent email, and are written to Supabase by the server at registration.
 - PIN/password hashes are created and verified only in serverless functions; they are never returned to the browser.
 - Account creation requires the user to copy/acknowledge the generated Child ID.
-- `/support` lets a parent submit a forgot-PIN request with the Child ID + parent email. The server verifies the pair before storing the message.
-- The developer portal has a **Support** tab. When an ID/email pair matches an account, the developer can email a one-time password. The child must then choose a new PIN or password before continuing.
+- `/support` lets a parent submit a forgot-PIN request with the Child ID + parent email. A one-time code is emailed to that parent address and must be entered before the request is stored.
+- The developer portal has a **Support** tab. Only verified recovery requests can be used, and issuing a one-time password signs out existing devices. The child must log in with that password and choose a new PIN or password before continuing.
+- Legacy PIN/password hashes are upgraded to salted scrypt hashes automatically on the next successful verification. Developer reset links are single-use, and sign-in/recovery/tutor throttles are shared across serverless instances via Supabase.
 - Developer login is restricted to `addaifrederick72@gmail.com` and a strong password. Reset links are only sent to that mailbox.
 - Children already signed in on a device can keep using the app offline; signing in on a new device requires a network connection.
 

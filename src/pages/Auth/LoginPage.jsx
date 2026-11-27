@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 import LoginGuidance from '../../components/LoginGuidance/LoginGuidance';
-import BiometricLoginButton from '../../components/BiometricLogin/BiometricLoginButton';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -208,13 +207,6 @@ const LoginPage = () => {
             >
               Create Account 🎉
             </Link>
-          </div>
-
-          {/* Biometric Login */}
-          <div className="mt-4">
-            <BiometricLoginButton 
-              onSuccess={() => navigate('/', { replace: true })} 
-            />
           </div>
 
         </div>

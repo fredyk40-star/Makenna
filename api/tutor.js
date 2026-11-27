@@ -1,10 +1,10 @@
-import { requireChildToken } from './_lib/child-auth.js';
+import { requireActiveChild, requireChildToken } from './_lib/child-auth.js';
 import { requireServerClient } from './_lib/supabase-server.js';
+import { checkRequestLimit } from './_lib/rate-limit.js';
 import { HttpError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_REQUESTS = 10;
-const rateLimits = new Map();
 
 // Only units from the bundled Ghana curriculum may be sent to Gemini. The
 // source is produced by CurriculumTutorService as "<subject>:<unitId>".
@@ -12,19 +12,6 @@ const CURRICULUM_SUBJECTS = new Set([
   'twi', 'ewe', 'ga', 'fante', 'english', 'mathematics', 'science', 'rme',
 ]);
 const CURRICULUM_LEVELS = new Set(['KG1', 'KG2', 'Basic1', 'Basic2']);
-
-function checkRateLimit(childId) {
-  const now = Date.now();
-  const entry = rateLimits.get(childId);
-  if (!entry || now - entry.startedAt >= RATE_LIMIT_WINDOW_MS) {
-    rateLimits.set(childId, { startedAt: now, count: 1 });
-    return;
-  }
-  if (entry.count >= RATE_LIMIT_REQUESTS) {
-    throw new HttpError(429, 'The tutor is taking a short break. Please try again in a minute.');
-  }
-  entry.count += 1;
-}
 
 const containsPersonalDetails = (question) => (
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(question)
@@ -71,17 +58,9 @@ function validateTutorRequest(body) {
   }
 }
 
-async function requireParentConsent(client, childId) {
-  const { data, error } = await client
-    .from('child_accounts')
-    .select('deleted_at, settings')
-    .eq('child_id', childId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data || data.deleted_at) {
-    throw new HttpError(403, 'This child account is no longer active.');
-  }
-  const tutor = data.settings?.tutor;
+async function requireParentConsent(client, token, childId) {
+  const { row } = await requireActiveChild(client, token, childId);
+  const tutor = row.settings?.tutor;
   if (!tutor || tutor.enabled !== true || tutor.allowOnlineAI !== true) {
     throw new HttpError(403, 'Online tutoring is not enabled for this child. Ask a parent to turn it on in Settings.');
   }
@@ -92,17 +71,22 @@ const handler = async (req, res) => {
   const body = readBody(req);
   const childId = requireChildToken(body.token, body.childId);
   validateTutorRequest(body);
-  checkRateLimit(childId);
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new HttpError(503, 'Online tutoring is not configured.');
+
+  await checkRequestLimit('tutor', req, childId, {
+    max: RATE_LIMIT_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    message: 'The tutor is taking a short break. Please try again in a minute.',
+  });
 
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
   if (!/^[A-Za-z0-9._-]+$/.test(model)) {
     throw new Error('GEMINI_MODEL contains invalid characters.');
   }
 
-  await requireParentConsent(requireServerClient(), childId);
+  await requireParentConsent(requireServerClient(), body.token, childId);
 
   const prompt = [
     'You are a kind, safe learning tutor for children aged 5 to 8.',

@@ -5,13 +5,20 @@ vi.mock('../../api/_lib/developer-auth.js', async (importOriginal) => {
   return {
     ...actual,
     verifyDeveloperPassword: vi.fn(async () => false),
+    isDeveloperRateLimited: vi.fn(async () => false),
+    recordDeveloperFailure: vi.fn(async () => {}),
+    clearDeveloperFailures: vi.fn(async () => {}),
     createSessionToken: vi.fn(() => 'session-token'),
     createResetToken: vi.fn(() => 'reset-token'),
   };
 });
 
-const { checkDeveloperAuthRateLimit, resetDeveloperAuthRateLimit } = await import('../../api/_lib/developer-auth.js');
-const { verifyDeveloperPassword } = await import('../../api/_lib/developer-auth.js');
+const {
+  verifyDeveloperPassword,
+  isDeveloperRateLimited,
+  recordDeveloperFailure,
+  clearDeveloperFailures,
+} = await import('../../api/_lib/developer-auth.js');
 const handler = (await import('../../api/developer-auth.js')).default;
 
 const makeRes = () => {
@@ -35,13 +42,15 @@ const req = (body) => ({
 });
 
 beforeEach(() => {
-  verifyDeveloperPassword.mockClear();
-  resetDeveloperAuthRateLimit('login:203.0.113.10');
-  resetDeveloperAuthRateLimit('reset:203.0.113.10');
+  let failures = 0;
+  verifyDeveloperPassword.mockReset().mockResolvedValue(false);
+  isDeveloperRateLimited.mockReset().mockImplementation(async () => failures >= 10);
+  recordDeveloperFailure.mockReset().mockImplementation(async () => { failures += 1; });
+  clearDeveloperFailures.mockReset().mockImplementation(async () => { failures = 0; });
 });
 
 describe('developer auth rate limiting', () => {
-  it('returns 429 after too many failed sign-in attempts', async () => {
+  it('returns 429 once the shared throttle is tripped', async () => {
     for (let i = 0; i < 10; i += 1) {
       const res = makeRes();
       await handler(req({ action: 'login', email: 'addaifrederick72@gmail.com', password: 'wrong' }), res);
@@ -55,12 +64,13 @@ describe('developer auth rate limiting', () => {
   });
 
   it('clears the throttle after a successful sign-in', async () => {
-    checkDeveloperAuthRateLimit('login:203.0.113.10');
+    // Trip it first, then authenticate successfully.
+    await handler(req({ action: 'login', email: 'addaifrederick72@gmail.com', password: 'wrong' }), makeRes());
     verifyDeveloperPassword.mockResolvedValueOnce(true);
 
     const res = makeRes();
     await handler(req({ action: 'login', email: 'addaifrederick72@gmail.com', password: 'correct' }), res);
     expect(res.statusCode).toBe(200);
-    expect(checkDeveloperAuthRateLimit('login:203.0.113.10')).toBe(true);
+    expect(clearDeveloperFailures).toHaveBeenCalled();
   });
 });
