@@ -518,9 +518,9 @@ const DeveloperDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <div>
           <h1 className="text-3xl font-bold">Developer Portal 🔧</h1>
           <p className="text-gray-400">System Management Dashboard</p>
@@ -824,7 +824,7 @@ const DeveloperDashboard = () => {
             </select>
           </div>
 
-          <div className="bg-gray-800 rounded-xl overflow-hidden">
+          <div className="bg-gray-800 rounded-xl overflow-hidden overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-700">
                 <tr>
@@ -875,7 +875,7 @@ const DeveloperDashboard = () => {
           {trashBin.length === 0 ? (
             <p className="text-gray-400 p-4">Trash is empty.</p>
           ) : (
-            <div className="bg-gray-800 rounded-xl overflow-hidden">
+            <div className="bg-gray-800 rounded-xl overflow-hidden overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-700">
                   <tr>
@@ -998,7 +998,7 @@ const DeveloperDashboard = () => {
             </button>
             <span className="text-sm text-gray-400 self-center">{logs.length} log entries</span>
           </div>
-          <div className="bg-gray-800 rounded-xl overflow-hidden">
+          <div className="bg-gray-800 rounded-xl overflow-hidden overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-700">
                 <tr>

@@ -117,7 +117,7 @@ const BibleStoryReader = () => {
     if (readingMode === 'read-to-me' && currentPage && !isPlaying && !isComplete) {
       readPageSmooth();
     }
-  }, [currentPageIndex, readingMode, isComplete]);
+  }, [currentPageIndex, readingMode, isComplete, readPageSmooth]);
 
   const handleNext = () => {
     window.speechSynthesis.cancel();

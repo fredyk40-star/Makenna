@@ -46,6 +46,14 @@ describe('CaptionDisplay', () => {
     expect(screen.queryByText('c')).toBeNull();
   });
 
+  it('does not render single-character letter sounds as caption toasts on learning screens', () => {
+    const { emit } = renderCaption('/');
+
+    emit('C');
+
+    expect(screen.queryByText('C')).toBeNull();
+  });
+
   it('shows live captions on learning screens', () => {
     const { emit } = renderCaption('/');
 

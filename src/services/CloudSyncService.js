@@ -330,19 +330,38 @@ export class CloudSyncService {
 
   static async deleteFromCloud(childId, token = null) {
     try {
+      const normalized = ChildAccountService.normalizeChildId(childId);
       const tokens = ChildAccountService.getChildTokens();
-      if (token) tokens[ChildAccountService.normalizeChildId(childId)] = token;
+      if (token) tokens[normalized] = token;
+      const childToken = tokens[normalized] || tokens[childId];
+      const developerToken = StorageService.get(DEVELOPER_SESSION_KEY, null);
+
+      if (!childToken && !developerToken) {
+        // Without a device token or developer session, this device cannot authorise
+        // cloud deletion. Local deletion is already complete and tombstoned.
+        return { success: true, childId, skippedCloud: true };
+      }
+
       await postApi('child-sync', {
         action: 'delete',
         childId,
         tokens,
         // A developer removing an account may not have the child's device
         // token, so the signed developer session is an alternate authority.
-        developerToken: StorageService.get(DEVELOPER_SESSION_KEY, null),
+        developerToken,
       });
       return { success: true, childId };
     } catch (error) {
-      console.error('Cloud delete failed:', error.message);
+      console.warn('Cloud delete failed:', error.message);
+      const isAuthError = error.message?.includes('no longer authorised')
+        || error.message?.includes('unauthorised')
+        || error.message?.includes('unauthorized')
+        || error.message?.includes('401');
+      if (isAuthError) {
+        // A permanent auth failure means this device cannot delete the cloud row.
+        // Return success so the sync queue drops the operation instead of retrying forever.
+        return { success: true, childId, unauthenticated: true };
+      }
       return { success: false, error: error.message };
     }
   }

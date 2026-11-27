@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ChildAccountService } from '../services/ChildAccountService';
+import { StorageService } from '../services/StorageService';
 import { AnalyticsService } from '../services/AnalyticsService';
 import { GamificationService } from '../services/GamificationService';
 import { CloudSyncService } from '../services/CloudSyncService';
+import { NotificationBellService } from '../services/NotificationBellService';
 
 const ChildAccountContext = createContext();
 
@@ -55,6 +57,7 @@ export const ChildAccountProvider = ({ children }) => {
         const child = ChildAccountService.getActiveChild();
         if (child) {
           setActiveChild(child);
+          StorageService.set('makenna_current_user_id', child.childId);
         }
       } catch (err) {
         console.error('getActiveChild error:', err);
@@ -81,6 +84,15 @@ export const ChildAccountProvider = ({ children }) => {
       }
       const child = ChildAccountService.getActiveChild();
       setActiveChild(child);
+      if (child?.childId) {
+        StorageService.set('makenna_current_user_id', child.childId);
+        NotificationBellService.addNotification(child.childId, {
+          title: 'Welcome!',
+          message: `Hello ${child.fullName || 'friend'}! Ready to learn today?`,
+          icon: '👋',
+        });
+        window.dispatchEvent(new Event('storage'));
+      }
       AnalyticsService.trackLogin();
       
       // The account is queued by ChildAccountService; flush it when possible.
@@ -105,6 +117,15 @@ export const ChildAccountProvider = ({ children }) => {
       const result = await ChildAccountService.loginChild(childId, credential);
       const child = ChildAccountService.getActiveChild();
       setActiveChild(child);
+      if (child?.childId) {
+        StorageService.set('makenna_current_user_id', child.childId);
+        NotificationBellService.addNotification(child.childId, {
+          title: 'Welcome!',
+          message: `Hello ${child.fullName || 'friend'}! Ready to learn today?`,
+          icon: '👋',
+        });
+        window.dispatchEvent(new Event('storage'));
+      }
       AnalyticsService.trackLogin();
       // Check daily reset for gamification
       GamificationService.checkDailyReset(childId);

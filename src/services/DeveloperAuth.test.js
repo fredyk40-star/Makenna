@@ -18,6 +18,7 @@ describe('developer authentication helpers', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it('issues signed sessions that expire and cannot be reused as reset tokens', () => {

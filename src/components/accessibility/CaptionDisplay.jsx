@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAccessibility } from '../../context/AccessibilityContext';
 import AccessibilityService from '../../services/AccessibilityService';
 
@@ -14,8 +15,6 @@ const CAPTION_FREE_ROUTES = new Set([
   '/developer-forgot-password',
   '/developer-reset-password',
 ]);
-
-const CAPTION_VISIBLE_MS = 6000;
 
 const CaptionDisplay = () => {
   const { captions } = useAccessibility();
@@ -33,12 +32,19 @@ const CaptionDisplay = () => {
 
   useEffect(() => {
     const unsubscribe = AccessibilityService.subscribeCaptions((text) => {
+      const clean = typeof text === 'string' ? text.trim() : '';
+      // Single characters (e.g. isolated letter sounds like "C" from phonics/alphabet games)
+      // are part of visual game cards and should not spawn a floating caption banner.
+      if (clean.length <= 1) return;
+
       if (hideTimer.current) clearTimeout(hideTimer.current);
-      setCaption(text);
+      setCaption(clean);
+
+      const visibleMs = Math.min(6000, Math.max(2500, clean.length * 60 + 1000));
       hideTimer.current = setTimeout(() => {
         setCaption('');
         hideTimer.current = null;
-      }, CAPTION_VISIBLE_MS);
+      }, visibleMs);
     });
 
     return () => {
@@ -52,16 +58,27 @@ const CaptionDisplay = () => {
     hideCaption();
   }, [pathname, hideCaption]);
 
-  if (CAPTION_FREE_ROUTES.has(pathname) || !captions || !caption) return null;
+  if (CAPTION_FREE_ROUTES.has(pathname) || !captions || !caption || caption.length <= 1) {
+    return null;
+  }
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] max-w-xl mx-4 px-5 py-3 rounded-2xl bg-gray-900/90 text-white text-center font-semibold shadow-xl"
-    >
-      {caption}
-    </div>
+    <AnimatePresence>
+      {caption && (
+        <motion.div
+          key={caption}
+          initial={{ opacity: 0, y: 12, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 8, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] max-w-xl mx-4 px-5 py-3 rounded-2xl bg-gray-900/90 text-white text-center font-semibold shadow-xl pointer-events-none backdrop-blur-sm"
+        >
+          {caption}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

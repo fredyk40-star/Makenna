@@ -284,7 +284,7 @@ const AIAssistant = () => {
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="absolute bottom-20 left-0 mb-2 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-xl pointer-events-auto overflow-hidden"
+            className="absolute bottom-20 left-0 mb-2 w-80 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-white/30 rounded-2xl shadow-xl pointer-events-auto overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
@@ -429,7 +429,7 @@ const AIAssistant = () => {
             }}
             whileTap={{ scale: 0.9 }}
             onClick={handleClick}
-            className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full shadow-lg cursor-pointer pointer-events-auto flex items-center justify-center hover:scale-105 transition-transform relative overflow-hidden"
+            className="w-16 h-16 bg-white/30 dark:bg-gray-800/30 backdrop-blur-md border border-white/30 rounded-full shadow-lg cursor-pointer pointer-events-auto flex items-center justify-center hover:scale-105 transition-transform relative overflow-hidden"
           >
             {/* Minimize button overlay */}
             <button

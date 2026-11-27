@@ -1,11 +1,19 @@
 import { motion } from 'framer-motion';
 import { useGreeting } from '../../../hooks/useGreeting';
 import { useApp } from '../../../context/AppContext';
+import { useChildAccount } from '../../../context/ChildAccountContext';
 import FloatingElements from './FloatingElements';
 
 const Hero = () => {
   const greeting = useGreeting();
   const { userName } = useApp();
+  const { activeChild, childName } = useChildAccount();
+  const displayName = activeChild?.fullName || childName || userName || 'Makenna';
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-100 via-purple-50 to-pink-50 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 p-6 md:p-8 lg:p-10 min-h-[200px] md:min-h-[240px]">
@@ -21,10 +29,10 @@ const Hero = () => {
             {greeting.greeting} {greeting.emoji}
           </p>
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-baloo font-bold text-primary dark:text-blue-400 mt-1">
-            Hello {userName}!
+            Hello {displayName}!
           </h1>
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mt-2 font-semibold">
-            Ready for today's adventure?
+            {today} • Ready for today's adventure?
           </p>
         </motion.div>
       </div>

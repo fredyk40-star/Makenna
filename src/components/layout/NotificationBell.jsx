@@ -3,14 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaBell, FaCheck, FaTrash } from 'react-icons/fa';
 import { NotificationBellService } from '../../services/NotificationBellService';
 import { NotificationService } from '../../services/NotificationService';
+import { useChildAccount } from '../../context/ChildAccountContext';
+import { StorageService } from '../../services/StorageService';
 
 const NotificationBell = () => {
+  const { activeChild } = useChildAccount();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
+    if (activeChild?.childId) {
+      StorageService.set('makenna_current_user_id', activeChild.childId);
+    }
     loadNotifications();
 
     // Listen for notification updates
@@ -20,7 +26,7 @@ const NotificationBell = () => {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [activeChild?.childId]);
 
   useEffect(() => {
     // Close when clicking outside

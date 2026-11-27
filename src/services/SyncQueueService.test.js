@@ -45,4 +45,18 @@ describe('SyncQueueService', () => {
     SyncQueueService.recordDeletion('kid-3', '2026-01-05T00:00:00.000Z');
     expect(SyncQueueService.getTombstones()['kid-3'].deletedAt).toBe('2026-01-05T00:00:00.000Z');
   });
+
+  it('drops operations that exceed MAX_ATTEMPTS to prevent infinite retry loops', async () => {
+    SyncQueueService.enqueue({ type: 'UPSERT_ACCOUNT', childId: 'kid-retry', payload: {} });
+    for (let i = 0; i < 5; i++) {
+      await SyncQueueService.flush(async () => ({ success: false, error: 'Persistent server error' }));
+    }
+    expect(SyncQueueService.getQueue()).toHaveLength(0);
+  });
+
+  it('immediately drops DELETE_ACCOUNT operations rejected as unauthorised', async () => {
+    SyncQueueService.enqueue({ type: 'DELETE_ACCOUNT', childId: 'kid-unauth', payload: {} });
+    await SyncQueueService.flush(async () => ({ success: false, error: 'This device is no longer authorised for that child' }));
+    expect(SyncQueueService.getQueue()).toHaveLength(0);
+  });
 });

@@ -93,12 +93,21 @@ export class SyncQueueService {
         processed += 1;
       } catch (error) {
         failed += 1;
-        remaining.push({
-          ...operation,
-          attempts: (operation.attempts || 0) + 1,
-          lastError: error.message,
-          giveUp: (operation.attempts || 0) + 1 >= MAX_ATTEMPTS,
-        });
+        const attempts = (operation.attempts || 0) + 1;
+        const isAuthError = error.message?.includes('no longer authorised')
+          || error.message?.includes('unauthorised')
+          || error.message?.includes('unauthorized');
+
+        // Drop operations that have exhausted retries or failed with permanent auth errors on deletion
+        if (attempts < MAX_ATTEMPTS && !(operation.type === 'DELETE_ACCOUNT' && isAuthError)) {
+          remaining.push({
+            ...operation,
+            attempts,
+            lastError: error.message,
+          });
+        } else {
+          console.warn(`[SyncQueue] Dropping operation after ${attempts} attempts (${operation.type}):`, error.message);
+        }
       }
     }
 

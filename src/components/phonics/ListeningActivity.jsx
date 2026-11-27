@@ -56,8 +56,8 @@ const ListeningActivity = ({
     }, 500);
   }, [letterId, speak]);
 
-  const handleLetterSelect = useCallback(async (letter) => {
-    if (isCorrect !== null) return;
+  const handleLetterSelect = useCallback((letter) => {
+    if (isCorrect !== null || activityComplete) return;
 
     setSelectedLetter(letter);
     const correct = letter.id === targetLetter?.id;
@@ -65,37 +65,26 @@ const ListeningActivity = ({
     setTotalAttempts(prev => prev + 1);
 
     if (correct) {
-      setScore(prev => prev + 1);
+      const nextScore = score + 1;
+      setScore(nextScore);
       setFeedback('🌟 Excellent! Great job!');
-      await speak('Excellent! Great job!', {
-        rate: 0.9,
-        pitch: 1.2
-      });
+      void speak('Excellent! Great job!', { rate: 0.9, pitch: 1.2 });
       announceToScreenReader('Correct! Great job!');
-
       if (onCorrect) onCorrect();
 
-      // Check if activity is complete (3 correct answers)
-      if (score + 1 >= 3) {
+      if (nextScore >= 3) {
         setActivityComplete(true);
         setFeedback('🎉 Amazing! You completed the activity!');
-        await speak('Amazing! You completed the activity!', {
-          rate: 0.9,
-          pitch: 1.2
-        });
+        void speak('Amazing! You completed the activity!', { rate: 0.9, pitch: 1.2 });
         if (onComplete) onComplete();
       } else {
-        // Next question after delay
         setTimeout(() => {
           generateQuestion();
-        }, 1500);
+        }, 1200);
       }
     } else {
       setFeedback('🤔 Not quite. Try again!');
-      await speak('Not quite. Try again!', {
-        rate: 0.9,
-        pitch: 1.1
-      });
+      void speak('Not quite. Try again!', { rate: 0.9, pitch: 1.1 });
       announceToScreenReader('Incorrect. Try again!');
       if (onIncorrect) onIncorrect();
 
@@ -103,9 +92,9 @@ const ListeningActivity = ({
         setSelectedLetter(null);
         setIsCorrect(null);
         setFeedback('');
-      }, 1000);
+      }, 900);
     }
-  }, [targetLetter, score, generateQuestion, speak, onCorrect, onIncorrect, onComplete]);
+  }, [targetLetter, score, generateQuestion, speak, onCorrect, onIncorrect, onComplete, activityComplete]);
 
   const handleReplaySound = useCallback(() => {
     if (targetLetter) {

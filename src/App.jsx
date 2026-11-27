@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 
 // Context Providers
@@ -131,6 +131,12 @@ const DeveloperProtectedRoute = ({ children }) => {
   return isDeveloperAuthenticated ? children : <Navigate to="/developer-login" replace />;
 };
 
+const AssistantGate = () => {
+  const location = useLocation();
+  if (location.pathname === '/login' || location.pathname === '/register') return null;
+  return <AIAssistant />;
+};
+
 const AppContent = () => {
   const { isAuthenticated, loading } = useChildAccount();
 
@@ -159,7 +165,7 @@ const AppContent = () => {
       <SessionTimeoutOverlay />
       <InstallPrompt />
       <VoiceGuideProvider>
-        <AIAssistant />
+        <AssistantGate />
         <UpdatePreviewBanner />
         <AnimatePresence mode="wait">
           <Suspense fallback={<LoadingSpinner />}>

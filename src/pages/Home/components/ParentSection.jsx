@@ -57,6 +57,9 @@ const ParentSection = () => {
             >
               <FaLock className="text-xl" aria-hidden="true" />
               <span className="font-semibold text-lg">Parent Zone (PIN required)</span>
+               <span className="hidden md:inline text-sm text-gray-500 dark:text-gray-400">
+                 Progress, settings and recovery
+               </span>
             </button>
           ) : (
             <motion.div
