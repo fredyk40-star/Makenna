@@ -101,6 +101,12 @@ const SongPlayer = () => {
     return () => clearInterval(interval);
   }, [isPlaying, song, activeLyricIndex]);
 
+  const handleComplete = useCallback(() => {
+    markCompleted(songId);
+    GamificationService.completeLesson(childId, 100);
+    announceToScreenReader(`Song completed! Great job singing ${song?.title}!`);
+  }, [songId, childId, song?.title, markCompleted]);
+
   useEffect(() => {
     if (!song?.audioUrl || !audioRef.current) return;
     const audio = audioRef.current;
@@ -207,12 +213,6 @@ const SongPlayer = () => {
     setVolumeState(newMuted ? 0 : 0.7);
     if (audioRef.current) audioRef.current.muted = newMuted;
   };
-
-  const handleComplete = useCallback(() => {
-    markCompleted(songId);
-    GamificationService.completeLesson(childId, 100);
-    announceToScreenReader(`Song completed! Great job singing ${song?.title}!`);
-  }, [songId, childId, song?.title, markCompleted]);
 
   const startRecording = () => {
     setShowRecording(true);

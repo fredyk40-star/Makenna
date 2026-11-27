@@ -97,11 +97,11 @@ const TracingPage = () => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-4 pb-4"
+      className="space-y-4 pb-24"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             to={`/alphabet/lesson/${letter.id}`}
             className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -110,7 +110,7 @@ const TracingPage = () => {
             <FaArrowLeft className="text-xl" />
           </Link>
           <div>
-            <h1 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white">
+            <h1 className="font-baloo text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
               Trace Letter {letter.letter}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -119,7 +119,7 @@ const TracingPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Case toggle */}
           <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
             <button

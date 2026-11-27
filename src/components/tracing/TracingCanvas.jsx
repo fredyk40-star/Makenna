@@ -283,12 +283,12 @@ const TracingCanvas = ({
         <div className="flex items-center gap-2 pointer-events-auto">
           {/* Color picker (practice mode only) */}
           {mode === 'practice' && (
-            <div className="flex items-center gap-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-1 border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-wrap items-center gap-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-1 border border-gray-200 dark:border-gray-700 max-w-[180px] sm:max-w-none">
               {colors.slice(0, 6).map((c) => (
                 <button
                   key={c}
                   onClick={() => changeColor(c)}
-                  className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${
+                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-transform hover:scale-110 ${
                     color === c ? 'ring-2 ring-primary ring-offset-2' : ''
                   }`}
                   style={{ backgroundColor: c }}
@@ -369,7 +369,7 @@ const TracingCanvas = ({
       />
 
       {mode === 'trace' && (
-        <p className="absolute top-16 left-4 right-4 text-center text-xs text-gray-600 dark:text-gray-300 pointer-events-none">
+        <p className="hidden md:block absolute top-20 left-4 right-4 text-center text-xs text-gray-600 dark:text-gray-300 pointer-events-none">
           Keyboard: focus the canvas, then press Enter/Space for each stroke.
         </p>
       )}
