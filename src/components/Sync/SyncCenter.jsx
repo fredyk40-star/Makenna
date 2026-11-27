@@ -59,11 +59,13 @@ const SyncCenter = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
         {[
           ['Status', cloudSyncStatus.online ? 'Online' : 'Offline'],
           ['Auto sync', isCloudSyncEnabled ? (cloudSyncStatus.syncing ? 'Syncing…' : 'On') : 'Off'],
           ['Waiting', `${cloudSyncStatus.pendingCount || 0} change(s)`],
+          ['Needs attention', `${(cloudSyncStatus.failedCount || 0) + (cloudSyncStatus.blockedCount || 0)}`],
+          ['Failed', `${cloudSyncStatus.droppedCount || 0}`],
           ['Last sync', formatDate(cloudSyncStatus.lastSync)],
         ].map(([label, value]) => (
           <div key={label} className="bg-gray-100 dark:bg-gray-700 rounded-xl p-3">

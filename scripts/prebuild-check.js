@@ -43,8 +43,8 @@ if (existsSync(srcDir)) {
   const strayTempFiles = [];
   const clientSupabaseImports = [];
   const leakedServerSecrets = [];
-  const deniedClientEnv = /VITE_(?:SUPABASE_|DEVELOPER_JWT_SECRET|CHILD_SESSION_SECRET|GEMINI_API_KEY|GMAIL_|SMTP_)/;
-  const deniedServerEnv = /process\.env\.(?:SUPABASE_SERVICE_ROLE_KEY|DEVELOPER_JWT_SECRET|CHILD_SESSION_SECRET|GEMINI_API_KEY|GMAIL_|SMTP_)/;
+  const deniedClientEnv = /VITE_(?:SUPABASE_|TIDB_|DEVELOPER_JWT_SECRET|CHILD_SESSION_SECRET|GEMINI_API_KEY|GMAIL_|SMTP_)/;
+  const deniedServerEnv = /process\.env\.(?:SUPABASE_SERVICE_ROLE_KEY|TIDB_PASSWORD|TIDB_CA|DEVELOPER_JWT_SECRET|CHILD_SESSION_SECRET|GEMINI_API_KEY|GMAIL_|SMTP_)/;
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);

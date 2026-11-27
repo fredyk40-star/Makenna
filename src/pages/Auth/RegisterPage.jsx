@@ -5,6 +5,7 @@ import { useChildAccount } from '../../context/ChildAccountContext';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 import CelebrationPopup from '../../components/common/CelebrationPopup';
 import LoginGuidance from '../../components/LoginGuidance/LoginGuidance';
+import StudyLampBackdrop from '../../components/auth/StudyLampBackdrop';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -82,16 +83,17 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-green-50 via-teal-50 to-blue-50 dark:from-gray-900 dark:via-teal-900 dark:to-gray-900 p-4">
+    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-sky-50 via-cyan-50 to-teal-100 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950 p-4 relative">
+      <StudyLampBackdrop />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md my-auto py-8"
+        className="w-full max-w-md my-auto py-8 relative z-10"
       >
         {/* AI Guided Registration Help - Stylish AI Note */}
         <LoginGuidance pageType="register" autoPlay={false} />
         
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
+        <div className="bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/70 dark:border-white/10 dark:border-amber-200/30 rounded-3xl shadow-2xl shadow-cyan-900/10 dark:shadow-black/30 p-8">
           {/* Header */}
           <div className="text-center mb-8">
             <img
@@ -122,9 +124,25 @@ const RegisterPage = () => {
           )}
 
           {/* Registration form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <motion.form
+            onSubmit={handleSubmit}
+            className="space-y-5"
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: { staggerChildren: 0.06 },
+              },
+            }}
+            initial="hidden"
+            animate="show"
+          >
             {/* Name input */}
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Your Name 👋
               </label>
@@ -138,7 +156,7 @@ const RegisterPage = () => {
                   setValidationErrors(prev => ({ ...prev, name: '' }));
                 }}
                 placeholder="Enter your name"
-                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all ${
+                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)] ${
                   validationErrors.name ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'
                 }`}
                 autoComplete="name"
@@ -152,10 +170,14 @@ const RegisterPage = () => {
                   {validationErrors.name}
                 </p>
               )}
-            </div>
+            </motion.div>
 
             {/* Parent email - required for recovery */}
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.06 }}
+            >
               <label htmlFor="parentEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Parent Email 📧
               </label>
@@ -169,7 +191,7 @@ const RegisterPage = () => {
                   setValidationErrors(prev => ({ ...prev, parentEmail: '' }));
                 }}
                 placeholder="parent@example.com"
-                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all ${
+                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)] ${
                   validationErrors.parentEmail ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'
                 }`}
                 autoComplete="email"
@@ -187,10 +209,14 @@ const RegisterPage = () => {
                   Required: without a parent email, this account cannot be recovered and will be lost forever.
                 </p>
               )}
-            </div>
+            </motion.div>
 
             {/* PIN input */}
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.12 }}
+            >
               <label htmlFor="pin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Choose a PIN 🔒
               </label>
@@ -207,7 +233,7 @@ const RegisterPage = () => {
                   }
                 }}
                 placeholder="4 or 8 digit PIN"
-                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all ${
+                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)] ${
                   validationErrors.pin ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'
                 }`}
                 autoComplete="new-password"
@@ -226,10 +252,14 @@ const RegisterPage = () => {
                   PIN must be 4 or 8 digits (numbers only)
                 </p>
               )}
-            </div>
+            </motion.div>
 
             {/* Confirm PIN input */}
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.18 }}
+            >
               <label htmlFor="confirmPin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Confirm PIN ✅
               </label>
@@ -246,7 +276,7 @@ const RegisterPage = () => {
                   }
                 }}
                 placeholder="Re-enter your PIN"
-                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all ${
+                className={`w-full px-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)] ${
                   validationErrors.confirmPin ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'
                 }`}
                 autoComplete="new-password"
@@ -261,13 +291,15 @@ const RegisterPage = () => {
                   {validationErrors.confirmPin}
                 </p>
               )}
-            </div>
+            </motion.div>
 
             {/* Submit button */}
-            <button
+            <motion.button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-green-300 shadow-lg shadow-green-200 dark:shadow-green-900"
+              whileHover={{ scale: 1.015 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-3 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-teal-300 shadow-lg shadow-teal-200 dark:shadow-teal-900"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
@@ -280,8 +312,8 @@ const RegisterPage = () => {
               ) : (
                 'Create Account 🚀'
               )}
-            </button>
-          </form>
+            </motion.button>
+          </motion.form>
 
           {/* Divider */}
           <div className="my-6 flex items-center gap-3">
@@ -297,7 +329,7 @@ const RegisterPage = () => {
             </p>
             <Link
               to="/login"
-              className="inline-block px-6 py-2 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-xl font-semibold hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors focus:outline-none focus:ring-4 focus:ring-purple-200"
+              className="inline-block px-6 py-2 bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300 rounded-xl font-semibold hover:bg-teal-200 dark:hover:bg-teal-800 transition-colors focus:outline-none focus:ring-4 focus:ring-teal-200"
             >
               Log In 🔐
             </Link>

@@ -588,6 +588,9 @@ export class DeveloperService {
     const exists = accounts.some(a => a.childId?.toLowerCase() === account.childId?.toLowerCase());
     if (!exists) accounts.push(account);
     ChildAccountService.saveAllAccounts(accounts);
+    // A restore must cancel any queued cloud deletion; otherwise the delete
+    // could replay after the restore and erase the returned account again.
+    SyncQueueService.removeForChild(account.childId);
     SyncQueueService.clearDeletion(account.childId);
 
     trash.splice(index, 1);

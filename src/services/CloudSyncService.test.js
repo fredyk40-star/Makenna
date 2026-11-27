@@ -11,6 +11,9 @@ beforeEach(() => {
 
 afterEach(() => {
   CloudSyncService.stopAutoSync();
+  if (typeof navigator !== 'undefined') {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+  }
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -77,6 +80,36 @@ describe('CloudSyncService conflict resolution', () => {
 
     expect(merged).toHaveLength(0);
   });
+
+  it('merges nested progress inside a key won by another device', () => {
+    const merged = CloudSyncService.mergeAccounts(
+      [{
+        childId: 'kid-1',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+        progress: {
+          letters: { localOnly: true, shared: 'local' },
+          shapes: { localOnly: true },
+        },
+      }],
+      [{
+        childId: 'kid-1',
+        updatedAt: '2026-01-03T00:00:00.000Z',
+        progress: {
+          letters: { cloudOnly: true, shared: 'cloud' },
+          numbers: { cloudOnly: true },
+        },
+      }],
+      {},
+    );
+
+    expect(merged[0].progress.letters).toEqual({
+      localOnly: true,
+      cloudOnly: true,
+      shared: 'cloud',
+    });
+    expect(merged[0].progress.shapes.localOnly).toBe(true);
+    expect(merged[0].progress.numbers.cloudOnly).toBe(true);
+  });
 });
 
 describe('CloudSyncService queue integration', () => {
@@ -125,7 +158,26 @@ describe('CloudSyncService queue integration', () => {
 
     expect(result.success).toBe(false);
     expect(result.skippedCloud).toBe(true);
+    expect(result.requiresAuth).toBe(true);
     expect(apiState.accounts.has('kid-no-token')).toBe(true);
+  });
+
+  it('sends the persisted operation id separately from the record version', async () => {
+    StorageService.set('makenna_cloud_sync_enabled', true);
+    CloudSyncService.queueAccountChange('UPSERT_ACCOUNT', {
+      childId: 'kid-op-id',
+      fullName: 'Ama',
+      updatedAt: new Date().toISOString(),
+      version: 7,
+    });
+    const operation = SyncQueueService.getQueue()[0];
+    const upload = vi.spyOn(CloudSyncService, 'uploadChildAccount').mockResolvedValue({ success: true });
+
+    await CloudSyncService.flushQueue();
+
+    expect(upload).toHaveBeenCalledWith(operation.payload, operation.id);
+    expect(operation.id).not.toBe('7');
+    expect(SyncQueueService.getQueue()).toHaveLength(0);
   });
 
   it('deletes from the cloud with a developer session after the device token is gone', async () => {
@@ -154,6 +206,30 @@ describe('CloudSyncService automatic sync', () => {
     expect(syncNow).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1200);
     expect(syncNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps writes pending offline and retries on reconnect', async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+    StorageService.set('makenna_cloud_sync_enabled', true);
+
+    CloudSyncService.queueAccountChange('UPSERT_ACCOUNT', {
+      childId: 'kid-offline',
+      fullName: 'Ama',
+      updatedAt: new Date().toISOString(),
+    });
+
+    const offlineStatus = CloudSyncService.getSyncStatus();
+    expect(offlineStatus.online).toBe(false);
+    expect(offlineStatus.pendingCount).toBe(1);
+    expect(SyncQueueService.getQueue()).toHaveLength(1);
+
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+    const requestSync = vi.spyOn(CloudSyncService, 'requestSync').mockResolvedValue({ success: true });
+    window.dispatchEvent(new Event('online'));
+
+    expect(requestSync).toHaveBeenCalledWith('online');
+    expect(SyncQueueService.getQueue()).toHaveLength(1);
   });
 
   it('does not schedule automatic sync when cloud sync is turned off', async () => {

@@ -63,7 +63,7 @@ const NavigationCards = memo(() => {
     { id: 2, title: 'Numbers Kingdom', emoji: '👑', color: CARD_COLORS[1], path: ROUTES.NUMBERS },
     { id: 3, title: 'Animal Safari', emoji: '🦁', color: CARD_COLORS[2], path: ROUTES.ANIMAL_SAFARI },
     { id: 4, title: 'Story Time', emoji: '📖', color: CARD_COLORS[3], path: ROUTES.STORIES },
-    { id: 5, title: 'Music', emoji: '🎵', color: CARD_COLORS[4], path: ROUTES.MUSIC },
+    { id: 5, title: 'Music', emoji: '🎵', color: CARD_COLORS[4], path: ROUTES.MUSIC_LIBRARY },
     { id: 6, title: 'Drawing', emoji: '🎨', color: CARD_COLORS[5], path: ROUTES.DRAWING },
     { id: 7, title: 'Bible Time', emoji: '🙏', color: CARD_COLORS[6], path: ROUTES.BIBLE_TIME },
     { id: 8, title: 'Science Lab', emoji: '🔬', color: CARD_COLORS[7], path: ROUTES.SCIENCE_LAB },

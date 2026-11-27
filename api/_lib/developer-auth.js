@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { getServerClient } from './supabase-server.js';
+import { storeForClient } from './store.js';
 import {
   isRateLimited as sharedIsRateLimited,
   recordFailure as sharedRecordFailure,
@@ -91,20 +91,19 @@ export function verifyResetToken(token) {
 export async function recordResetToken(token) {
   const payload = verifyResetToken(token);
   if (!payload?.jti) return false;
-  const client = getServerClient();
-  if (!client) {
+  const store = storeForClient();
+  if (!store.isConfigured()) {
     localResetTokens.add(payload.jti);
     return true;
   }
   try {
-    const { error } = await client.from('developer_reset_tokens').upsert({
+    await store.upsertResetToken({
       jti: payload.jti,
       email: payload.email,
       expires_at: new Date(payload.exp * 1000).toISOString(),
       used_at: null,
       created_at: new Date().toISOString(),
-    }, { onConflict: 'jti' });
-    if (error) throw error;
+    });
     return true;
   } catch (error) {
     console.error('Reset token record failed:', error.message);
@@ -117,25 +116,18 @@ export async function recordResetToken(token) {
 export async function consumeResetToken(token) {
   const payload = verifyResetToken(token);
   if (!payload?.jti) return false;
-  const client = getServerClient();
-  if (!client) {
+  const store = storeForClient();
+  if (!store.isConfigured()) {
     if (!localResetTokens.has(payload.jti)) return false;
     localResetTokens.delete(payload.jti);
     return true;
   }
   try {
-    const { data, error } = await client
-      .from('developer_reset_tokens')
-      .update({ used_at: new Date().toISOString() })
-      .eq('jti', payload.jti)
-      .is('used_at', null)
-      .select('jti')
-      .maybeSingle();
-    if (error) throw error;
+    const consumed = await store.consumeResetToken(payload.jti, new Date().toISOString());
     // If token recording fell back to memory while the database was briefly
     // unavailable, honour that local record once the database recovers.
-    if (!data && localResetTokens.delete(payload.jti)) return true;
-    return !!data;
+    if (!consumed && localResetTokens.delete(payload.jti)) return true;
+    return !!consumed;
   } catch (error) {
     console.error('Reset token consumption failed:', error.message);
     if (!localResetTokens.has(payload.jti)) return false;
@@ -167,26 +159,17 @@ function safeHexEqual(a, b) {
 }
 
 async function getAuthRecord() {
-  const client = getServerClient();
-  if (!client) return null;
+  const store = storeForClient();
+  if (!store.isConfigured()) return null;
   try {
-    const { data, error } = await client
-      .from('developer_auth')
-      .select('email, password_hash, password_salt')
-      .eq('id', 'default')
-      .maybeSingle();
-    if (error) {
-      console.error('Developer auth lookup failed:', error.message);
-      return null;
-    }
-    return data || null;
+    return await store.findDeveloperAuth();
   } catch (error) {
     console.error('Developer auth lookup failed:', error.message);
     return null;
   }
 }
 
-/** Verify against Supabase first, then an env-provided hash for simple setups. */
+/** Verify against the configured store first, then an env-provided hash for simple setups. */
 export async function verifyDeveloperPassword(email, password) {
   if (String(email || '').trim().toLowerCase() !== DEVELOPER_EMAIL.toLowerCase()) return false;
 
@@ -200,24 +183,22 @@ export async function verifyDeveloperPassword(email, password) {
   return safeHexEqual(hashPassword(password, salt), expectedHash);
 }
 
-/** Persist a new strong password hash. Requires the service-role key. */
+/** Persist a new strong password hash through the active server-side store. */
 export async function saveDeveloperPassword(newPassword) {
-  const client = getServerClient();
-  if (!client) {
-    throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required to save a new password.');
+  const store = storeForClient();
+  if (!store.isConfigured()) {
+    throw new Error(`A configured data store is required to save a new password. ${store.describeConfig()}.`);
   }
 
   const passwordSalt = crypto.randomBytes(16).toString('hex');
   const passwordHash = hashPassword(newPassword, passwordSalt);
-  const { error } = await client.from('developer_auth').upsert({
+  await store.upsertDeveloperAuth({
     id: 'default',
     email: DEVELOPER_EMAIL.toLowerCase(),
     password_hash: passwordHash,
     password_salt: passwordSalt,
     pin_hash: null,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'id' });
-
-  if (error) throw new Error(error.message);
+  });
   return true;
 }

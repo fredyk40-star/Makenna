@@ -1,25 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { consentState } = vi.hoisted(() => ({
-  consentState: { enabled: true, allowOnlineAI: true, deletedAt: null },
-}));
-
-vi.mock('../../api/_lib/supabase-server.js', () => ({
-  requireServerClient: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: async () => ({
-            data: {
-              deleted_at: consentState.deletedAt,
-              settings: { tutor: { enabled: consentState.enabled, allowOnlineAI: consentState.allowOnlineAI } },
-            },
-            error: null,
-          }),
-        }),
+const { consentState, fakeStore } = vi.hoisted(() => {
+  const state = { enabled: true, allowOnlineAI: true, deletedAt: null };
+  return {
+    consentState: state,
+    fakeStore: () => ({
+      kind: 'test',
+      isConfigured: () => true,
+      describeConfig: () => 'the test store',
+      findAccount: async () => ({
+        child_id: 'kid12345678',
+        deleted_at: state.deletedAt,
+        settings: { tutor: { enabled: state.enabled, allowOnlineAI: state.allowOnlineAI } },
       }),
+      findRateLimit: async () => null,
+      bumpRateLimit: async () => 1,
+      deleteRateLimit: async () => {},
     }),
-  }),
+  };
+});
+
+vi.mock('../../api/_lib/store.js', () => ({
+  getStore: () => fakeStore(),
+  storeForClient: () => fakeStore(),
+  requireStore: () => fakeStore(),
+  validOperationId: value => (
+    typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null
+  ),
 }));
 
 import tutorHandler from '../../api/tutor.js';

@@ -1,12 +1,13 @@
 import { HttpError } from './http.js';
-import { getServerClient } from './supabase-server.js';
+import { storeForClient } from './store.js';
 
 /**
  * Shared, distributed login/request throttling.
  *
- * The authoritative counters live in Supabase so separate serverless instances
- * see the same failures. When Supabase is not configured (local development and
- * unit tests) we fall back to a process-local map with identical behaviour.
+ * The authoritative counters live in the configured data store so separate
+ * serverless instances see the same failures. When no store is configured
+ * (local development and unit tests) we fall back to a process-local map with
+ * identical behaviour.
  */
 const MAX_FAILURES = 5;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -41,19 +42,14 @@ const enforce = (count, max, message) => {
   if (count >= max) throw new HttpError(429, message);
 };
 
-const resolveClient = client => (client === undefined ? getServerClient() : client);
+const resolveStore = client => storeForClient(client);
 
 export async function isRateLimited(scope, req, id, client) {
   const key = keyFor(scope, req, id);
-  const supabase = resolveClient(client);
-  if (!supabase) return localCount(key) >= MAX_FAILURES;
+  const store = resolveStore(client);
+  if (!store.isConfigured()) return localCount(key) >= MAX_FAILURES;
   try {
-    const { data, error } = await supabase
-      .from('auth_rate_limits')
-      .select('count, first_at')
-      .eq('key', key)
-      .maybeSingle();
-    if (error) throw error;
+    const data = await store.findRateLimit(key);
     if (!data) return false;
     return Date.now() - Date.parse(data.first_at) <= WINDOW_MS
       && Number(data.count) >= MAX_FAILURES;
@@ -65,18 +61,14 @@ export async function isRateLimited(scope, req, id, client) {
 
 export async function recordFailure(scope, req, id, client) {
   const key = keyFor(scope, req, id);
-  const supabase = resolveClient(client);
-  if (!supabase) {
+  const store = resolveStore(client);
+  if (!store.isConfigured()) {
     enforce(localBump(key), MAX_FAILURES, 'Too many attempts. Please wait 15 minutes and try again.');
     return;
   }
   try {
-    const { data, error } = await supabase.rpc('bump_auth_failure', {
-      p_key: key,
-      p_window_seconds: Math.floor(WINDOW_MS / 1000),
-    });
-    if (error) throw error;
-    enforce(Number(data), MAX_FAILURES, 'Too many attempts. Please wait 15 minutes and try again.');
+    const count = await store.bumpRateLimit(key, Math.floor(WINDOW_MS / 1000));
+    enforce(Number(count), MAX_FAILURES, 'Too many attempts. Please wait 15 minutes and try again.');
   } catch (error) {
     if (error instanceof HttpError) throw error;
     console.error('Rate limit update failed:', error.message);
@@ -95,19 +87,15 @@ export async function checkRequestLimit(scope, req, id, options = {}, client) {
   const windowMs = options.windowMs ?? WINDOW_MS;
   const message = options.message || 'Too many attempts. Please wait 15 minutes and try again.';
   const key = keyFor(scope, req, id);
-  const supabase = resolveClient(client);
+  const store = resolveStore(client);
 
-  if (!supabase) {
+  if (!store.isConfigured()) {
     enforce(localBump(key, windowMs), max, message);
     return;
   }
   try {
-    const { data, error } = await supabase.rpc('bump_auth_failure', {
-      p_key: key,
-      p_window_seconds: Math.floor(windowMs / 1000),
-    });
-    if (error) throw error;
-    enforce(Number(data), max, message);
+    const count = await store.bumpRateLimit(key, Math.floor(windowMs / 1000));
+    enforce(Number(count), max, message);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     console.error('Rate limit update failed:', error.message);
@@ -118,11 +106,10 @@ export async function checkRequestLimit(scope, req, id, options = {}, client) {
 export async function clearFailures(scope, req, id, client) {
   const key = keyFor(scope, req, id);
   local.delete(key);
-  const supabase = resolveClient(client);
-  if (!supabase) return;
+  const store = resolveStore(client);
+  if (!store.isConfigured()) return;
   try {
-    const { error } = await supabase.from('auth_rate_limits').delete().eq('key', key);
-    if (error) throw error;
+    await store.deleteRateLimit(key);
   } catch (error) {
     console.error('Rate limit reset failed:', error.message);
   }

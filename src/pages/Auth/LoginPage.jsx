@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
 import LoginGuidance from '../../components/LoginGuidance/LoginGuidance';
+import StudyLampBackdrop from '../../components/auth/StudyLampBackdrop';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -58,16 +59,17 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900 p-4">
+    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-sky-50 via-cyan-50 to-teal-100 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950 p-4 relative">
+      <StudyLampBackdrop />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md my-auto py-8"
+        className="w-full max-w-md my-auto py-8 relative z-10"
       >
         {/* AI Guided Login Help - Stylish AI Note */}
         <LoginGuidance pageType="login" autoPlay={false} />
         
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
+        <div className="bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/70 dark:border-white/10 dark:border-amber-200/30 rounded-3xl shadow-2xl shadow-cyan-900/10 dark:shadow-black/30 p-8">
           {/* Header */}
           <div className="text-center mb-8">
             <img
@@ -100,12 +102,24 @@ const LoginPage = () => {
           {/* Login form */}
           <motion.form
             onSubmit={handleSubmit}
-            animate={shakeForm ? { x: [-10, 10, -10, 10, 0] } : {}}
+            animate={shakeForm ? { x: [-10, 10, -10, 10, 0] } : 'show'}
             transition={{ duration: 0.4 }}
             className="space-y-5"
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: { staggerChildren: 0.06 },
+              },
+            }}
+            initial="hidden"
           >
             {/* Child ID input */}
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
               <label htmlFor="childId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Child ID
               </label>
@@ -118,16 +132,20 @@ const LoginPage = () => {
                   setLocalError('');
                 }}
                 placeholder="e.g., kid20345635"
-                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)]"
                 autoComplete="username"
                 autoCapitalize="none"
                 disabled={isSubmitting}
                 aria-label="Child ID"
               />
-            </div>
+            </motion.div>
 
             {/* PIN input */}
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.06 }}
+            >
               <label htmlFor="pin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 PIN or Password
               </label>
@@ -142,7 +160,7 @@ const LoginPage = () => {
                     setLocalError('');
                   }}
                   placeholder="Enter your PIN or password"
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)]"
                   autoComplete="current-password"
                   disabled={isSubmitting}
                   aria-label="PIN or password"
@@ -162,18 +180,20 @@ const LoginPage = () => {
               <div className="mt-2 text-right">
                 <Link
                   to="/support"
-                  className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
+                  className="text-xs text-teal-700 dark:text-teal-300 hover:underline"
                 >
                   Need help / Forgot PIN?
                 </Link>
               </div>
-            </div>
+            </motion.div>
 
             {/* Submit button */}
-            <button
+            <motion.button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-purple-300 shadow-lg shadow-purple-200 dark:shadow-purple-900"
+              whileHover={{ scale: 1.015 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-3 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-teal-300 shadow-lg shadow-teal-200 dark:shadow-teal-900"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
@@ -186,7 +206,7 @@ const LoginPage = () => {
               ) : (
                 'Log In 🚀'
               )}
-            </button>
+            </motion.button>
           </motion.form>
 
           {/* Divider */}
@@ -203,7 +223,7 @@ const LoginPage = () => {
             </p>
             <Link
               to="/register"
-              className="inline-block px-6 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-xl font-semibold hover:bg-green-200 dark:hover:bg-green-800 transition-colors focus:outline-none focus:ring-4 focus:ring-green-200"
+              className="inline-block px-6 py-2 bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300 rounded-xl font-semibold hover:bg-teal-200 dark:hover:bg-teal-800 transition-colors focus:outline-none focus:ring-4 focus:ring-teal-200"
             >
               Create Account 🎉
             </Link>

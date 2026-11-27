@@ -3,11 +3,11 @@ import {
   getAccountRow,
   hashCredentialStrong,
   normalizeChildId,
-  requireServerClient,
   validateEmail,
   verifyStoredCredential,
 } from './_lib/child-auth.js';
 import { verifySessionToken } from './_lib/developer-auth.js';
+import { requireStore } from './_lib/store.js';
 import {
   isRateLimited,
   recordFailure,
@@ -80,15 +80,15 @@ async function sendVerification(req, client, body) {
   if (account) {
     const code = String(crypto.randomInt(0, 10 ** CODE_LENGTH)).padStart(CODE_LENGTH, '0');
     const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString();
-    const { error } = await client.from('parent_email_verifications').upsert({
+    await client.upsertEmailVerification({
+      id: crypto.randomUUID(),
       child_id: childId,
       parent_email: parentEmail,
       code_hash: hashCredentialStrong(code),
       expires_at: expiresAt,
       attempts: 0,
       created_at: new Date().toISOString(),
-    }, { onConflict: 'child_id,parent_email' });
-    if (error) throw new Error(error.message);
+    });
 
     if (isMailConfigured()) {
       try {
@@ -114,35 +114,21 @@ async function sendVerification(req, client, body) {
 
 async function consumeVerification(client, childId, parentEmail, code) {
   if (!/^\d{6}$/.test(String(code || ''))) return false;
-  const { data, error } = await client
-    .from('parent_email_verifications')
-    .select('id, code_hash, expires_at, attempts')
-    .eq('child_id', childId)
-    .eq('parent_email', parentEmail)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
+  const data = await client.findEmailVerification(childId, parentEmail);
   if (!data) return false;
   if (Date.parse(data.expires_at) <= Date.now() || Number(data.attempts) >= MAX_CODE_ATTEMPTS) {
-    await client.from('parent_email_verifications').delete().eq('id', data.id);
+    await client.deleteEmailVerification(data.id);
     return false;
   }
 
   const { valid } = verifyStoredCredential(String(code), data.code_hash);
   if (!valid) {
-    const { error: updateError } = await client
-      .from('parent_email_verifications')
-      .update({ attempts: Number(data.attempts) + 1 })
-      .eq('id', data.id);
-    if (updateError) throw new Error(updateError.message);
+    await client.updateEmailVerificationAttempts(data.id, Number(data.attempts) + 1);
     return false;
   }
 
   // Single use: delete the challenge as soon as it succeeds.
-  const { error: deleteError } = await client
-    .from('parent_email_verifications')
-    .delete()
-    .eq('id', data.id);
-  if (deleteError) throw new Error(deleteError.message);
+  await client.deleteEmailVerification(data.id);
   return true;
 }
 
@@ -165,55 +151,41 @@ async function submit(req, client, body) {
   }
 
   const now = new Date().toISOString();
-  const { data, error } = await client
-    .from('support_requests')
-    .insert({
-      id: crypto.randomUUID(),
-      child_id: account.child_id,
-      parent_email: parentEmail,
-      message,
-      status: 'open',
-      developer_note: '',
-      parent_verified: true,
-      created_at: now,
-      updated_at: now,
-    })
-    .select('*')
-    .single();
-  if (error) throw new Error(error.message);
+  const data = await client.insertSupportRequest({
+    id: crypto.randomUUID(),
+    child_id: account.child_id,
+    parent_email: parentEmail,
+    message,
+    status: 'open',
+    developer_note: '',
+    parent_verified: true,
+    created_at: now,
+    updated_at: now,
+  });
 
   await clearFailures(req, parentEmail, client, 'support-submit');
   return { request: toClientRequest(data), message: GENERIC_REPLY };
 }
 
 async function list(client) {
-  const { data, error } = await client
-    .from('support_requests')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return { requests: (data || []).map(toClientRequest) };
+  const rows = await client.listSupportRequests();
+  return { requests: (rows || []).map(toClientRequest) };
 }
 
 async function update(client, body) {
   if (!ALLOWED_STATUS.includes(body.status)) {
     throw new HttpError(400, `Unsupported status: ${body.status}`);
   }
-  const { error } = await client
-    .from('support_requests')
-    .update({
-      status: body.status,
-      developer_note: typeof body.developerNote === 'string' ? body.developerNote.slice(0, 1000) : '',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', body.id);
-  if (error) throw new Error(error.message);
+  await client.updateSupportRequest(body.id, {
+    status: body.status,
+    developer_note: typeof body.developerNote === 'string' ? body.developerNote.slice(0, 1000) : '',
+    updated_at: new Date().toISOString(),
+  });
   return { id: body.id };
 }
 
 async function remove(client, body) {
-  const { error } = await client.from('support_requests').delete().eq('id', body.id);
-  if (error) throw new Error(error.message);
+  await client.deleteSupportRequest(body.id);
   return { id: body.id };
 }
 
@@ -224,9 +196,7 @@ async function syncToCloud(client, body) {
   // Verification state is server-owned: never let a browser grant itself a
   // verified recovery request through an offline sync payload.
   const ids = requests.map(request => request.id).filter(Boolean);
-  const { data: existing } = ids.length
-    ? await client.from('support_requests').select('id, parent_verified').in('id', ids)
-    : { data: [] };
+  const existing = await client.listSupportRequestsByIds(ids);
   const verifiedById = new Map((existing || []).map(row => [row.id, !!row.parent_verified]));
 
   const rows = requests.filter(request => verifiedById.has(request.id)).map((request) => ({
@@ -242,17 +212,14 @@ async function syncToCloud(client, body) {
   }));
   if (!rows.length) return { count: 0 };
 
-  const { error } = await client
-    .from('support_requests')
-    .upsert(rows, { onConflict: 'id' });
-  if (error) throw new Error(error.message);
+  await client.upsertSupportRequests(rows);
   return { count: rows.length };
 }
 
 const handler = async (req, res) => {
   requirePost(req, res);
   const body = readBody(req);
-  const client = requireServerClient();
+  const client = requireStore();
 
   switch (body.action) {
     case 'send_verification': {

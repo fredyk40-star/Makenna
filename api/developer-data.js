@@ -1,4 +1,4 @@
-import { requireServerClient } from './_lib/child-auth.js';
+import { requireStore } from './_lib/store.js';
 import { verifySessionToken } from './_lib/developer-auth.js';
 import { HttpError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
@@ -59,56 +59,40 @@ const handler = async (req, res) => {
   requirePost(req, res);
   const body = readBody(req);
   requireDeveloper(body);
-  const client = requireServerClient();
+  const client = requireStore();
 
   switch (body.action) {
     case 'flags_push': {
-      const { error } = await client.from('feature_flags').upsert({
+      await client.upsertFeatureFlags({
         id: 'default',
         flags: body.flags && typeof body.flags === 'object' ? body.flags : {},
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
-      if (error) throw new Error(error.message);
+      });
       return json(res, 200, { success: true });
     }
     case 'flags_pull': {
-      const { data, error } = await client.from('feature_flags').select('flags').eq('id', 'default').maybeSingle();
-      if (error) throw new Error(error.message);
-      return json(res, 200, { success: true, flags: flagsFromRow(data) });
+      const row = await client.findFeatureFlags();
+      return json(res, 200, { success: true, flags: flagsFromRow(row) });
     }
     case 'updates_push': {
       const updates = Array.isArray(body.updates) ? body.updates : [];
-      for (const update of updates) {
-        const { error } = await client.from('developer_updates').upsert(updateToRow(update), { onConflict: 'id' });
-        if (error) throw new Error(error.message);
-      }
+      await client.upsertDeveloperUpdates(updates.map(updateToRow));
       return json(res, 200, { success: true, count: updates.length });
     }
     case 'updates_pull': {
-      const { data, error } = await client
-        .from('developer_updates')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return json(res, 200, { success: true, updates: (data || []).map(updateFromRow) });
+      const rows = await client.listDeveloperUpdates();
+      return json(res, 200, { success: true, updates: (rows || []).map(updateFromRow) });
     }
     case 'trash_push': {
-      const entry = trashToRow(body.entry || {});
-      const { error } = await client.from('developer_trash').upsert(entry, { onConflict: 'child_id' });
-      if (error) throw new Error(error.message);
+      await client.upsertDeveloperTrash(trashToRow(body.entry || {}));
       return json(res, 200, { success: true });
     }
     case 'trash_pull': {
-      const { data, error } = await client
-        .from('developer_trash')
-        .select('*')
-        .order('deleted_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return json(res, 200, { success: true, entries: (data || []).map(trashFromRow) });
+      const rows = await client.listDeveloperTrash();
+      return json(res, 200, { success: true, entries: (rows || []).map(trashFromRow) });
     }
     case 'trash_delete': {
-      const { error } = await client.from('developer_trash').delete().eq('child_id', body.childId);
-      if (error) throw new Error(error.message);
+      await client.deleteDeveloperTrash(body.childId);
       return json(res, 200, { success: true });
     }
     default:

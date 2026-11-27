@@ -10,7 +10,6 @@ import {
   normalizeChildId,
   recordFailure,
   requireActiveChild,
-  requireServerClient,
   tempPasswordExpiry,
   toClientAccount,
   upgradeCredential,
@@ -22,6 +21,7 @@ import {
   verifyStoredCredential,
 } from './_lib/child-auth.js';
 import { verifySessionToken } from './_lib/developer-auth.js';
+import { requireStore } from './_lib/store.js';
 import { HttpError as ApiError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
 const VERIFIED_REQUEST_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -57,33 +57,28 @@ async function register(client, body) {
   const childId = await createUniqueChildId(client);
   const now = new Date().toISOString();
 
-  const { data, error } = await client
-    .from('child_accounts')
-    .insert({
-      child_id: childId,
-      full_name: fullName.trim(),
-      pin_hash: hashCredentialStrong(pin),
-      pin_set: true,
-      password_hash: null,
-      password_set: false,
-      parent_email: parentEmail.trim().toLowerCase(),
-      temp_password_hash: null,
-      temp_password_expires_at: null,
-      requires_credential_reset: false,
-      avatar: 'default',
-      created_at: now,
-      last_login: null,
-      progress: {},
-      settings: {},
-      updated_at: now,
-      deleted_at: null,
-      token_revoked_at: null,
-      version: 1,
-    })
-    .select('*')
-    .single();
+  const data = await client.insertAccount({
+    child_id: childId,
+    full_name: fullName.trim(),
+    pin_hash: hashCredentialStrong(pin),
+    pin_set: true,
+    password_hash: null,
+    password_set: false,
+    parent_email: parentEmail.trim().toLowerCase(),
+    temp_password_hash: null,
+    temp_password_expires_at: null,
+    requires_credential_reset: false,
+    avatar: 'default',
+    created_at: now,
+    last_login: null,
+    progress: {},
+    settings: {},
+    updated_at: now,
+    deleted_at: null,
+    token_revoked_at: null,
+    version: 1,
+  });
 
-  if (error) throw new Error(error.message);
   return {
     account: toClientAccount(data),
     token: createChildToken(childId),
@@ -137,11 +132,7 @@ async function login(req, client, body) {
   await Promise.all(upgrades.map(([field, value]) => upgradeCredential(client, childId, field, value)));
 
   const now = new Date().toISOString();
-  const { error } = await client
-    .from('child_accounts')
-    .update({ last_login: now, updated_at: now })
-    .eq('child_id', childId);
-  if (error) throw new Error(error.message);
+  await client.updateAccount(childId, { last_login: now, updated_at: now });
 
   return {
     account: toClientAccount({ ...row, last_login: now, updated_at: now }),
@@ -183,17 +174,13 @@ async function issueTemporaryPassword(req, client, body) {
 
   const tempPassword = newTemporaryPassword();
   const expiresAt = tempPasswordExpiry();
-  const { error } = await client
-    .from('child_accounts')
-    .update({
-      temp_password_hash: hashCredentialStrong(tempPassword),
-      temp_password_expires_at: expiresAt,
-      requires_credential_reset: true,
-      token_revoked_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('child_id', childId);
-  if (error) throw new Error(error.message);
+  await client.updateAccount(childId, {
+    temp_password_hash: hashCredentialStrong(tempPassword),
+    temp_password_expires_at: expiresAt,
+    requires_credential_reset: true,
+    token_revoked_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
 
   await clearFailures(req, parentEmail, client, 'recovery');
   return {
@@ -232,17 +219,13 @@ async function resetCredential(client, body) {
     ? { password_hash: hash, password_set: true, pin_hash: null, pin_set: false }
     : { pin_hash: hash, pin_set: true, password_hash: null, password_set: false };
 
-  const { error } = await client
-    .from('child_accounts')
-    .update({
-      ...updates,
-      temp_password_hash: null,
-      temp_password_expires_at: null,
-      requires_credential_reset: false,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('child_id', childId);
-  if (error) throw new Error(error.message);
+  await client.updateAccount(childId, {
+    ...updates,
+    temp_password_hash: null,
+    temp_password_expires_at: null,
+    requires_credential_reset: false,
+    updated_at: new Date().toISOString(),
+  });
 
   return {
     account: toClientAccount({
@@ -288,7 +271,7 @@ async function verifyPin(req, client, body) {
 const handler = async (req, res) => {
   requirePost(req, res);
   const body = readBody(req);
-  const client = requireServerClient();
+  const client = requireStore();
 
   switch (body.action) {
     case 'register': {

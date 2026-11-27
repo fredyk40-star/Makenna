@@ -21,6 +21,11 @@ vi.mock('../../components/LoginGuidance/LoginGuidance', () => ({
   default: () => null,
 }));
 
+// The decorative backdrop expects the real ThemeProvider; it is irrelevant here.
+vi.mock('../../components/auth/StudyLampBackdrop', () => ({
+  default: () => null,
+}));
+
 import LoginPage from './LoginPage';
 
 describe('LoginPage', () => {

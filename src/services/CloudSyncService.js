@@ -24,6 +24,12 @@ const DEFAULT_STATUS = {
   lastResult: null,
   pendingCount: 0,
   pendingChanges: false,
+  failedCount: 0,
+  blockedCount: 0,
+  overflowCount: 0,
+  droppedCount: 0,
+  nextRetryAt: null,
+  lastFailure: null,
   syncing: false,
   online: true,
 };
@@ -38,9 +44,15 @@ const autoSync = {
   intervalTimer: null,
   inFlight: null,
   reschedule: false,
+  unsubscribeQueue: null,
 };
 
 const handleOnline = () => CloudSyncService.requestSync('online');
+const handleOffline = () => CloudSyncService.updateSyncStatus({
+  syncing: false,
+  online: false,
+  lastError: 'Offline — changes are queued',
+});
 const handleFocus = () => CloudSyncService.requestSync('focus');
 const handleVisibility = () => {
   if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
@@ -106,8 +118,10 @@ export class CloudSyncService {
     autoSync.started = true;
 
     window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibility);
+    autoSync.unsubscribeQueue = SyncQueueService.subscribe(() => this.updateSyncStatus({}));
     autoSync.intervalTimer = setInterval(
       () => CloudSyncService.requestSync('interval'),
       AUTO_SYNC_INTERVAL_MS
@@ -118,13 +132,16 @@ export class CloudSyncService {
     if (!autoSync.started) return;
     if (autoSync.debounceTimer) clearTimeout(autoSync.debounceTimer);
     if (autoSync.intervalTimer) clearInterval(autoSync.intervalTimer);
+    if (autoSync.unsubscribeQueue) autoSync.unsubscribeQueue();
     if (typeof window !== 'undefined') {
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     }
     autoSync.debounceTimer = null;
     autoSync.intervalTimer = null;
+    autoSync.unsubscribeQueue = null;
     autoSync.inFlight = null;
     autoSync.reschedule = false;
     autoSync.started = false;
@@ -195,12 +212,18 @@ export class CloudSyncService {
 
   static getSyncStatus() {
     const stored = StorageService.get(SYNC_STATUS_KEY, {});
-    const pendingCount = SyncQueueService.getPendingCount();
+    const stats = SyncQueueService.getQueueStats();
     return {
       ...DEFAULT_STATUS,
       ...stored,
-      pendingCount,
-      pendingChanges: pendingCount > 0,
+      pendingCount: stats.pending,
+      pendingChanges: stats.pending > 0,
+      failedCount: stats.failed,
+      blockedCount: stats.blocked,
+      overflowCount: stats.overflow,
+      droppedCount: stats.droppedCount,
+      nextRetryAt: stats.nextRetryAt,
+      lastFailure: stats.lastFailure,
       online: typeof navigator === 'undefined' ? true : navigator.onLine !== false,
     };
   }
@@ -210,8 +233,15 @@ export class CloudSyncService {
       ...this.getSyncStatus(),
       ...updates,
     };
-    next.pendingCount = SyncQueueService.getPendingCount();
-    next.pendingChanges = next.pendingCount > 0;
+    const stats = SyncQueueService.getQueueStats();
+    next.pendingCount = stats.pending;
+    next.pendingChanges = stats.pending > 0;
+    next.failedCount = stats.failed;
+    next.blockedCount = stats.blocked;
+    next.overflowCount = stats.overflow;
+    next.droppedCount = stats.droppedCount;
+    next.nextRetryAt = stats.nextRetryAt;
+    next.lastFailure = stats.lastFailure;
     StorageService.set(SYNC_STATUS_KEY, next);
     listeners.forEach(listener => {
       try {
@@ -280,13 +310,15 @@ export class CloudSyncService {
     return this.getSyncStatus();
   }
 
-  static async uploadChildAccount(account) {
+  static async uploadChildAccount(account, operationId = null) {
     const payload = this.toSyncPayload(account);
     try {
       const result = await postApi('child-sync', {
         action: 'push',
         tokens: ChildAccountService.getChildTokens(),
         accounts: [payload],
+        // Client retry key. The server owns version/updatedAt independently.
+        ...(operationId ? { operationId } : {}),
       });
       const failure = result.failures?.[0];
       if (failure) return { success: false, error: failure.error };
@@ -366,7 +398,15 @@ export class CloudSyncService {
         if (!isPlainObject(winnerValue) || !isPlainObject(loserValue)) {
           return winnerValue ?? loserValue ?? {};
         }
-        return { ...loserValue, ...winnerValue };
+        const merged = { ...loserValue, ...winnerValue };
+        // Keep one nested level from the loser: multi-device progress often
+        // diverges inside a shared key, not only between top-level keys.
+        Object.keys(loserValue).forEach(childKey => {
+          if (isPlainObject(loserValue[childKey]) && isPlainObject(winnerValue[childKey])) {
+            merged[childKey] = { ...loserValue[childKey], ...winnerValue[childKey] };
+          }
+        });
+        return merged;
       };
 
       const account = {
@@ -446,18 +486,29 @@ export class CloudSyncService {
   static async flushQueue() {
     const result = await SyncQueueService.flush(async operation => {
       if (operation.type === 'DELETE_ACCOUNT') {
-        return this.deleteFromCloud(operation.childId, operation.payload?.token);
+        return this.deleteFromCloud(
+          operation.childId,
+          operation.payload?.token,
+          operation.id,
+        );
       }
-      if (operation.type === 'UPSERT_ACCOUNT') return this.uploadChildAccount(operation.payload);
+      if (operation.type === 'UPSERT_ACCOUNT') {
+        return this.uploadChildAccount(operation.payload, operation.id);
+      }
       return { success: false, error: `Unknown operation: ${operation.type}` };
     });
 
-    const firstFailure = SyncQueueService.getQueue().find(operation => operation.lastError)?.lastError;
+    const stats = SyncQueueService.getQueueStats();
+    const firstFailure = stats.lastFailure;
+    const details = [];
+    if (result.dropped) details.push(`${result.dropped} failed change(s) need review`);
+    if (stats.blocked) details.push(`${stats.blocked} change(s) need authorisation`);
+    if (result.failed && !result.dropped) details.push(`${result.failed} queued change(s) still pending`);
     this.updateSyncStatus({
-      lastResult: { direction: 'queue', ...result },
-      lastError: result.success
+      lastResult: { direction: 'queue', ...result, ...stats },
+      lastError: result.success && !stats.failed && !stats.blocked
         ? null
-        : `${result.failed} queued change(s) still pending${firstFailure ? `: ${firstFailure}` : ''}`,
+        : `${details.join('; ') || 'Sync needs attention'}${firstFailure ? `: ${firstFailure}` : ''}`,
     });
     return result;
   }
@@ -483,7 +534,7 @@ export class CloudSyncService {
       const pull = await this.syncFromCloud();
       const push = pull.success ? await this.syncToCloud() : { success: false, count: 0, failures: [] };
       const success = queue.success && pull.success && push.success;
-      const firstError = SyncQueueService.getQueue().find(operation => operation.lastError)?.lastError
+      const firstError = SyncQueueService.getQueueStats().lastFailure
         || pull.error
         || push.failures?.[0]?.error
         || 'Sync finished with pending issues';
@@ -508,7 +559,7 @@ export class CloudSyncService {
     }
   }
 
-  static async deleteFromCloud(childId, token = null) {
+  static async deleteFromCloud(childId, token = null, operationId = null) {
     try {
       const normalized = ChildAccountService.normalizeChildId(childId);
       const tokens = ChildAccountService.getChildTokens();
@@ -523,6 +574,7 @@ export class CloudSyncService {
           success: false,
           childId,
           skippedCloud: true,
+          requiresAuth: true,
           error: 'Cloud deletion needs a signed child or developer session.',
         };
       }
@@ -534,6 +586,7 @@ export class CloudSyncService {
         // A developer removing an account may not have the child's device
         // token, so the signed developer session is an alternate authority.
         developerToken,
+        ...(operationId ? { operationId } : {}),
       });
       return { success: true, childId };
     } catch (error) {
@@ -541,12 +594,14 @@ export class CloudSyncService {
       const isAuthError = error.message?.includes('no longer authorised')
         || error.message?.includes('unauthorised')
         || error.message?.includes('unauthorized')
+        || error.message?.includes('Developer session is invalid')
         || error.message?.includes('401');
       if (isAuthError) {
         return {
           success: false,
           childId,
           unauthenticated: true,
+          requiresAuth: true,
           error: 'This device is no longer authorised to delete that cloud account.',
         };
       }

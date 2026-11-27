@@ -3,11 +3,11 @@ import {
   getAccountRow,
   hasVerifiedRecoveryRequest,
   normalizeChildId,
-  requireServerClient,
   validateChildId,
   verifyStoredCredential,
 } from './_lib/child-auth.js';
 import { sendMail } from './_lib/mailer.js';
+import { requireStore } from './_lib/store.js';
 import { HttpError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -38,7 +38,7 @@ const handler = async (req, res) => {
   // The mail endpoint must not become a shortcut around parent verification:
   // confirm the credential was actually issued for this verified child/parent
   // pair before sending it anywhere.
-  const client = requireServerClient();
+  const client = requireStore();
   const row = await getAccountRow(client, normalizedChildId);
   if (!row || row.deleted_at || row.parent_email?.toLowerCase() !== normalizedEmail) {
     throw new HttpError(404, 'No verified recovery request was found for that Child ID and parent email.');

@@ -1,5 +1,5 @@
 import { requireActiveChild, requireChildToken } from './_lib/child-auth.js';
-import { requireServerClient } from './_lib/supabase-server.js';
+import { requireStore } from './_lib/store.js';
 import { checkRequestLimit } from './_lib/rate-limit.js';
 import { HttpError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
@@ -86,7 +86,7 @@ const handler = async (req, res) => {
     throw new Error('GEMINI_MODEL contains invalid characters.');
   }
 
-  await requireParentConsent(requireServerClient(), body.token, childId);
+  await requireParentConsent(requireStore(), body.token, childId);
 
   const prompt = [
     'You are a kind, safe learning tutor for children aged 5 to 8.',

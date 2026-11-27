@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { HttpError } from './http.js';
-import { requireServerClient } from './supabase-server.js';
+import { storeForClient } from './store.js';
 import {
   isRateLimited as sharedIsRateLimited,
   recordFailure as sharedRecordFailure,
@@ -85,13 +85,10 @@ export const verifyStoredCredential = (credential, storedHash) => {
 
 /** Replaces a verified legacy hash with the strong format. */
 export async function upgradeCredential(client, childId, field, credential) {
-  if (!client) return;
   try {
-    const { error } = await client
-      .from('child_accounts')
-      .update({ [field]: hashCredentialStrong(credential) })
-      .eq('child_id', normalizeChildId(childId));
-    if (error) throw error;
+    await storeForClient(client).updateAccount(normalizeChildId(childId), {
+      [field]: hashCredentialStrong(credential),
+    });
   } catch (error) {
     console.error('Credential hash upgrade failed:', error.message);
   }
@@ -209,15 +206,9 @@ export const clearFailures = (req, childId, client, scope = 'child') => (
   sharedClearFailures(scope, req, childId, client)
 );
 
-export const getAccountRow = async (client, childId) => {
-  const { data, error } = await client
-    .from('child_accounts')
-    .select('*')
-    .eq('child_id', normalizeChildId(childId))
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data || null;
-};
+export const getAccountRow = async (client, childId) => (
+  storeForClient(client).findAccount(normalizeChildId(childId))
+);
 
 export async function createUniqueChildId(client) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -246,16 +237,11 @@ export const tempPasswordExpiry = () => new Date(
  */
 export async function hasVerifiedRecoveryRequest(client, childId, parentEmail, maxAgeMs = 24 * 60 * 60 * 1000) {
   const since = new Date(Date.now() - maxAgeMs).toISOString();
-  const { data, error } = await client
-    .from('support_requests')
-    .select('id')
-    .eq('child_id', normalizeChildId(childId))
-    .eq('parent_email', String(parentEmail || '').trim().toLowerCase())
-    .eq('parent_verified', true)
-    .gte('created_at', since)
-    .limit(1);
-  if (error) throw new Error(error.message);
-  return !!data?.length;
+  return storeForClient(client).findVerifiedSupportRequest(
+    normalizeChildId(childId),
+    String(parentEmail || '').trim().toLowerCase(),
+    since,
+  );
 }
 
 /** Public account shape. Credential hashes are deliberately never returned. */
@@ -308,4 +294,5 @@ export const timeOf = (value) => {
   return Number.isFinite(time) ? time : 0;
 };
 
-export { requireServerClient };
+// Compatibility re-export for older callers; new code uses the store seam.
+export { getServerClient, requireServerClient } from './supabase-server.js';

@@ -3,18 +3,36 @@ import {
   getAccountRow,
   normalizeChildId,
   requireActiveChild,
-  requireServerClient,
   syncPatch,
   validateChildId,
   timeOf,
   toClientAccount,
 } from './_lib/child-auth.js';
 import { verifySessionToken } from './_lib/developer-auth.js';
+import { requireStore, validOperationId } from './_lib/store.js';
 import { HttpError, json, readBody, requirePost, withErrors } from './_lib/http.js';
 
 const tokenFor = (tokens, childId) => (
   tokens?.[childId] || tokens?.[normalizeChildId(childId)] || null
 );
+
+async function replayedOperation(client, childId, operationId, action) {
+  if (!operationId || !childId) return null;
+  const row = await client.findSyncOperation(childId, operationId);
+  if (!row || row.action !== action) return null;
+  return row.response && typeof row.response === 'object' ? row.response : {};
+}
+
+async function rememberOperation(client, childId, operationId, action, response) {
+  if (!operationId || !childId) return;
+  await client.recordSyncOperation({
+    child_id: childId,
+    operation_id: operationId,
+    action,
+    response,
+    created_at: new Date().toISOString(),
+  });
+}
 
 async function pull(client, body) {
   const childIds = authorizedChildIds(body.tokens);
@@ -33,19 +51,22 @@ async function pull(client, body) {
   }
   if (!activeIds.length) return { accounts: [] };
 
-  const { data, error } = await client
-    .from('child_accounts')
-    .select('*')
-    .in('child_id', activeIds)
-    .is('deleted_at', null);
-  if (error) throw new Error(error.message);
-
-  return { accounts: (data || []).map(toClientAccount) };
+  const rows = await client.listAccountsByIds(activeIds);
+  return { accounts: (rows || []).map(toClientAccount) };
 }
 
 async function push(client, body) {
   const accounts = Array.isArray(body.accounts) ? body.accounts.slice(0, 200) : [];
   const tokens = body.tokens || {};
+  const operationId = validOperationId(body.operationId);
+  const replayChildId = accounts.length === 1 ? normalizeChildId(accounts[0]?.childId) : null;
+
+  // A replay after the local success was not persisted must not re-apply the
+  // write. The operation id is a client retry key, never a record version.
+  if (operationId && replayChildId) {
+    const replay = await replayedOperation(client, replayChildId, operationId, 'push');
+    if (replay) return { ...replay, replayed: true };
+  }
 
   // Reject the whole batch before writing anything if any device is unauthorised.
   for (const account of accounts) {
@@ -68,11 +89,7 @@ async function push(client, body) {
         skipped += 1;
         continue;
       }
-      const { error } = await client
-        .from('child_accounts')
-        .update(syncPatch(account))
-        .eq('child_id', childId);
-      if (error) throw new Error(error.message);
+      await client.updateAccount(childId, syncPatch(account));
       applied += 1;
     } catch (error) {
       console.error('Child sync push failed:', { childId, message: error.message });
@@ -80,11 +97,20 @@ async function push(client, body) {
     }
   }
 
-  return { count: applied, skipped, failures };
+  const response = { count: applied, skipped, failures };
+  if (!failures.length) {
+    await rememberOperation(client, replayChildId, operationId, 'push', response);
+  }
+  return response;
 }
 
 async function softDelete(client, body) {
   const requestedId = normalizeChildId(body.childId);
+  const operationId = validOperationId(body.operationId);
+
+  const replay = await replayedOperation(client, requestedId, operationId, 'delete');
+  if (replay) return { childId: requestedId, ...replay, replayed: true };
+
   let childId;
 
   // A developer may delete any account from the dashboard. Otherwise the
@@ -101,12 +127,14 @@ async function softDelete(client, body) {
   }
 
   const now = new Date().toISOString();
-  const { error } = await client
-    .from('child_accounts')
-    .update({ deleted_at: now, token_revoked_at: now, updated_at: now })
-    .eq('child_id', childId);
-  if (error) throw new Error(error.message);
-  return { childId };
+  await client.updateAccount(childId, {
+    deleted_at: now,
+    token_revoked_at: now,
+    updated_at: now,
+  });
+  const response = { childId };
+  await rememberOperation(client, childId, operationId, 'delete', response);
+  return response;
 }
 
 async function restore(client, body) {
@@ -121,11 +149,7 @@ async function restore(client, body) {
   const patch = syncPatch(body.account || {});
   patch.deleted_at = null;
   patch.token_revoked_at = null;
-  const { error } = await client
-    .from('child_accounts')
-    .update(patch)
-    .eq('child_id', childId);
-  if (error) throw new Error(error.message);
+  await client.updateAccount(childId, patch);
   return { childId };
 }
 
@@ -133,19 +157,14 @@ async function adminList(client, body) {
   if (!verifySessionToken(body.developerToken || body.sessionToken)) {
     throw new HttpError(401, 'Developer session is invalid. Please sign in again.');
   }
-  const { data, error } = await client
-    .from('child_accounts')
-    .select('*')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return { accounts: (data || []).map(toClientAccount) };
+  const rows = await client.listActiveAccounts();
+  return { accounts: (rows || []).map(toClientAccount) };
 }
 
 const handler = async (req, res) => {
   requirePost(req, res);
   const body = readBody(req);
-  const client = requireServerClient();
+  const client = requireStore();
 
   switch (body.action) {
     case 'pull': {

@@ -105,4 +105,73 @@ describe('SyncQueueService', () => {
     expect(result.success).toBe(false);
     expect(SyncQueueService.getQueue()).toHaveLength(1);
   });
+
+  it('keeps a stable operation id across retries and reloads', async () => {
+    SyncQueueService.enqueue({ type: 'UPSERT_ACCOUNT', childId: 'kid-id', payload: {} });
+    const originalId = SyncQueueService.getQueue()[0].id;
+
+    await SyncQueueService.flush(
+      async () => ({ success: false, error: 'Offline' }),
+      { now: Date.parse('2026-01-05T00:00:00.000Z') },
+    );
+
+    expect(SyncQueueService.getQueue()[0].id).toBe(originalId);
+    expect(originalId).not.toBe(String(SyncQueueService.getQueue()[0].version));
+  });
+
+  it('preserves overflow and exposes pending status instead of discarding writes', () => {
+    for (let index = 0; index < 202; index += 1) {
+      SyncQueueService.enqueue({
+        type: 'UPSERT_ACCOUNT',
+        childId: `kid-${index}`,
+        payload: { index },
+      });
+    }
+
+    const stats = SyncQueueService.getQueueStats();
+    expect(stats.active).toBe(200);
+    expect(stats.overflow).toBe(2);
+    expect(stats.pending).toBe(202);
+    expect(JSON.parse(localStorage.getItem('makenna_sync_queue_overflow_v1'))).toHaveLength(2);
+  });
+
+  it('moves exhausted operations to a visible, retryable dead-letter list', async () => {
+    SyncQueueService.enqueue({ type: 'UPSERT_ACCOUNT', childId: 'kid-fail', payload: {} });
+    const start = Date.parse('2026-01-05T00:00:00.000Z');
+    for (let i = 0; i < 5; i += 1) {
+      await SyncQueueService.flush(
+        async () => ({ success: false, error: 'Persistent server error' }),
+        { now: start + (i * 60_000) },
+      );
+    }
+
+    const failed = SyncQueueService.getFailedOperations();
+    expect(failed).toHaveLength(1);
+    expect(failed[0].lastError).toBe('Persistent server error');
+    expect(SyncQueueService.getQueueStats().droppedCount).toBe(1);
+
+    expect(SyncQueueService.retryFailed(failed[0].id)).toBe(true);
+    expect(SyncQueueService.getQueue()).toHaveLength(1);
+    expect(SyncQueueService.getFailedOperations()).toHaveLength(0);
+  });
+
+  it('does not drop blocked operations after repeated attempts', async () => {
+    SyncQueueService.enqueue({ type: 'DELETE_ACCOUNT', childId: 'kid-blocked', payload: {} });
+    const start = Date.parse('2026-01-05T00:00:00.000Z');
+    for (let i = 0; i < 8; i += 1) {
+      await SyncQueueService.flush(
+        async () => ({
+          success: false,
+          error: 'This device is no longer authorised for that child',
+          requiresAuth: true,
+        }),
+        { now: start + (i * 60_000) },
+      );
+    }
+
+    expect(SyncQueueService.getQueue()).toHaveLength(1);
+    expect(SyncQueueService.getQueue()[0].blocked).toBe(true);
+    expect(SyncQueueService.getFailedOperations()).toHaveLength(0);
+    expect(SyncQueueService.getQueueStats().blocked).toBe(1);
+  });
 });

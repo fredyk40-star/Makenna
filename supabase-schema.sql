@@ -231,6 +231,17 @@ CREATE TABLE IF NOT EXISTS public.parent_email_verifications (
   UNIQUE (child_id, parent_email)
 );
 
+-- Client operation ids: stable retry keys sent by the sync queue. These are
+-- independent of child_accounts.version and make delete/push replays safe.
+CREATE TABLE IF NOT EXISTS public.sync_operations (
+  child_id TEXT NOT NULL,
+  operation_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  response JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (child_id, operation_id)
+);
+
 -- Atomic, race-safe failure counter used by api/_lib/rate-limit.js.
 CREATE OR REPLACE FUNCTION public.bump_auth_failure(p_key TEXT, p_window_seconds INTEGER)
 RETURNS INTEGER
@@ -278,6 +289,7 @@ ALTER TABLE public.parent_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.auth_rate_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.developer_reset_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parent_email_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sync_operations ENABLE ROW LEVEL SECURITY;
 
 -- Remove every legacy policy, including permissive anon and PUBLIC policies.
 -- Permissive policies combine with OR, so a single broad policy defeats the
@@ -294,7 +306,7 @@ BEGIN
          'child_accounts', 'support_requests', 'developer_auth',
          'feature_flags', 'developer_updates', 'developer_trash',
          'sync_state', 'parent_profiles', 'auth_rate_limits',
-          'developer_reset_tokens', 'parent_email_verifications'
+          'developer_reset_tokens', 'parent_email_verifications', 'sync_operations'
         )
   LOOP
     EXECUTE format('DROP POLICY %I ON %I.%I', policy_record.policyname, policy_record.schemaname, policy_record.tablename);
@@ -304,13 +316,15 @@ END $$;
 REVOKE ALL ON TABLE public.child_accounts, public.support_requests,
   public.developer_auth, public.feature_flags, public.developer_updates,
   public.developer_trash, public.sync_state, public.parent_profiles,
-  public.auth_rate_limits, public.developer_reset_tokens, public.parent_email_verifications
+  public.auth_rate_limits, public.developer_reset_tokens, public.parent_email_verifications,
+  public.sync_operations
   FROM PUBLIC, anon, authenticated;
 
 GRANT ALL ON TABLE public.child_accounts, public.support_requests,
   public.developer_auth, public.feature_flags, public.developer_updates,
   public.developer_trash, public.sync_state, public.parent_profiles,
-  public.auth_rate_limits, public.developer_reset_tokens, public.parent_email_verifications
+  public.auth_rate_limits, public.developer_reset_tokens, public.parent_email_verifications,
+  public.sync_operations
   TO service_role;
 
 -- Note: the anon key is no longer needed by the app. Remove

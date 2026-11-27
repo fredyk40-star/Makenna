@@ -42,15 +42,24 @@ cp .env.example .env
 Serverless functions need these server-only variables:
 
 ```
+DATA_STORE=supabase
 SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=YOUR-SERVICE-ROLE-KEY
 DEVELOPER_JWT_SECRET=<random 48-byte base64url value>
 CHILD_SESSION_SECRET=<another random 48-byte base64url value>
 ```
 
+`DATA_STORE` defaults to `supabase`. TiDB Cloud MySQL-compatible mode is implemented
+behind the same server-side store contract but is only selected with
+`DATA_STORE=tidb` after its server-only credentials are configured. Never expose
+`TIDB_PASSWORD`, `TIDB_CA`, or any other database secret with a `VITE_` prefix.
+
 Child registration, login, credential reset, cloud sync and support requests are handled by `api/child-auth.js`, `api/child-sync.js` and `api/support.js`. Browser calls carry signed device tokens or developer session tokens.
 
-A staged TiDB Cloud migration plan is recorded in [`docs/tidb-migration-plan.md`](docs/tidb-migration-plan.md). Supabase remains active until the TiDB-backed deployment is verified.
+The staged migration plan and manual TiDB setup/shadow-test steps are in
+[`docs/tidb-migration-plan.md`](docs/tidb-migration-plan.md). Supabase remains
+authoritative until the TiDB-backed deployment is verified and cutover is explicitly
+approved.
 
 ## 🔐 Accounts, Recovery, and Developer Access
 
@@ -72,9 +81,9 @@ Production setup in Vercel:
    node scripts/hash-developer-password.js "your-strong-password"
    ```
 
-3. Add the printed `DEVELOPER_PASSWORD_HASH` / `DEVELOPER_PASSWORD_SALT`, plus `DEVELOPER_JWT_SECRET`, `CHILD_SESSION_SECRET`, `DEVELOPER_EMAIL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` as **server-only** Vercel env vars.
+3. Add the printed `DEVELOPER_PASSWORD_HASH` / `DEVELOPER_PASSWORD_SALT`, plus `DATA_STORE=supabase`, `DEVELOPER_JWT_SECRET`, `CHILD_SESSION_SECRET`, `DEVELOPER_EMAIL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` as **server-only** Vercel env vars.
 4. Add `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Google App Password), `GMAIL_FROM`, and `APP_URL`. Gmail SMTP is handled by `api/mail.js`; browser code never sees these secrets.
-5. Add only `VITE_DEVELOPER_EMAIL` and `VITE_ENABLE_CLOUD_SYNC` as client env vars. Never expose `SUPABASE_SERVICE_ROLE_KEY` with a `VITE_` prefix.
+5. Add only `VITE_DEVELOPER_EMAIL` and `VITE_ENABLE_CLOUD_SYNC` as client env vars. Never expose `SUPABASE_SERVICE_ROLE_KEY`, `TIDB_PASSWORD`, `TIDB_CA`, or any other database/JWT/SMTP secret with a `VITE_` prefix.
 6. If Gmail is not configured locally, the developer portal shows the one-time password on screen so the flow can still be tested.
 
 ## 🎨 Branding Assets
