@@ -18,6 +18,11 @@ const TracingPage = () => {
   const [selectedCase, setSelectedCase] = useState('uppercase');
   const [selectedMode, setSelectedMode] = useState(mode);
   const [traceProgress, setTraceProgress] = useState(0);
+  const displayLetter = letter
+    ? selectedCase === 'uppercase'
+      ? letter.letter
+      : letter.lowercase
+    : '';
   const {
     markOpened,
     markSkill,
@@ -45,6 +50,11 @@ const TracingPage = () => {
       navigate('/alphabet', { replace: true });
     }
   }, [letterId, mode, navigate]);
+
+  // Reset progress when the letter case changes so each case starts fresh.
+  useEffect(() => {
+    setTraceProgress(0);
+  }, [selectedCase, letterId]);
 
   useEffect(() => {
     const startedAt = Date.now();
@@ -127,7 +137,7 @@ const TracingPage = () => {
           </Link>
           <div className="min-w-0">
             <h1 className="font-baloo text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
-              Trace Letter {letter.letter}
+              Trace Letter {displayLetter}
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               {selectedMode === 'trace' ? 'Follow the guide to trace' : 'Practice freehand'}
@@ -155,9 +165,10 @@ const TracingPage = () => {
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
               }`}
               aria-pressed={selectedCase === 'uppercase'}
+              aria-label={`Trace capital letter ${letter.letter}`}
               type="button"
             >
-              A
+              {`A (${letter.letter})`}
             </button>
             <button
               onClick={() => setSelectedCase('lowercase')}
@@ -167,9 +178,10 @@ const TracingPage = () => {
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
               }`}
               aria-pressed={selectedCase === 'lowercase'}
+              aria-label={`Trace small letter ${letter.lowercase}`}
               type="button"
             >
-              a
+              {`a (${letter.lowercase})`}
             </button>
           </div>
 
@@ -240,7 +252,7 @@ const TracingPage = () => {
           <span className="hidden sm:inline">Back to Lesson</span>
         </button>
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          {letter.letter} • {selectedCase}
+          {displayLetter} • {selectedCase}
         </div>
         <button
           onClick={() => {

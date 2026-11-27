@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   FaUndo, FaRedo, FaEraser, FaPencilAlt, FaTrash, FaDownload, FaSave
@@ -9,6 +9,7 @@ const DrawingPad = ({ onSave = null }) => {
   const canvasRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const {
+    canvasEngine,
     color,
     colors,
     lineWidth,
@@ -25,6 +26,16 @@ const DrawingPad = ({ onSave = null }) => {
     redo,
     exportDrawing
   } = useDrawing(canvasRef);
+
+  // Keep the canvas bitmap aligned with its displayed size when the window
+  // rotates or resizes (mobile <-> desktop, orientation changes).
+  useEffect(() => {
+    const handleResize = () => {
+      if (canvasEngine) canvasEngine.resize();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [canvasEngine]);
 
   const getCoordinates = useCallback((e) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -82,7 +93,7 @@ const DrawingPad = ({ onSave = null }) => {
   };
 
   return (
-    <div className="w-full h-[70vh] flex flex-col items-center gap-4">
+    <div className="w-full flex flex-col items-center gap-4">
       {/* Toolbar */}
       <div className="w-full flex flex-wrap items-center justify-center gap-2 md:gap-4 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-soft">
         {/* Colors */}
@@ -131,18 +142,21 @@ const DrawingPad = ({ onSave = null }) => {
         </div>
       </div>
 
-      {/* Canvas */}
-      <motion.canvas
-        ref={canvasRef}
-        width="1000"
-        height="600"
-        className="w-full h-full rounded-2xl bg-gray-50 dark:bg-gray-900 shadow-inner touch-none cursor-crosshair"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        style={{ touchAction: 'none' }}
-      />
+      {/* Drawing canvas - locked 5:3 aspect ratio so strokes never stretch/distort
+           on mobile, tablet, or desktop screens. */}
+      <div className="relative w-full max-w-3xl aspect-[5/3] rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-900 shadow-inner">
+        <motion.canvas
+          ref={canvasRef}
+          width="1000"
+          height="600"
+          className="w-full h-full touch-none cursor-crosshair"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          style={{ touchAction: 'none' }}
+        />
+      </div>
     </div>
   );
 };
