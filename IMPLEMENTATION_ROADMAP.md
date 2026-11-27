@@ -14,32 +14,32 @@ Legend: `[ ]` planned · `[~]` in progress · `[x]` done
 - [x] Fix avatar store purchase crash
 - [x] Repair tracing engine (real letter paths, coordinate normalization, live progress, undo/redo)
 
-## Phase 1 — Trust & reliability `[~]`
-- [ ] Add Vitest + React Testing Library + jsdom
-- [ ] Unit tests for tracing validation, reward purchasing, game configs, mission logic
-- [ ] GitHub Actions CI (lint, test, build, audit)
-- [ ] Unify avatar/reward/gamification catalogs into one source of truth
-- [ ] Versioned local-storage migration layer, initialized before app render
-- [ ] Central error-reporting service wired to ErrorBoundary
-- [ ] Resolve stale-closure lint warnings in touched files
+## Phase 1 — Trust & reliability `[x]`
+- [x] Add Vitest + React Testing Library + jsdom
+- [x] Unit tests for tracing validation, reward purchasing, game configs, mission logic
+- [x] GitHub Actions CI (lint, test, build, audit)
+- [x] Unify avatar/reward/gamification catalogs into one source of truth
+- [x] Versioned local-storage migration layer, initialized before app render
+- [x] Central error-reporting service wired to ErrorBoundary
+- [x] Resolve stale-closure lint warnings in touched files
 
-## Phase 2 — Daily Mission path `[ ]`
-- [ ] Adaptive 10–15 minute daily mission: review → lesson → game → reward
-- [ ] Mission service with streak/mastery-driven selection
-- [ ] `/mission` page and home navigation entry
-- [ ] Mission completion feeds gamification and progress services
+## Phase 2 — Daily Mission path `[x]`
+- [x] Adaptive 10–15 minute daily mission: review → lesson → game → reward
+- [x] Mission service with streak/mastery-driven selection
+- [x] `/mission` page and home navigation entry
+- [x] Mission completion feeds gamification and progress services
 
-## Phase 3 — Parent dashboard `[ ]`
-- [ ] Weekly activity, mastery by skill, streaks, time-on-task
-- [ ] "What Makenna learned this week" summary
-- [ ] Screen-time limits, safe mode, content toggles
-- [ ] Printable/exportable progress report
+## Phase 3 — Parent dashboard `[x]`
+- [x] Weekly activity, mastery by skill, streaks, time-on-task
+- [x] "What Makenna learned this week" summary
+- [x] Screen-time limits, safe mode, content toggles
+- [x] Printable/exportable progress report
 
-## Phase 4 — Teacher / classroom mode `[ ]`
-- [ ] Class roster and child linking
-- [ ] Assignments and curriculum-aligned lesson plans
-- [ ] Class progress view
-- [ ] Printable certificates and worksheets
+## Phase 4 — Teacher / classroom mode `[x]`
+- [x] Class roster and child linking
+- [x] Assignments and curriculum-aligned lesson plans
+- [x] Class progress view
+- [x] Printable certificates and worksheets
 
 ## Phase 5 — Offline-first sync `[ ]`
 - [ ] Sync queue with deterministic conflict resolution

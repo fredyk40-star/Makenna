@@ -233,8 +233,9 @@
   }
 }
 
-/* Parent report: visible only when printing/saving as PDF */
-.print-report {
+/* Print-only reports, worksheets and certificates */
+.print-report,
+.classroom-print {
   display: none;
 }
 
@@ -244,17 +245,60 @@
   }
 
   .print-report,
-  .print-report * {
+  .print-report *,
+  .classroom-print,
+  .classroom-print * {
     visibility: visible;
   }
 
-  .print-report {
+  .print-report,
+  .classroom-print {
     display: block;
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     background: white;
+    color: #111827;
     padding: 24px;
+  }
+
+  .print-report h1,
+  .print-report h2,
+  .print-report h3,
+  .classroom-print h1,
+  .classroom-print h2,
+  .classroom-print h3 {
+    color: #111827;
+  }
+
+  .print-question,
+  .print-certificate {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .print-certificate {
+    text-align: center;
+    min-height: 260px;
+  }
+
+  .print-signature {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 48px;
+    border-top: 1px solid #9ca3af;
+    padding-top: 8px;
+  }
+
+  .print-answer-key {
+    border-top: 2px solid #9ca3af;
+    margin-top: 24px;
+    padding-top: 12px;
+    font-size: 0.9em;
   }
 }
