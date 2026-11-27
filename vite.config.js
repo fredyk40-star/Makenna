@@ -30,7 +30,7 @@ export default defineConfig({
         clientsClaim: true,
         skipWaiting: true,
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,mp3,ogg,wav,m4a}'],
         // Device startup images are large and only used by iOS at launch.
         globIgnores: ['**/*landscape.png', '**/*portrait.png'],
         runtimeCaching: [

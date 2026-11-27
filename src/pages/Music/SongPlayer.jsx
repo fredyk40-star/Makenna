@@ -60,89 +60,159 @@ const SongPlayer = () => {
     };
   }, [songId, navigate, childName, progress.recordedSongs]);
 
-  // Lyric highlighting during playback
+  // Keep lyric highlighting in sync with either real audio or the spoken fallback.
   useEffect(() => {
-    if (isPlaying && song?.lyrics) {
-      const interval = setInterval(() => {
-        const time = Date.now() - (startTimeRef.current || Date.now());
-        const seconds = time / 1000;
-        setCurrentTime(seconds);
+    if (!isPlaying || !song?.lyrics) return;
 
-        // Find current lyric based on timing
+    if (song.audioUrl) {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      const syncLyrics = () => {
+        const seconds = audio.currentTime;
+        setCurrentTime(seconds);
         const lyricIndex = song.lyrics.findIndex((line, i) => {
           const nextLine = song.lyrics[i + 1];
           return seconds >= (line.timing * 4) && (!nextLine || seconds < (nextLine.timing * 4));
         });
+        if (lyricIndex !== activeLyricIndex) setActiveLyricIndex(lyricIndex);
+      };
 
-        if (lyricIndex !== activeLyricIndex) {
-          setActiveLyricIndex(lyricIndex);
-        }
-      }, 100);
-
-      return () => clearInterval(interval);
+      audio.addEventListener('timeupdate', syncLyrics);
+      syncLyrics();
+      return () => audio.removeEventListener('timeupdate', syncLyrics);
     }
+
+    const interval = setInterval(() => {
+      const time = Date.now() - (startTimeRef.current || Date.now());
+      const seconds = time / 1000;
+      setCurrentTime(seconds);
+
+      const lyricIndex = song.lyrics.findIndex((line, i) => {
+        const nextLine = song.lyrics[i + 1];
+        return seconds >= (line.timing * 4) && (!nextLine || seconds < (nextLine.timing * 4));
+      });
+
+      if (lyricIndex !== activeLyricIndex) {
+        setActiveLyricIndex(lyricIndex);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
   }, [isPlaying, song, activeLyricIndex]);
 
-  const handlePlayPause = useCallback(() => {
-    if (!audioRef.current) {
-      // Create audio context or use TTS
-      if (song) {
-        voiceGuide.speak(song.title.split('.')[0] || 'Song starting');
-        voiceGuide.queue(`Category: ${song.category.replace('-', ' ')}`, {});
+  useEffect(() => {
+    if (!song?.audioUrl || !audioRef.current) return;
+    const audio = audioRef.current;
 
-        // Speak lyrics line by line for basic karaoke effect
-        if (song.lyrics) {
-          song.lyrics.forEach((line, __i) => {
-            setTimeout(() => {
-              if (isPlaying) {
-                voiceGuide.speak(line.words, { rate: playbackSpeed * 0.9 });
-              }
-            }, line.timing * 4000 / playbackSpeed);
+    const onLoadedMetadata = () => {
+      if (Number.isFinite(audio.duration)) setDuration(audio.duration);
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      handleComplete();
+    };
+
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('ended', onEnded);
+    return () => {
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('ended', onEnded);
+    };
+  }, [song?.audioUrl, song?.duration, handleComplete]);
+
+  const handlePlayPause = useCallback(() => {
+    if (song?.audioUrl && audioRef.current) {
+      const audio = audioRef.current;
+      if (isPlaying) {
+        audio.pause();
+        setIsPlaying(false);
+      } else {
+        audio.playbackRate = playbackSpeed;
+        audio.volume = isMuted ? 0 : volume;
+        audio.play()
+          .then(() => setIsPlaying(true))
+          .catch(() => {
+            setIsPlaying(false);
           });
-        }
+      }
+      return;
+    }
+
+    if (song) {
+      voiceGuide.speak(song.title.split('.')[0] || 'Song starting');
+      voiceGuide.queue(`Category: ${song.category.replace('-', ' ')}`, {});
+
+      if (song.lyrics) {
+        song.lyrics.forEach((line) => {
+          setTimeout(() => {
+            if (isPlaying) {
+              voiceGuide.speak(line.words, { rate: playbackSpeed * 0.9 });
+            }
+          }, line.timing * 4000 / playbackSpeed);
+        });
       }
     }
 
     setIsPlaying(!isPlaying);
     startTimeRef.current = Date.now();
-  }, [song, isPlaying, playbackSpeed]);
+  }, [song, isPlaying, playbackSpeed, volume, isMuted]);
 
   const handleReplay = useCallback(() => {
+    if (song?.audioUrl && audioRef.current) {
+      const audio = audioRef.current;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.playbackRate = playbackSpeed;
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      setCurrentTime(0);
+      setActiveLyricIndex(-1);
+      return;
+    }
+
     setIsPlaying(false);
     setCurrentTime(0);
     setActiveLyricIndex(-1);
     setTimeout(() => {
       handlePlayPause();
     }, 100);
-  }, [handlePlayPause]);
+  }, [handlePlayPause, song?.audioUrl, playbackSpeed]);
 
   const handleStop = useCallback(() => {
+    if (song?.audioUrl && audioRef.current) {
+      const audio = audioRef.current;
+      audio.pause();
+      audio.currentTime = 0;
+    }
     setIsPlaying(false);
     setCurrentTime(0);
     setActiveLyricIndex(-1);
-  }, []);
+  }, [song?.audioUrl]);
 
   const handleVolumeChange = (e) => {
     const newVolume = Math.max(0, Math.min(0.7, parseFloat(e.target.value))); // Max 0.7 for child safety
     setVolumeState(newVolume);
     setIsMuted(newVolume === 0);
+    if (audioRef.current) audioRef.current.volume = newVolume;
   };
 
   const handleSpeedChange = (speed) => {
     setPlaybackSpeed(speed);
+    if (audioRef.current) audioRef.current.playbackRate = speed;
   };
 
   const handleToggleMute = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
     setVolumeState(newMuted ? 0 : 0.7);
+    if (audioRef.current) audioRef.current.muted = newMuted;
   };
 
-  const handleComplete = () => {
+  const handleComplete = useCallback(() => {
     markCompleted(songId);
     GamificationService.completeLesson(childId, 100);
     announceToScreenReader(`Song completed! Great job singing ${song?.title}!`);
-  };
+  }, [songId, childId, song?.title, markCompleted]);
 
   const startRecording = () => {
     setShowRecording(true);
@@ -231,7 +301,13 @@ const SongPlayer = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {song?.audioUrl && (
+    <audio ref={audioRef} src={song.audioUrl} preload="metadata" className="hidden">
+      <track kind="captions" />
+    </audio>
+  )}
+
+  {/* Main Content */}
       <div className={`p-4 ${isFullScreen ? 'pb-20' : ''}`}>
         {/* Karaoke Lyrics Display */}
         <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-soft p-6 mb-4 ${isFullScreen ? 'min-h-[60vh]' : ''}`}>

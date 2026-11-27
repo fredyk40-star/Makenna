@@ -637,9 +637,28 @@ export const MUSIC_LIBRARY = [
     vocabWords: ['water', 'safety', 'swim', 'pool', 'careful'],
     duration: 30,
     estimatedTime: 2
+  },
+  {
+    id: 'twinkle-twinkle',
+    title: 'Twinkle Twinkle Little Star',
+    category: 'alphabet',
+    description: 'Sing along with a real recorded children’s song.',
+    icon: '⭐',
+    lyrics: [
+      { words: 'Twinkle, twinkle, little star', timing: 0 },
+      { words: 'How I wonder what you are', timing: 4 },
+      { words: 'Up above the world so high', timing: 8 },
+      { words: 'Like a diamond in the sky', timing: 12 },
+      { words: 'Twinkle, twinkle, little star', timing: 16 },
+      { words: 'How I wonder what you are', timing: 20 }
+    ],
+    vocabWords: ['twinkle', 'star', 'sky', 'diamond', 'wonder'],
+    duration: 126,
+    estimatedTime: 3,
+    audioUrl: '/audio/music/twinkle-twinkle-little-star.mp3',
+    realAudio: true
   }
 ];
-
 // Music games data
 export const MUSIC_GAMES = [
   {
