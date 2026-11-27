@@ -70,8 +70,15 @@ export const ChildAccountProvider = ({ children }) => {
     setError(null);
     try {
       const result = await ChildAccountService.registerChild(fullName, pin, parentEmail);
-      // Auto-login after registration
-      await ChildAccountService.loginChild(result.childId, pin);
+      // Registration already saved the account and device token. Auto-login is
+      // a convenience; a transient failure here must not make the user retry a
+      // name that is already registered.
+      try {
+        await ChildAccountService.loginChild(result.childId, pin);
+      } catch (loginErr) {
+        console.warn('Auto-login pending after registration:', loginErr.message);
+        ChildAccountService.setActiveChild(result.childId);
+      }
       const child = ChildAccountService.getActiveChild();
       setActiveChild(child);
       AnalyticsService.trackLogin();
