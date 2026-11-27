@@ -225,11 +225,15 @@ const dispatch = (endpoint, body) => {
     }
 
     if (body.action === 'delete') {
-      const id = requireChild({
-        childId: body.childId,
-        token: tokenFor(tokens, body.childId),
-      });
-      if (!id) return fail('This device is no longer authorised.', 401);
+      const id = requireDev(body)
+        ? normalize(body.childId)
+        : requireChild({
+          childId: body.childId,
+          token: tokenFor(tokens, body.childId),
+        });
+      if (!id || !/^kid[\d-]+$/i.test(id)) {
+        return fail('This device is no longer authorised.', 401);
+      }
       apiState.accounts.delete(id);
       return ok({ childId: id });
     }

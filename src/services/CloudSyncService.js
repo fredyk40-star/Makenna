@@ -12,6 +12,7 @@ import { SyncQueueService } from './SyncQueueService';
 
 const SYNC_STATUS_KEY = 'makenna_sync_status_v1';
 const ENABLED_KEY = 'makenna_cloud_sync_enabled';
+const DEVELOPER_SESSION_KEY = 'makenna_dev_session_token_v1';
 
 const DEFAULT_STATUS = {
   enabled: false,
@@ -119,11 +120,13 @@ export class CloudSyncService {
     };
   }
 
-  static queueAccountChange(type, account, childId = null) {
+  static queueAccountChange(type, account, childId = null, token = null) {
     if (type === 'DELETE_ACCOUNT') {
       const id = childId || account?.childId;
+      // A child removed locally must not be re-uploaded by an older queued write.
+      SyncQueueService.removeForChild(id);
       SyncQueueService.recordDeletion(id);
-      SyncQueueService.enqueue({ type, childId: id, payload: { childId: id } });
+      SyncQueueService.enqueue({ type, childId: id, payload: { childId: id, token } });
     } else {
       const payload = this.toSyncPayload(account);
       SyncQueueService.enqueue({ type: 'UPSERT_ACCOUNT', childId: payload.childId, payload });
@@ -262,7 +265,9 @@ export class CloudSyncService {
   /** Replay queued writes; failed operations stay queued with retry counts. */
   static async flushQueue() {
     const result = await SyncQueueService.flush(async operation => {
-      if (operation.type === 'DELETE_ACCOUNT') return this.deleteFromCloud(operation.childId);
+      if (operation.type === 'DELETE_ACCOUNT') {
+        return this.deleteFromCloud(operation.childId, operation.payload?.token);
+      }
       if (operation.type === 'UPSERT_ACCOUNT') return this.uploadChildAccount(operation.payload);
       return { success: false, error: `Unknown operation: ${operation.type}` };
     });
@@ -323,12 +328,17 @@ export class CloudSyncService {
     }
   }
 
-  static async deleteFromCloud(childId) {
+  static async deleteFromCloud(childId, token = null) {
     try {
+      const tokens = ChildAccountService.getChildTokens();
+      if (token) tokens[ChildAccountService.normalizeChildId(childId)] = token;
       await postApi('child-sync', {
         action: 'delete',
         childId,
-        tokens: ChildAccountService.getChildTokens(),
+        tokens,
+        // A developer removing an account may not have the child's device
+        // token, so the signed developer session is an alternate authority.
+        developerToken: StorageService.get(DEVELOPER_SESSION_KEY, null),
       });
       return { success: true, childId };
     } catch (error) {

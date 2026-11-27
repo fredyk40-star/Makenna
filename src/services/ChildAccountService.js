@@ -26,10 +26,10 @@ const stampForSync = account => ({
   version: Number(account.version || 0) + 1,
 });
 
-const queueCloudChange = (type, account, childId) => {
+const queueCloudChange = (type, account, childId, token = null) => {
   void import('./CloudSyncService')
     .then(({ CloudSyncService }) => {
-      CloudSyncService.queueAccountChange(type, account, childId);
+      CloudSyncService.queueAccountChange(type, account, childId, token);
     })
     .catch(() => {
       // Offline or sync unavailable — the local write is already saved.
@@ -381,9 +381,12 @@ export class ChildAccountService {
     const normalizedId = this.normalizeChildId(childId);
     let accounts = this.getAllAccounts();
     const removed = accounts.find(a => a.childId?.toLowerCase() === normalizedId);
+    const token = this.getChildToken(normalizedId);
     accounts = accounts.filter(a => a.childId?.toLowerCase() !== normalizedId);
     this.saveAllAccounts(accounts);
-    if (removed) queueCloudChange('DELETE_ACCOUNT', removed, removed.childId);
+    // Capture the signed device token before removing it. The queued cloud
+    // delete needs that token to prove this device may delete the row.
+    if (removed) queueCloudChange('DELETE_ACCOUNT', removed, removed.childId, token);
     this._removeChildToken(normalizedId);
     if (this.getActiveChildId()?.toLowerCase() === normalizedId) {
       this.logoutChild();

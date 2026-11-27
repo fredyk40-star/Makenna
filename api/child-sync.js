@@ -5,6 +5,7 @@ import {
   requireChildToken,
   requireServerClient,
   syncPatch,
+  validateChildId,
   timeOf,
   toClientAccount,
 } from './_lib/child-auth.js';
@@ -66,9 +67,20 @@ async function push(client, body) {
 }
 
 async function softDelete(client, body) {
-  const tokens = body.tokens || {};
-  const token = tokens[body.childId] || tokens[normalizeChildId(body.childId)];
-  const childId = requireChildToken(token, body.childId);
+  const requestedId = normalizeChildId(body.childId);
+  let childId;
+
+  // A developer may delete any account from the dashboard. Otherwise the
+  // request must carry a signed token issued when this device signed in.
+  if (verifySessionToken(body.developerToken || body.sessionToken)) {
+    if (!validateChildId(requestedId)) throw new HttpError(400, 'Invalid child ID.');
+    childId = requestedId;
+  } else {
+    const tokens = body.tokens || {};
+    const token = tokens[body.childId] || tokens[requestedId];
+    childId = requireChildToken(token, body.childId);
+  }
+
   const { error } = await client
     .from('child_accounts')
     .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })

@@ -118,6 +118,17 @@ export class SyncQueueService {
     notify();
   }
 
+  /** Drop stale writes for a child that has been deleted locally. */
+  static removeForChild(childId) {
+    const id = String(childId || '').toLowerCase();
+    if (!id) return 0;
+    const queue = this.getQueue();
+    const kept = queue.filter(operation => String(operation.childId || '').toLowerCase() !== id);
+    StorageService.set(QUEUE_KEY, kept);
+    notify();
+    return queue.length - kept.length;
+  }
+
   /** Deletions need a timestamp so an older cloud row cannot resurrect them. */
   static recordDeletion(childId, deletedAt = new Date().toISOString()) {
     if (!childId) return;
