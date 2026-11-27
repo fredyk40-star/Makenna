@@ -40,6 +40,7 @@ const lazyWithErrorHandler = (importFn) => {
 
 // Lazy load pages
 const Home = lazyWithErrorHandler(() => import('./pages/Home/Home'));
+const MissionPage = lazyWithErrorHandler(() => import('./pages/Mission/MissionPage'));
 const Learn = lazyWithErrorHandler(() => import('./pages/Learn/Learn'));
 const Games = lazyWithErrorHandler(() => import('./pages/Games/Games'));
 const Welcome = lazyWithErrorHandler(() => import('./pages/Welcome/Welcome'));
@@ -163,6 +164,7 @@ const AppContent = () => {
               {isAuthenticated ? (
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Home />} />
+                  <Route path="mission" element={<MissionPage />} />
                   <Route path="welcome" element={<Welcome />} />
                   <Route path="learn" element={<Learn />} />
                   <Route path="games" element={<Games />} />

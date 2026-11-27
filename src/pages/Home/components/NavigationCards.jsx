@@ -58,6 +58,7 @@ Card.displayName = 'Card';
 
 const NavigationCards = memo(() => {
   const cards = [
+    { id: 0, title: "Today's Mission", emoji: '🎯', color: CARD_COLORS[3], path: ROUTES.MISSION },
     { id: 1, title: 'Alphabet Adventure', emoji: '📚', color: CARD_COLORS[0], path: ROUTES.ALPHABET },
     { id: 2, title: 'Numbers Kingdom', emoji: '👑', color: CARD_COLORS[1], path: ROUTES.NUMBERS },
     { id: 3, title: 'Animal Safari', emoji: '🦁', color: CARD_COLORS[2], path: ROUTES.ANIMAL_SAFARI },

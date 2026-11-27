@@ -8,6 +8,7 @@ import {
 
 export const ROUTES = {
   HOME: '/',
+  MISSION: '/mission',
   WELCOME: '/welcome',
   LEARN: '/learn',
   GAMES: '/games',
