@@ -6,6 +6,7 @@ import { getGameById } from '../../data/numbersGamesData';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import gameProgressService from '../../services/GameProgressService';
 import adaptiveLearningService from '../../services/AdaptiveLearningService';
+import { resultFor } from '../../utils/gameScoring';
 import { announceToScreenReader } from '../../utils/accessibility';
 
 // Import all game components
@@ -65,78 +66,71 @@ const GameTemplate = () => {
   const [, setIsComplete] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [gameRound, setGameRound] = useState(0);
 
-  const { markCompleted, markMastered } = useNumbersProgress();
+  const {
+    saveGameResult,
+    isGameFavorited,
+    toggleFavoriteGame,
+  } = useNumbersProgress();
+  const isFavorite = isGameFavorited(gameId);
 
   useEffect(() => {
     const found = getGameById(gameId);
     if (found) {
       setGame(found);
       setStartTime(Date.now());
-
-      // Load favorite status
-      try {
-        const favorites = JSON.parse(localStorage.getItem('numbers_game_favorites') || '[]');
-        setIsFavorite(favorites.includes(gameId));
-      } catch (error) {
-        console.warn('Failed to load favorites:', error);
-      }
     } else {
       navigate('/numbers/games');
     }
   }, [gameId, navigate]);
 
   const toggleFavorite = useCallback(() => {
-    const newFavorite = !isFavorite;
-    setIsFavorite(newFavorite);
-    try {
-      const favorites = JSON.parse(localStorage.getItem('numbers_game_favorites') || '[]');
-      if (newFavorite) {
-        favorites.push(gameId);
-      } else {
-        const index = favorites.indexOf(gameId);
-        if (index > -1) favorites.splice(index, 1);
-      }
-      localStorage.setItem('numbers_game_favorites', JSON.stringify(favorites));
-    } catch (error) {
-      console.warn('Failed to save favorites:', error);
-    }
-  }, [isFavorite, gameId]);
+    toggleFavoriteGame(gameId);
+    announceToScreenReader(isFavorite ? 'Removed from favorites' : 'Added to favorites');
+  }, [isFavorite, gameId, toggleFavoriteGame]);
 
   const handleGameComplete = useCallback((result) => {
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+    // Several legacy games add one to the denominator, which makes a perfect
+    // run score 83%. Derive the score from answered questions instead.
+    const correct = Math.max(0, Number(result.correct) || 0);
+    const incorrect = Math.max(0, Number(result.incorrect) || 0);
+    const graded = (correct || incorrect)
+      ? resultFor(correct, correct + incorrect, incorrect)
+      : { score: Math.max(0, Number(result.score) || 0), stars: Math.max(0, Number(result.stars) || 0), correct, incorrect };
 
     // Record progress
     gameProgressService.recordProgress(gameId, {
-      score: result.score || 0,
-      stars: result.stars || 0,
+      score: graded.score,
+      stars: graded.stars,
       time: timeSpent,
       completed: true,
       gameId: gameId
     });
 
-    // Update numbers progress
-    markCompleted(gameId);
-    if (result.score > 80) {
-      markMastered(gameId);
-    }
+    // Game results are kept separate from number lesson progress so game ids
+    // never appear as mastered/completed numbers.
+    saveGameResult(gameId, {
+      score: graded.score,
+      stars: graded.stars,
+    });
 
     // Adaptive learning
     adaptiveLearningService.recordPerformance(gameId, {
-      correct: result.correct || 0,
-      incorrect: result.incorrect || 0,
+      correct,
+      incorrect,
       time: timeSpent,
       difficulty: game?.difficulty || 'medium'
     });
 
-    setScore(result.score || 0);
-    setStars(result.stars || 0);
+    setScore(graded.score);
+    setStars(graded.stars);
     setIsComplete(true);
     setShowCelebration(true);
 
-    announceToScreenReader(`Game complete! You scored ${result.score}%`);
-  }, [gameId, startTime, game, markCompleted, markMastered]);
+    announceToScreenReader(`Game complete! You scored ${graded.score}%`);
+  }, [gameId, startTime, game, saveGameResult]);
 
   const GameComponent = game ? GameComponents[game.id] || null : null;
 
@@ -198,6 +192,7 @@ const GameTemplate = () => {
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-soft p-4 md:p-6 min-h-[400px]">
         {GameComponent ? (
           <GameComponent
+            key={`${game.id}-${gameRound}`}
             game={game}
             onComplete={handleGameComplete}
             onScoreUpdate={(newScore) => setScore(newScore)}
@@ -260,6 +255,7 @@ const GameTemplate = () => {
                     setScore(0);
                     setStars(0);
                     setStartTime(Date.now());
+                    setGameRound(prev => prev + 1);
                   }}
                   className="px-4 py-2 btn-primary"
                 >

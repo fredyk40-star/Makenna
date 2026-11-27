@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaArrowLeft, FaArrowRight, FaPlay, FaPause,
@@ -15,62 +15,73 @@ import { announceToScreenReader } from '../../utils/accessibility';
 const NumberStoryReader = () => {
   const { storyId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const preferredMode = location.state?.readingMode;
   const [story, setStory] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [readingMode, setReadingMode] = useState('read-to-me');
+  const [readingMode, setReadingMode] = useState(
+    preferredMode === 'read-myself' ? 'read-myself' : 'read-to-me',
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [highlightedWord, setHighlightedWord] = useState('');
   const [showVocabulary, setShowVocabulary] = useState(false);
   const [selectedWord, setSelectedWord] = useState(null);
-  const [, setIsComplete] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [startTime, setStartTime] = useState(Date.now());
 
   const { speak, stop } = useAudio();
-  const { markCompleted, markMastered } = useNumbersProgress();
+  const {
+    completeStory,
+    isStoryFavorited,
+    toggleFavoriteStory,
+  } = useNumbersProgress();
+  const isFavorite = isStoryFavorited(storyId);
+  const startTimeRef = useRef(Date.now());
 
   useEffect(() => {
     const found = getStoryById(storyId);
-    if (found) {
-      setStory(found);
-      setStartTime(Date.now());
-
-      // Load favorite status
-      try {
-        const favorites = JSON.parse(localStorage.getItem('number_story_favorites') || '[]');
-        setIsFavorite(favorites.includes(storyId));
-      } catch (error) {
-        console.warn('Failed to load favorites:', error);
-      }
-    } else {
+    if (!found) {
       navigate('/numbers/stories');
+      return undefined;
     }
+    setStory(found);
+    startTimeRef.current = Date.now();
 
     return () => {
-      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-      readingAnalyticsService.recordReadingTime(timeSpent / 60);
+      const seconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      if (seconds > 0) readingAnalyticsService.recordReadingTime(seconds / 60);
     };
   }, [storyId, navigate]);
 
   const toggleFavorite = useCallback(() => {
-    const newFavorite = !isFavorite;
-    setIsFavorite(newFavorite);
-    try {
-      const favorites = JSON.parse(localStorage.getItem('number_story_favorites') || '[]');
-      if (newFavorite) {
-        favorites.push(storyId);
-        readingAnalyticsService.addFavoriteStory(storyId);
-      } else {
-        const index = favorites.indexOf(storyId);
-        if (index > -1) favorites.splice(index, 1);
-        readingAnalyticsService.removeFavoriteStory(storyId);
-      }
-      localStorage.setItem('number_story_favorites', JSON.stringify(favorites));
-    } catch (error) {
-      console.warn('Failed to save favorites:', error);
+    toggleFavoriteStory(storyId);
+    if (isFavorite) {
+      readingAnalyticsService.removeFavoriteStory(storyId);
+    } else {
+      readingAnalyticsService.addFavoriteStory(storyId);
     }
-  }, [isFavorite, storyId]);
+  }, [isFavorite, storyId, toggleFavoriteStory]);
+
+  const readPage = useCallback(async (pageIndex) => {
+    if (!story) return;
+
+    const page = story.pages[pageIndex];
+    if (!page) return;
+
+    setIsPlaying(true);
+    const words = page.text.split(' ');
+
+    for (const word of words) {
+      setHighlightedWord(word);
+      await speak(word, { rate: 0.7, pitch: 1.1 });
+      // Speech synthesis resolves immediately in some browsers; hold each
+      // highlight long enough for a child to follow along.
+      const letters = word.replace(/[^a-zA-Z]/g, '').length;
+      await new Promise(resolve => setTimeout(resolve, Math.min(900, Math.max(260, letters * 110))));
+    }
+
+    setHighlightedWord('');
+    setIsPlaying(false);
+  }, [story, speak]);
 
   const handlePageTurn = useCallback(async (direction) => {
     if (!story) return;
@@ -79,10 +90,8 @@ const NumberStoryReader = () => {
     if (newPage < 0 || newPage >= story.pages.length) {
       if (direction === 'next' && newPage === story.pages.length) {
         // Story complete
-        setIsComplete(true);
         setShowCelebration(true);
-        markCompleted(`story-${story.number}`);
-        markMastered(`story-${story.number}`);
+        completeStory(story.id, story.number);
         readingAnalyticsService.recordStoryCompletion(storyId);
         announceToScreenReader('Story complete! Great reading!');
       }
@@ -95,30 +104,7 @@ const NumberStoryReader = () => {
     if (readingMode === 'read-to-me') {
       await readPage(newPage);
     }
-  }, [story, currentPage, readingMode]);
-
-  const readPage = useCallback(async (pageIndex) => {
-    if (!story) return;
-
-    const page = story.pages[pageIndex];
-    if (!page) return;
-
-    setIsPlaying(true);
-    const text = page.text;
-    const words = text.split(' ');
-
-    for (const word of words) {
-      setHighlightedWord(word);
-      await speak(word, {
-        rate: 0.7,
-        pitch: 1.1
-      });
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-
-    setHighlightedWord('');
-    setIsPlaying(false);
-  }, [story, speak]);
+  }, [story, currentPage, readingMode, completeStory, readPage, storyId]);
 
   const handleWordClick = useCallback(async (word) => {
     if (readingMode === 'read-myself') {
@@ -315,14 +301,10 @@ const NumberStoryReader = () => {
 
         <button
           onClick={() => handlePageTurn('next')}
-          disabled={currentPage === story.pages.length - 1}
-          className={`p-3 rounded-xl transition-colors ${
-            currentPage === story.pages.length - 1
-              ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
-          aria-label="Next page"
+          className="px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+          aria-label={currentPage === story.pages.length - 1 ? 'Finish story' : 'Next page'}
         >
+          {currentPage === story.pages.length - 1 ? 'Finish' : 'Next'}
           <FaArrowRight />
         </button>
       </div>
@@ -435,8 +417,7 @@ const NumberStoryReader = () => {
                   onClick={() => {
                     setShowCelebration(false);
                     setCurrentPage(0);
-                    setIsComplete(false);
-                    setStartTime(Date.now());
+                    startTimeRef.current = Date.now();
                     if (readingMode === 'read-to-me') {
                       readPage(0);
                     }

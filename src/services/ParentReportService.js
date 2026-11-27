@@ -8,6 +8,10 @@ import { SafeModeService } from './SafeModeService';
 import DailyMissionService from './DailyMissionService';
 import gameProgressService from './GameProgressService';
 import { ChildAccountService } from './ChildAccountService';
+import {
+  getCompletionCount as getNumbersCompletionCount,
+  getMasteryCount as getNumbersMasteryCount,
+} from './NumbersProgressService';
 
 const SUMMARY_WORDS = {
   Alphabet: 'letters and their sounds',
@@ -58,7 +62,10 @@ export class ParentReportService {
       },
       mastery: {
         alphabet: (alphabet.completed || alphabet.mastered || []).length,
-        numbers: (numbers.completed || numbers.mastered || []).length,
+        // Numbers are derived from skill records so a written/story skill does
+        // not inflate completion, and legacy arrays remain compatible.
+        numbers: getNumbersMasteryCount(numbers),
+        numbersCompleted: getNumbersCompletionCount(numbers),
         bySubject: stats.mastery || {},
       },
       charts: { daily, weekly },

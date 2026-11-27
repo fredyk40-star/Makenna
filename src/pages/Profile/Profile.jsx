@@ -3,13 +3,20 @@ import { FaShieldAlt, FaStar, FaBook, FaSignOutAlt, FaLock, FaChild, FaFolderOpe
 import { Link } from 'react-router-dom';
 import { useChildAccount } from '../../context/ChildAccountContext';
 import { useAlphabetProgress } from '../../hooks/useAlphabetProgress';
+import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import { ALPHABET_DATA } from '../../data/alphabetData';
+import { NUMBERS_DATA } from '../../data/numbersData';
 
 import AvatarSelector from '../../components/AvatarSelector/AvatarSelector';
 
 const Profile = () => {
   const { activeChild, childId, logout } = useChildAccount();
   const { progress: alphabetState, getSkillCompletionPercentage } = useAlphabetProgress();
+  const {
+    getCompletionCount: getNumbersCompleted,
+    getCompletionPercentage: getNumbersPercentage,
+    getFavoriteNumbers,
+  } = useNumbersProgress();
 
   // Get progress from child account directly
   const getProgress = () => {
@@ -19,14 +26,15 @@ const Profile = () => {
 
   const alphabetProgress = getSkillCompletionPercentage();
   const lettersMastered = alphabetState.completed.length;
-  const numbersProgress = getProgress().numbers || 0;
+  const numbersCompleted = getNumbersCompleted();
+  const numbersProgress = getNumbersPercentage();
   const favoriteLetters = [
     ...new Set([
       ...alphabetState.favorites.letters,
       ...(getProgress().favoriteLetters || []),
     ]),
   ];
-  const favoriteNumbers = getProgress().favoriteNumbers || [];
+  const favoriteNumbers = getFavoriteNumbers();
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to log out?')) {
@@ -110,6 +118,9 @@ const Profile = () => {
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
               <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: `${numbersProgress}%` }}></div>
             </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {numbersCompleted} of {NUMBERS_DATA.length} numbers completed · recognition, counting and word skills
+            </p>
           </div>
         </div>
       </div>

@@ -48,6 +48,7 @@ export const STORAGE_KEYS = {
   PROGRESS: 'progress',
   SETTINGS: 'settings',
   ALPHABET_PROGRESS: 'alphabet_progress',
+  NUMBERS_PROGRESS: 'numbers_progress',
 };
 
 export const CARD_COLORS = [

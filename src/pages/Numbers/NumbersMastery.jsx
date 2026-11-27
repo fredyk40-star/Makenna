@@ -15,7 +15,10 @@ const NumbersMastery = () => {
     progress,
     getCompletionPercentage,
     getMasteryPercentage,
-    getNextNumber
+    getCompletionCount,
+    getMasteryCount,
+    getNextNumber,
+    saveAssessmentResult,
   } = useNumbersProgress();
 
   const [assessmentResults, setAssessmentResults] = useState(null);
@@ -28,12 +31,12 @@ const NumbersMastery = () => {
 
   const completionPercentage = getCompletionPercentage();
   const masteryPercentage = getMasteryPercentage();
-  getNextNumber();
+  const completedNumbers = getCompletionCount();
+  const masteredNumbers = getMasteryCount();
+  const nextNumberId = getNextNumber();
 
   // Calculate stats
-  const totalGames = NUMBERS_DATA.length;
-
-  const masteredNumbers = progress.mastered.length;
+  const totalNumbers = NUMBERS_DATA.length;
   const gamesPlayed = gameProgressService.getTotalPlays();
   const starsEarned = gameProgressService.getTotalStars();
   const minutesRead = readingAnalyticsService.getStats().minutesRead || 0;
@@ -42,21 +45,29 @@ const NumbersMastery = () => {
 
   const startAssessment = useCallback(() => {
     // Generate assessment using assessment service
+    // The assessment reads word, emoji and objects from each curriculum entry.
     const numberData = {};
     NUMBERS_DATA.forEach(num => {
       numberData[num.id] = {
+        word: num.word,
+        phonics: num.phonics,
+        emoji: num.emoji,
+        objects: num.objects || [],
         vocabulary: num.examples,
-        sound: num.phonics
+        sound: num.phonics,
       };
     });
-    const questions = numbersAssessmentService.generateAssessment(numberData, progress);
+    const questions = numbersAssessmentService.generateAssessment(numberData, {
+      ...progress,
+      focusId: progress.assessment?.weakestNumbers?.[0] || getNextNumber(),
+    });
     setCurrentQuestion(questions[0] || null);
     setQuestionIndex(0);
     setScore(0);
     setIsAssessmentComplete(false);
     setSelectedAnswer(null);
     setShowAssessment(true);
-  }, [progress]);
+  }, [progress, getNextNumber]);
 
   const handleAnswer = useCallback((answer) => {
     if (selectedAnswer !== null) return;
@@ -71,6 +82,7 @@ const NumbersMastery = () => {
         setIsAssessmentComplete(true);
         const results = numbersAssessmentService.getResults();
         setAssessmentResults(results);
+        saveAssessmentResult(results);
       } else {
         setTimeout(() => {
           const next = numbersAssessmentService.getCurrentQuestion();
@@ -80,7 +92,7 @@ const NumbersMastery = () => {
         }, 1000);
       }
     }
-  }, [selectedAnswer]);
+  }, [selectedAnswer, saveAssessmentResult]);
 
   const getLevelEmoji = (level) => {
     const map = {
@@ -106,13 +118,13 @@ const NumbersMastery = () => {
 
 
   const stats = useMemo(() => [
-  { label: 'Numbers Mastered', value: masteredNumbers, total: totalGames, icon: FaStar, color: 'text-yellow-500' },
+    { label: 'Numbers Completed', value: completedNumbers, total: totalNumbers, icon: FaChartLine, color: 'text-primary' },
+    { label: 'Numbers Mastered', value: masteredNumbers, total: totalNumbers, icon: FaStar, color: 'text-yellow-500' },
     { label: 'Games Played', value: gamesPlayed, total: null, icon: FaGamepad, color: 'text-green-500' },
     { label: 'Stars Earned', value: starsEarned, total: null, icon: FaTrophy, color: 'text-purple-500' },
     { label: 'Minutes Read', value: minutesRead, total: null, icon: FaBook, color: 'text-blue-500' },
     { label: 'Day Streak', value: streak, total: null, icon: FaFire, color: 'text-orange-500' },
-    { label: 'Completion', value: `${completionPercentage}%`, total: null, icon: FaChartLine, color: 'text-primary' }
-  ]);
+  ], [completedNumbers, masteredNumbers, totalNumbers, gamesPlayed, starsEarned, minutesRead, streak]);
 
   return (
     <motion.div
@@ -201,6 +213,27 @@ const NumbersMastery = () => {
         </div>
       </div>
 
+      {/* Continue learning */}
+      {nextNumberId && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-soft">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">Up next</p>
+            <p className="font-baloo text-lg font-bold text-gray-800 dark:text-white">
+              Number {nextNumberId}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Finish recognition, counting and word skills to complete it.
+            </p>
+          </div>
+          <Link
+            to={`/numbers/lesson/${nextNumberId}`}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            Practice Number {nextNumberId} →
+          </Link>
+        </div>
+      )}
+
       {/* Assessment Section */}
       <div className="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-2xl p-6 text-center">
         <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white">
@@ -234,13 +267,22 @@ const NumbersMastery = () => {
             >
               {!isAssessmentComplete ? (
                 <>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between gap-3 mb-4">
                     <h3 className="font-baloo text-xl font-bold text-gray-800 dark:text-white">
                       Number Assessment
                     </h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Question {questionIndex + 1} of {numbersAssessmentService.questions.length}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Question {questionIndex + 1} of {numbersAssessmentService.questions.length}
+                      </span>
+                      <button
+                        onClick={() => setShowAssessment(false)}
+                        className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        aria-label="Exit assessment"
+                      >
+                        Exit
+                      </button>
+                    </div>
                   </div>
 
                   {currentQuestion && (
@@ -330,9 +372,9 @@ const NumbersMastery = () => {
         </p>
         <div className="flex items-center justify-center gap-4 mt-4">
           <div className="bg-white/80 dark:bg-gray-800/80 rounded-xl px-4 py-2 text-sm">
-            {masteredNumbers} / {totalGames} Mastered
+            {masteredNumbers} / {totalNumbers} Mastered
           </div>
-          {masteredNumbers === totalGames ? (
+          {masteredNumbers >= totalNumbers ? (
             <button
               onClick={() => navigate('/learn')}
               className="btn-primary"

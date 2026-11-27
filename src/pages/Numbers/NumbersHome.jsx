@@ -1,40 +1,46 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaStar, FaCheck, FaSearch, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaStar, FaCheck, FaSearch, FaHeart, FaRegHeart, FaPlay, FaTrophy } from 'react-icons/fa';
 import { NUMBERS_DATA, searchNumbers } from '../../data/numbersData';
 import { useNumbersProgress } from '../../hooks/useNumbersProgress';
+import { getNumberSkillPercent } from '../../services/NumbersProgressService';
 import { staggerContainer } from '../../utils/constants';
 
 const NumbersHome = () => {
   const {
+    progress,
     isNumberCompleted,
     isNumberFavorited,
     isNumberMastered,
     getCompletionPercentage,
-    getMasteryPercentage
+    getMasteryPercentage,
+    getNextNumber,
   } = useNumbersProgress();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredNumbers, setFilteredNumbers] = useState(NUMBERS_DATA);
   const [showFavorites, setShowFavorites] = useState(false);
 
-  useEffect(() => {
-    let results = NUMBERS_DATA;
-
-    if (searchQuery.trim()) {
-      results = searchNumbers(searchQuery);
-    }
-
+  // Derived, not mirrored into state: avoids a render/filter/render loop.
+  const filteredNumbers = useMemo(() => {
+    let results = searchQuery.trim() ? searchNumbers(searchQuery) : NUMBERS_DATA;
     if (showFavorites) {
-      results = results.filter(num => isNumberFavorited(num.id));
+      results = results.filter(num => progress.favorites.includes(num.id));
     }
-
-    setFilteredNumbers(results);
-  }, [searchQuery, showFavorites, isNumberFavorited]);
+    return results;
+  }, [searchQuery, showFavorites, progress.favorites]);
 
   const completionPercentage = getCompletionPercentage();
   const masteryPercentage = getMasteryPercentage();
+  const completedCount = NUMBERS_DATA.filter(num => isNumberCompleted(num.id)).length;
+  const masteredCount = NUMBERS_DATA.filter(num => isNumberMastered(num.id)).length;
+  const nextNumberId = getNextNumber();
+  const nextNumber = NUMBERS_DATA.find(num => num.id === nextNumberId);
+  const continueId = progress.lastSkill?.numberId
+    && NUMBERS_DATA.some(num => num.id === progress.lastSkill.numberId)
+    ? progress.lastSkill.numberId
+    : nextNumberId;
+  const continueNumber = NUMBERS_DATA.find(num => num.id === continueId) || nextNumber;
 
   return (
     <motion.div
@@ -56,31 +62,13 @@ const NumbersHome = () => {
             Learn numbers 0 to 20 with fun activities!
           </p>
 
-          {/* Progress Ring */}
-          <div className="flex items-center gap-6 mt-4">
+          {/* Progress Rings */}
+          <div className="flex flex-wrap items-center gap-6 mt-4">
             <div className="flex items-center gap-2">
               <div className="relative w-12 h-12">
-                <svg className="w-12 h-12 transform -rotate-90">
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-gray-200 dark:text-gray-600"
-                  />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-primary"
-                    strokeDasharray={`${completionPercentage * 1.256} 125.6`}
-                    strokeLinecap="round"
-                  />
+                <svg className="w-12 h-12 transform -rotate-90" aria-hidden="true">
+                  <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="none" className="text-gray-200 dark:text-gray-600" />
+                  <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="none" className="text-primary" strokeDasharray={`${completionPercentage * 1.256} 125.6`} strokeLinecap="round" />
                 </svg>
                 <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200">
                   {completionPercentage}%
@@ -90,27 +78,9 @@ const NumbersHome = () => {
             </div>
             <div className="flex items-center gap-2">
               <div className="relative w-12 h-12">
-                <svg className="w-12 h-12 transform -rotate-90">
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-gray-200 dark:text-gray-600"
-                  />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-yellow-500"
-                    strokeDasharray={`${masteryPercentage * 1.256} 125.6`}
-                    strokeLinecap="round"
-                  />
+                <svg className="w-12 h-12 transform -rotate-90" aria-hidden="true">
+                  <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="none" className="text-gray-200 dark:text-gray-600" />
+                  <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="none" className="text-yellow-500" strokeDasharray={`${masteryPercentage * 1.256} 125.6`} strokeLinecap="round" />
                 </svg>
                 <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200">
                   {masteryPercentage}%
@@ -118,14 +88,54 @@ const NumbersHome = () => {
               </div>
               <span className="text-sm text-gray-600 dark:text-gray-300">Mastered</span>
             </div>
+            <Link
+              to="/numbers/mastery"
+              className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-200 text-sm font-semibold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+            >
+              <FaTrophy className="text-yellow-500" />
+              Mastery dashboard
+            </Link>
           </div>
         </div>
       </div>
 
+      {/* Continue learning */}
+      {continueNumber && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row items-center gap-4 p-4 md:p-5 rounded-2xl bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900/30 dark:to-blue-900/30"
+        >
+          <div className="text-5xl">{continueNumber.emoji}</div>
+          <div className="flex-1 text-center sm:text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
+              Continue learning
+            </p>
+            <h2 className="font-baloo text-xl font-bold text-gray-800 dark:text-white">
+              Number {continueNumber.number} · {continueNumber.word}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              {progress.lastSkill?.skill
+                ? `Last practiced: ${progress.lastSkill.skill.replace(/([A-Z])/g, ' $1').toLowerCase()}`
+                : 'Start with recognition, counting and number words.'}
+            </p>
+          </div>
+          <Link to={`/numbers/lesson/${continueNumber.id}`}>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-bold shadow-soft hover:bg-primary-dark transition-colors"
+            >
+              <FaPlay /> Continue
+            </motion.button>
+          </Link>
+        </motion.div>
+      )}
+
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" aria-hidden="true" />
           <input
             type="text"
             value={searchQuery}
@@ -137,19 +147,21 @@ const NumbersHome = () => {
         </div>
         <button
           onClick={() => setShowFavorites(!showFavorites)}
-          className={`px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
+          className={`px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
             showFavorites
               ? 'bg-yellow-500 text-white'
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
           }`}
+          aria-pressed={showFavorites}
           aria-label={showFavorites ? 'Show all numbers' : 'Show favorites'}
         >
-          {showFavorites ? <FaHeart className="text-white" /> : <FaRegHeart />}
+          {showFavorites ? <FaHeart /> : <FaRegHeart />}
+          <span className="sm:hidden">{showFavorites ? 'Favorites' : 'All'}</span>
         </button>
       </div>
 
       {/* Results Count */}
-      <div className="text-sm text-gray-500 dark:text-gray-400">
+      <div className="text-sm text-gray-500 dark:text-gray-400" aria-live="polite">
         {filteredNumbers.length} numbers found
       </div>
 
@@ -162,17 +174,14 @@ const NumbersHome = () => {
           const isCompleted = isNumberCompleted(num.id);
           const isMastered = isNumberMastered(num.id);
           const isFavorited = isNumberFavorited(num.id);
+          const skillPercent = getNumberSkillPercent(progress, num.id);
 
           return (
             <motion.div
               key={num.id}
               variants={{
                 initial: { opacity: 0, scale: 0.9 },
-                animate: {
-                  opacity: 1,
-                  scale: 1,
-                  transition: { delay: index * 0.05 }
-                }
+                animate: { opacity: 1, scale: 1, transition: { delay: index * 0.05 } },
               }}
               whileHover={{ scale: 1.05, y: -4 }}
               whileTap={{ scale: 0.95 }}
@@ -190,12 +199,19 @@ const NumbersHome = () => {
                 <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-1">
                   {num.word}
                 </div>
-                <div className="mt-2 text-2xl">
-                  {num.emoji}
+                <div className="mt-2 text-2xl" aria-hidden="true">{num.emoji}</div>
+
+                {/* Skill progress */}
+                <div className="mt-2 h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{ width: `${skillPercent}%` }}
+                    aria-label={`${skillPercent}% skills practiced`}
+                  />
                 </div>
 
                 {/* Status Indicators */}
-                <div className="mt-2 flex items-center justify-center gap-1">
+                <div className="mt-2 flex items-center justify-center gap-2">
                   {isCompleted && (
                     <span className="text-green-500 text-xs flex items-center gap-1">
                       <FaCheck className="text-[10px]" />
@@ -229,54 +245,60 @@ const NumbersHome = () => {
           className="text-center py-12"
         >
           <div className="text-6xl mb-4">🔍</div>
-          <h3 className="font-baloo text-2xl text-gray-600 dark:text-gray-300">
-            No numbers found
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Try searching for something else!
-          </p>
+          <h3 className="font-baloo text-2xl text-gray-600 dark:text-gray-300">No numbers found</h3>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Try searching for something else!</p>
         </motion.div>
       )}
 
-      {/* Quick Stats */}
+      {/* Real Quick Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">
           <div className="text-2xl font-bold text-primary">{NUMBERS_DATA.length}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">Total Numbers</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">
-          <div className="text-2xl font-bold text-green-500">{isNumberCompleted('20') ? 21 : 0}+</div>
+          <div className="text-2xl font-bold text-green-500">{completedCount}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">Completed</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">
-          <div className="text-2xl font-bold text-yellow-500">{isNumberMastered('20') ? 21 : 0}+</div>
+          <div className="text-2xl font-bold text-yellow-500">{masteredCount}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">Mastered</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">
-          <div className="text-2xl font-bold text-pink-500">❤️</div>
+          <div className="text-2xl font-bold text-pink-500">{progress.favorites.length}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">Favorites</div>
         </div>
       </div>
-      <div className="flex justify-center gap-4 mt-6">
-          <Link to="/numbers/games">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-bold shadow-soft hover:shadow-hover transition-all duration-300"
-            >
-              🎮 Play Games
-            </motion.button>
-          </Link>
-          <Link to="/numbers/stories">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold shadow-soft hover:shadow-hover transition-all duration-300"
-            >
-              📖 Read Stories
-            </motion.button>
-          </Link>
-        </div>
+
+      <div className="flex flex-wrap justify-center gap-4 mt-6">
+        <Link to="/numbers/games">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-bold shadow-soft hover:shadow-hover transition-all duration-300"
+          >
+            🎮 Play Games
+          </motion.button>
+        </Link>
+        <Link to="/numbers/stories">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold shadow-soft hover:shadow-hover transition-all duration-300"
+          >
+            📖 Read Stories
+          </motion.button>
+        </Link>
+        <Link to="/numbers/mastery">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold shadow-soft hover:shadow-hover transition-all duration-300"
+          >
+            🏆 Check Mastery
+          </motion.button>
+        </Link>
+      </div>
     </motion.div>
   );
 };

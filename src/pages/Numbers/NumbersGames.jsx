@@ -1,32 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaArrowLeft, FaSearch, FaHeart, FaRegHeart, FaPlay, FaClock, FaFilter, FaGamepad } from 'react-icons/fa';
 import { NUMBERS_GAMES, GAME_CATEGORIES, searchGames } from '../../data/numbersGamesData';
+import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import gameProgressService from '../../services/GameProgressService';
 import { staggerContainer } from '../../utils/constants';
 
 const NumbersGames = () => {
+  const { progress, isGameFavorited, toggleFavoriteGame, getGameProgress } = useNumbersProgress();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [showFavorites, setShowFavorites] = useState(false);
-  const [favorites, setFavorites] = useState([]);
-  const [filteredGames, setFilteredGames] = useState(NUMBERS_GAMES);
 
-  useEffect(() => {
-    // Load favorites
-    try {
-      const saved = localStorage.getItem('numbers_game_favorites');
-      if (saved) {
-        setFavorites(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.warn('Failed to load favorites:', error);
-    }
-  }, []);
-
-  useEffect(() => {
+  const filteredGames = useMemo(() => {
     let results = [...NUMBERS_GAMES];
 
     // Search filter
@@ -46,40 +34,33 @@ const NumbersGames = () => {
 
     // Favorites filter
     if (showFavorites) {
-      results = results.filter(game => favorites.includes(game.id));
+      results = results.filter(game => progress.favoriteGames.includes(game.id));
     }
 
     // Sort: favorites first, then by title
     results.sort((a, b) => {
-      const aFav = favorites.includes(a.id) ? -1 : 1;
-      const bFav = favorites.includes(b.id) ? -1 : 1;
+      const aFav = progress.favoriteGames.includes(a.id) ? -1 : 1;
+      const bFav = progress.favoriteGames.includes(b.id) ? -1 : 1;
       if (aFav !== bFav) return aFav - bFav;
       return a.title.localeCompare(b.title);
     });
 
-    setFilteredGames(results);
-  }, [searchQuery, selectedCategory, selectedDifficulty, showFavorites, favorites]);
+    return results;
+  }, [searchQuery, selectedCategory, selectedDifficulty, showFavorites, progress.favoriteGames]);
 
   const toggleFavorite = useCallback((gameId) => {
-    const newFavorites = favorites.includes(gameId)
-      ? favorites.filter(id => id !== gameId)
-      : [...favorites, gameId];
+    toggleFavoriteGame(gameId);
+  }, [toggleFavoriteGame]);
 
-    setFavorites(newFavorites);
-    localStorage.setItem('numbers_game_favorites', JSON.stringify(newFavorites));
-  }, [favorites]);
-
-  const getGameProgress = useCallback((gameId) => {
-    return gameProgressService.getGameProgress(gameId);
-  }, []);
+  const getAuxProgress = useCallback((gameId) => (
+    gameProgressService.getGameProgress(gameId)
+  ), []);
 
   const getStarsDisplay = useCallback((gameId) => {
-    const progress = getGameProgress(gameId);
-    if (progress && progress.bestStars) {
-      return '⭐'.repeat(Math.min(progress.bestStars, 5));
-    }
-    return '☆☆☆☆☆';
-  }, [getGameProgress]);
+    const canonical = getGameProgress(gameId);
+    const bestStars = Math.max(canonical?.bestStars || 0, getAuxProgress(gameId)?.bestStars || 0);
+    return bestStars > 0 ? '⭐'.repeat(Math.min(bestStars, 5)) : '☆☆☆☆☆';
+  }, [getGameProgress, getAuxProgress]);
 
   const difficulties = [
     { id: 'all', label: 'All' },
@@ -109,7 +90,7 @@ const NumbersGames = () => {
               🎮 Numbers Games
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Play and learn numbers 0-20!
+              Play fun counting and recognition games!
             </p>
           </div>
         </div>
@@ -194,10 +175,10 @@ const NumbersGames = () => {
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
         {filteredGames.map((game, index) => {
-          const isFavorite = favorites.includes(game.id);
-          const progress = getGameProgress(game.id);
+          const isFavorite = isGameFavorited(game.id);
+          const gameProgress = getAuxProgress(game.id);
           const stars = getStarsDisplay(game.id);
-          const hasPlayed = progress && progress.plays > 0;
+          const hasPlayed = gameProgress && gameProgress.plays > 0;
 
           return (
             <motion.div
@@ -261,7 +242,7 @@ const NumbersGames = () => {
                     <span className="text-gray-500 dark:text-gray-400">{stars}</span>
                     {hasPlayed && (
                       <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">
-                        ({progress.plays} plays)
+                        ({gameProgress.plays} plays)
                       </span>
                     )}
                   </div>
@@ -282,7 +263,7 @@ const NumbersGames = () => {
                   <div className="mt-2 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min((progress.completed || 0) / 10 * 100, 100)}%` }}
+                      style={{ width: `${Math.min((gameProgress.completed || 0) / 10 * 100, 100)}%` }}
                     />
                   </div>
                 )}
@@ -316,7 +297,7 @@ const NumbersGames = () => {
           <div className="text-xs text-gray-500 dark:text-gray-400">Total Games</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">
-          <div className="text-2xl font-bold text-yellow-500">{favorites.length}</div>
+          <div className="text-2xl font-bold text-yellow-500">{progress.favoriteGames.length}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">Favorites</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">

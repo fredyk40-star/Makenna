@@ -1,65 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   FaArrowLeft, FaSearch, FaPlay, FaBookOpen, FaHeadphones
 } from 'react-icons/fa';
 import { NUMBERS_STORIES, searchStories } from '../../data/numbersStoriesData';
+import { useNumbersProgress } from '../../hooks/useNumbersProgress';
 import readingAnalyticsService from '../../services/ReadingAnalyticsService';
 import { staggerContainer } from '../../utils/constants';
 
 const NumberStories = () => {
+  const {
+    progress,
+    isStoryFavorited,
+    toggleFavoriteStory,
+  } = useNumbersProgress();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredStories, setFilteredStories] = useState(NUMBERS_STORIES);
-  const [favorites, setFavorites] = useState([]);
-  const [readingMode, setReadingMode] = useState('all'); // 'all', 'read-to-me', 'read-myself'
+  // Reading mode is a reader preference passed through navigation, not a
+  // property of a story, so every story remains available in every mode.
+  const [readingMode, setReadingMode] = useState('read-to-me');
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('number_story_favorites');
-      if (saved) {
-        setFavorites(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.warn('Failed to load favorites:', error);
-    }
-  }, []);
+  const filteredStories = useMemo(() => {
+    const results = searchQuery.trim() ? [...searchStories(searchQuery)] : [...NUMBERS_STORIES];
 
-  useEffect(() => {
-    let results = [...NUMBERS_STORIES];
-
-    if (searchQuery.trim()) {
-      results = searchStories(searchQuery);
-    }
-
-    if (readingMode !== 'all') {
-      // Filter by reading mode (simplified)
-      results = results.filter(story => story.level === 1);
-    }
-
-    // Sort: favorites first
-    results.sort((a, b) => {
-      const aFav = favorites.includes(a.id) ? -1 : 1;
-      const bFav = favorites.includes(b.id) ? -1 : 1;
+    // Sort: favorites first, then by number.
+    return results.sort((a, b) => {
+      const aFav = progress.favoriteStories.includes(a.id) ? -1 : 1;
+      const bFav = progress.favoriteStories.includes(b.id) ? -1 : 1;
       if (aFav !== bFav) return aFav - bFav;
       return a.number - b.number;
     });
-
-    setFilteredStories(results);
-  }, [searchQuery, readingMode, favorites]);
+  }, [searchQuery, progress.favoriteStories]);
 
   const toggleFavorite = (storyId) => {
-    const newFavorites = favorites.includes(storyId)
-      ? favorites.filter(id => id !== storyId)
-      : [...favorites, storyId];
-
-    setFavorites(newFavorites);
-    localStorage.setItem('number_story_favorites', JSON.stringify(newFavorites));
-
-    if (newFavorites.includes(storyId)) {
-      readingAnalyticsService.addFavoriteStory(storyId);
-    } else {
+    toggleFavoriteStory(storyId);
+    if (isStoryFavorited(storyId)) {
       readingAnalyticsService.removeFavoriteStory(storyId);
+    } else {
+      readingAnalyticsService.addFavoriteStory(storyId);
     }
   };
 
@@ -84,7 +62,7 @@ const NumberStories = () => {
               📖 Number Stories
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Read and learn with numbers 1 to 20!
+              Read along and learn numbers through stories!
             </p>
           </div>
         </div>
@@ -110,18 +88,11 @@ const NumberStories = () => {
           </div>
         </div>
 
-        {/* Reading Mode Filters */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setReadingMode('all')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
-              readingMode === 'all'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            All Stories
-          </button>
+        {/* Reading Mode preference: applies when a story is opened */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+            Open stories in:
+          </span>
           <button
             onClick={() => setReadingMode('read-to-me')}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 flex items-center gap-1 ${
@@ -153,7 +124,7 @@ const NumberStories = () => {
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
         {filteredStories.map((story, index) => {
-          const isFavorite = favorites.includes(story.id);
+          const isFavorite = isStoryFavorited(story.id);
 
           return (
             <motion.div
@@ -210,7 +181,7 @@ const NumberStories = () => {
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     {story.pages.length} pages
                   </div>
-                  <Link to={`/numbers/story/${story.id}`}>
+                  <Link to={`/numbers/story/${story.id}`} state={{ readingMode }}>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -251,13 +222,11 @@ const NumberStories = () => {
           <div className="text-xs text-gray-500 dark:text-gray-400">Total Stories</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">
-          <div className="text-2xl font-bold text-yellow-500">{favorites.length}</div>
+          <div className="text-2xl font-bold text-yellow-500">{progress.favoriteStories.length}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">Favorites</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">
-          <div className="text-2xl font-bold text-green-500">
-            {readingAnalyticsService.getStats().storiesCompleted || 0}
-          </div>
+          <div className="text-2xl font-bold text-green-500">{progress.stories.length}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">Read</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-soft">

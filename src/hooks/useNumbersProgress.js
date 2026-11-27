@@ -1,192 +1,222 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChildAccount } from '../context/ChildAccountContext';
+import { ChildAccountService } from '../services/ChildAccountService';
 import { NUMBERS_DATA } from '../data/numbersData';
+import {
+  NUMBERS_PROGRESS_KEY,
+  getCompletionCount,
+  getMasteryCount,
+  getNextNumber,
+  getNumberSkillCount,
+  getNumberSkillPercent,
+  getNumberSkills,
+  getSkillCompletionPercentage,
+  isNumberCompletedBySkills,
+  isNumberMasteredBySkills,
+  isSkillComplete,
+  markSkillInProgress,
+  normalizeNumbersProgress,
+  recordAssessmentResult,
+  recordGameResult,
+  recordStoryCompletion,
+  toggleFavoriteGame as toggleFavoriteGameInProgress,
+  toggleFavoriteStory as toggleFavoriteStoryInProgress,
+  withCoreCompletion,
+  withMasteryCompletion,
+} from '../services/NumbersProgressService';
 
-const STORAGE_KEY = 'numbers_progress';
+const TOTAL_NUMBERS = NUMBERS_DATA.length || 21;
+const emptyProgress = () => normalizeNumbersProgress();
+
+const readCurrentProgress = (childId) => {
+  const source = childId
+    ? ChildAccountService.getChild(childId)?.progress?.[NUMBERS_PROGRESS_KEY]
+    : null;
+  return normalizeNumbersProgress(source);
+};
 
 export const useNumbersProgress = () => {
-  const { activeChild, childId } = useChildAccount();
-  const [progress, setProgress] = useState(null);
+  const { activeChild, childId, updateChild } = useChildAccount();
+  const [progress, setProgress] = useState(() => readCurrentProgress(childId));
+  const progressRef = useRef(progress);
+  const childIdRef = useRef(childId);
+  const updateChildRef = useRef(updateChild);
 
-  // Load progress from child account or localStorage
   useEffect(() => {
-    if (activeChild) {
-      // Get progress from child's progress data
-      const saved = activeChild.progress?.[STORAGE_KEY];
-      if (saved) {
-        setProgress(saved);
-      } else {
-        // Initialize default progress
-        setProgress({
-          opened: [],
-          completed: [],
-          favorites: [],
-          mastered: [],
-          timeSpent: {},
-          lastVisited: null,
-          totalTime: 0,
-          recentLessons: []
-        });
-      }
+    childIdRef.current = childId;
+    updateChildRef.current = updateChild;
+  }, [childId, updateChild]);
+
+  const applyProgress = useCallback((next) => {
+    const normalized = normalizeNumbersProgress(next);
+    progressRef.current = normalized;
+    setProgress(normalized);
+
+    const targetId = childIdRef.current || ChildAccountService.getActiveChildId();
+    if (!targetId) return normalized;
+
+    const account = ChildAccountService.getChild(targetId);
+    const updates = {
+      progress: {
+        ...(account?.progress || {}),
+        [NUMBERS_PROGRESS_KEY]: normalized,
+      },
+    };
+
+    // Context keeps the UI in sync; the service queues the automatic cloud sync.
+    if (updateChildRef.current) {
+      updateChildRef.current(updates);
     } else {
-      // No child - use default empty state
-      setProgress({
-        opened: [],
-        completed: [],
-        favorites: [],
-        mastered: [],
-        timeSpent: {},
-        lastVisited: null,
-        totalTime: 0,
-        recentLessons: []
-      });
+      ChildAccountService.updateChild(targetId, updates);
     }
-  }, [activeChild]);
+    return normalized;
+  }, []);
 
-  // Save progress to child account
+  // Reload when another component (or a cloud sync) changes the active child.
   useEffect(() => {
-    if (progress && childId) {
-      const accounts = JSON.parse(localStorage.getItem('makenna_child_accounts_v2') || '[]');
-      const accountIndex = accounts.findIndex(a => a.childId?.toLowerCase() === childId?.toLowerCase());
-      if (accountIndex !== -1) {
-        if (!accounts[accountIndex].progress) {
-          accounts[accountIndex].progress = {};
-        }
-        accounts[accountIndex].progress[STORAGE_KEY] = progress;
-        localStorage.setItem('makenna_child_accounts_v2', JSON.stringify(accounts));
-      }
-    }
-  }, [progress, childId]);
+    const stored = readCurrentProgress(childId);
+    progressRef.current = stored;
+    setProgress(stored);
+  }, [childId, activeChild?.progress?.[NUMBERS_PROGRESS_KEY]]);
 
-  const markOpened = useCallback((numberId) => {
-    setProgress(prev => {
-      if (!prev.opened.includes(numberId)) {
-        return {
-          ...prev,
-          opened: [...prev.opened, numberId],
-          lastVisited: new Date().toISOString()
-        };
-      }
-      return prev;
-    });
-  }, []);
+  const update = useCallback((updater) => {
+    // Base sequential writes on the latest in-memory progress. Re-reading the
+    // account here can lose an earlier write made in the same event loop tick.
+    const base = normalizeNumbersProgress(progressRef.current);
+    const next = typeof updater === 'function' ? updater(base) : updater;
+    return applyProgress(next);
+  }, [applyProgress]);
 
-  const markCompleted = useCallback((numberId) => {
-    setProgress(prev => {
-      if (!prev.completed.includes(numberId)) {
-        return {
-          ...prev,
-          completed: [...prev.completed, numberId],
-          recentLessons: [
-            numberId,
-            ...prev.recentLessons.filter(id => id !== numberId)
-          ].slice(0, 10)
-        };
-      }
-      return prev;
-    });
-  }, []);
+  const markOpened = useCallback((id) => {
+    if (progressRef.current.opened.includes(String(id))) return;
+    update(prev => ({
+      ...prev,
+      opened: [...prev.opened, String(id)],
+      lastVisited: new Date().toISOString(),
+    }));
+  }, [update]);
 
-  const markMastered = useCallback((numberId) => {
-    setProgress(prev => {
-      if (!prev.mastered.includes(numberId)) {
-        return {
-          ...prev,
-          mastered: [...prev.mastered, numberId]
-        };
-      }
-      return prev;
-    });
-  }, []);
-
-  const toggleFavorite = useCallback((numberId) => {
-    setProgress(prev => {
-      const favorites = prev.favorites.includes(numberId)
-        ? prev.favorites.filter(id => id !== numberId)
-        : [...prev.favorites, numberId];
-      
+  const markCompleted = useCallback((id) => {
+    update(prev => {
+      const safeId = String(id);
+      const withCore = withCoreCompletion(prev, safeId);
       return {
-        ...prev,
-        favorites
+        ...withCore,
+        completed: withCore.completed.includes(safeId)
+          ? withCore.completed
+          : [...withCore.completed, safeId],
+        recentLessons: [safeId, ...withCore.recentLessons.filter(item => item !== safeId)].slice(0, 10),
       };
     });
-  }, []);
+  }, [update]);
 
-  const addTimeSpent = useCallback((numberId, seconds) => {
-    setProgress(prev => ({
+  const markMastered = useCallback((id) => {
+    update(prev => {
+      const safeId = String(id);
+      const withMastery = withMasteryCompletion(prev, safeId);
+      return {
+        ...withMastery,
+        mastered: withMastery.mastered.includes(safeId)
+          ? withMastery.mastered
+          : [...withMastery.mastered, safeId],
+      };
+    });
+  }, [update]);
+
+  /** Record a practiced skill. Core skills also unlock lesson completion. */
+  const markSkill = useCallback((id, skill, options = true) => {
+    update(prev => {
+      const withSkill = markSkillInProgress(prev, id, skill, options);
+      return withMasteryCompletion(withCoreCompletion(withSkill, id), id);
+    });
+  }, [update]);
+
+  const toggleFavorite = useCallback((id) => {
+    update(prev => {
+      const safeId = String(id);
+      const favorites = prev.favorites.includes(safeId)
+        ? prev.favorites.filter(item => item !== safeId)
+        : [...prev.favorites, safeId];
+      return { ...prev, favorites };
+    });
+  }, [update]);
+
+  const toggleFavoriteGame = useCallback((gameId) => {
+    update(prev => toggleFavoriteGameInProgress(prev, gameId));
+  }, [update]);
+
+  const toggleFavoriteStory = useCallback((storyId) => {
+    update(prev => toggleFavoriteStoryInProgress(prev, storyId));
+  }, [update]);
+
+  const addTimeSpent = useCallback((id, seconds) => {
+    const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+    if (!safeSeconds) return;
+    update(prev => ({
       ...prev,
       timeSpent: {
         ...prev.timeSpent,
-        [numberId]: (prev.timeSpent[numberId] || 0) + seconds
+        [String(id)]: (prev.timeSpent[String(id)] || 0) + safeSeconds,
       },
-      totalTime: prev.totalTime + seconds
+      totalTime: prev.totalTime + safeSeconds,
     }));
-  }, []);
+  }, [update]);
 
-  const isNumberOpened = useCallback((numberId) => {
-    return progress?.opened.includes(numberId) || false;
-  }, [progress]);
+  const saveGameResult = useCallback((gameId, result = {}) => {
+    update(prev => recordGameResult(prev, gameId, result));
+  }, [update]);
 
-  const isNumberCompleted = useCallback((numberId) => {
-    return progress?.completed.includes(numberId) || false;
-  }, [progress]);
+  const completeStory = useCallback((storyId, numberId = null) => {
+    update(prev => recordStoryCompletion(prev, storyId, numberId));
+  }, [update]);
 
-  const isNumberMastered = useCallback((numberId) => {
-    return progress?.mastered.includes(numberId) || false;
-  }, [progress]);
+  const saveAssessmentResult = useCallback((results = {}) => {
+    update(prev => recordAssessmentResult(prev, results));
+  }, [update]);
 
-  const isNumberFavorited = useCallback((numberId) => {
-    return progress?.favorites.includes(numberId) || false;
-  }, [progress]);
-
-  const getCompletionPercentage = useCallback(() => {
-    if (!progress) return 0;
-    const total = NUMBERS_DATA.length;
-    const completed = progress.completed.length;
-    return Math.round((completed / total) * 100);
-  }, [progress]);
-
-  const getMasteryPercentage = useCallback(() => {
-    if (!progress) return 0;
-    const total = NUMBERS_DATA.length;
-    const mastered = progress.mastered.length;
-    return Math.round((mastered / total) * 100);
-  }, [progress]);
-
-  const getNextNumber = useCallback(() => {
-    if (!progress) return null;
-    const allIds = NUMBERS_DATA.map(n => n.id);
-    const nextId = allIds.find(id => !progress.completed.includes(id));
-    return nextId || null;
-  }, [progress]);
-
-  const resetProgress = useCallback(() => {
-    setProgress({
-      opened: [],
-      completed: [],
-      favorites: [],
-      mastered: [],
-      timeSpent: {},
-      lastVisited: null,
-      totalTime: 0,
-      recentLessons: []
-    });
-  }, []);
+  const resetProgress = useCallback(() => applyProgress(emptyProgress()), [applyProgress]);
 
   return {
     progress,
     markOpened,
     markCompleted,
     markMastered,
+    markSkill,
     toggleFavorite,
+    toggleFavoriteGame,
+    toggleFavoriteStory,
     addTimeSpent,
-    isNumberOpened,
-    isNumberCompleted,
-    isNumberMastered,
-    isNumberFavorited,
-    getCompletionPercentage,
-    getMasteryPercentage,
-    getNextNumber,
-    resetProgress
+    saveGameResult,
+    completeStory,
+    saveAssessmentResult,
+    resetProgress,
+    isNumberOpened: id => progress.opened.includes(String(id)),
+    isNumberCompleted: id => isNumberCompletedBySkills(progress, id),
+    isNumberMastered: id => isNumberMasteredBySkills(progress, id),
+    isNumberFavorited: id => progress.favorites.includes(String(id)),
+    isSkillComplete: (id, skill) => isSkillComplete(progress, id, skill),
+    getNumberSkills: id => getNumberSkills(progress, id),
+    getNumberSkillCount: id => getNumberSkillCount(progress, id),
+    getNumberSkillPercent: id => getNumberSkillPercent(progress, id),
+    getCompletionCount: () => getCompletionCount(progress),
+    getMasteryCount: () => getMasteryCount(progress),
+    getCompletionPercentage: () => (
+      Math.round((getCompletionCount(progress) / TOTAL_NUMBERS) * 100)
+    ),
+    getMasteryPercentage: () => (
+      Math.round((getMasteryCount(progress) / TOTAL_NUMBERS) * 100)
+    ),
+    getSkillCompletionPercentage: () => getSkillCompletionPercentage(progress),
+    getNextNumber: () => getNextNumber(progress),
+    getRecentLessons: () => progress.recentLessons,
+    getFavoriteNumbers: () => progress.favorites,
+    getGameProgress: gameId => progress.games[String(gameId)] || null,
+    isGameFavorited: gameId => progress.favoriteGames.includes(String(gameId)),
+    isStoryFavorited: storyId => progress.favoriteStories.includes(String(storyId)),
+    isStoryCompleted: storyId => progress.stories.includes(String(storyId)),
+    getAssessmentResult: () => progress.assessment,
+    getProgress: () => progress,
   };
 };
+
+export default useNumbersProgress;

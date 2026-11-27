@@ -11,11 +11,23 @@ import { getNumberTracingData } from '../../data/numberTracingData';
 import { announceToScreenReader } from '../../utils/accessibility';
 import { NUMBERS_DATA } from '../../data/numbersData';
 
+const COLOR_NAMES = {
+  '#2563EB': 'Blue',
+  '#FF6B6B': 'Red',
+  '#4ECDC4': 'Teal',
+  '#FFE66D': 'Yellow',
+  '#A78BFA': 'Purple',
+  '#F472B6': 'Pink',
+  '#34D399': 'Green',
+  '#FB923C': 'Orange',
+};
+
 const NumberTracing = () => {
   const { numberId } = useParams();
   const navigate = useNavigate();
   const canvasRef = useRef(null);
   const tracePointsRef = useRef([]);
+  const speechTimeoutRef = useRef(null);
   const [number, setNumber] = useState(null);
   const [tracingData, setTracingData] = useState(null);
   const [mode, setMode] = useState('guided'); // 'guided' | 'free'
@@ -26,7 +38,7 @@ const NumberTracing = () => {
   const [accuracy, setAccuracy] = useState(0);
   const [traceResult, setTraceResult] = useState(null);
 
-  const { markCompleted, markMastered } = useNumbersProgress();
+  const { markSkill } = useNumbersProgress();
   const { speak } = useAudio();
 
   const {
@@ -48,18 +60,28 @@ const NumberTracing = () => {
 
   useEffect(() => {
     const found = getNumberById(numberId);
-    if (found) {
-      setNumber(found);
-      const tracing = getNumberTracingData(numberId);
-      setTracingData(tracing);
-
-      // Speak number name
-      setTimeout(() => {
-        speak(`Trace the number ${found.number}`, { rate: 0.8, pitch: 1.1 });
-      }, 500);
-    } else {
+    if (!found) {
       navigate('/numbers');
+      return undefined;
     }
+
+    setNumber(found);
+    const tracing = getNumberTracingData(numberId);
+    setTracingData(tracing);
+    // Guided strokes exist for 0-10. Larger numbers use free practice with an
+    // explicit completion action instead of pretending a guide is available.
+    setMode(tracing ? 'guided' : 'free');
+    setCurrentStroke(0);
+    setIsComplete(false);
+    setTraceResult(null);
+
+    speechTimeoutRef.current = setTimeout(() => {
+      speak(tracing
+        ? `Trace the number ${found.number}`
+        : `Practice writing the number ${found.number}`, { rate: 0.8, pitch: 1.1 });
+    }, 500);
+
+    return () => clearTimeout(speechTimeoutRef.current);
   }, [numberId, navigate, speak]);
 
   // Get coordinates from pointer events
@@ -123,10 +145,14 @@ const NumberTracing = () => {
 
     setIsComplete(true);
     setShowCelebration(true);
-    markCompleted(numberId);
-    markMastered(numberId);
+    // Tracing records the writing skill only. Mastery needs the other skills too.
+    markSkill(numberId, 'writing', {
+      completed: true,
+      accuracy: accuracyScore,
+      attempts: 1,
+    });
     speak('You traced the number perfectly!', { rate: 0.9, pitch: 1.2 });
-  }, [canvasEngine, tracingData, currentStroke, markCompleted, markMastered, numberId, speak]);
+  }, [canvasEngine, tracingData, currentStroke, markSkill, numberId, speak]);
 
   // Handle pointer events for tracing
   const handlePointerDown = useCallback((e) => {
@@ -165,6 +191,14 @@ const NumberTracing = () => {
     setTraceResult(null);
     setAccuracy(0);
   }, [clearCanvas]);
+
+  // Keyboard-friendly path for free practice and numbers without guide strokes.
+  const handlePracticeComplete = useCallback(() => {
+    markSkill(numberId, 'writing', { completed: true, attempts: 1 });
+    setIsComplete(true);
+    setShowCelebration(true);
+    announceToScreenReader(`Writing practice recorded for number ${number?.number || numberId}`);
+  }, [markSkill, numberId, number?.number]);
 
   // Render guide overlay
   const renderGuide = useCallback(() => {
@@ -285,7 +319,11 @@ const NumberTracing = () => {
               Trace Number {number?.number || ''}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {mode === 'guided' ? 'Follow the guide to trace' : 'Practice freehand'}
+              {!tracingData
+                ? 'Guided strokes are not available yet — practice freely!'
+                : mode === 'guided'
+                  ? 'Follow the guide to trace'
+                  : 'Practice freehand'}
             </p>
           </div>
         </div>
@@ -294,7 +332,8 @@ const NumberTracing = () => {
           <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
             <button
               onClick={() => setMode('guided')}
-              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+              disabled={!tracingData}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 mode === 'guided'
                   ? 'bg-white dark:bg-gray-600 text-primary dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
@@ -334,7 +373,7 @@ const NumberTracing = () => {
       </div>
 
       {/* Canvas */}
-      <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-soft overflow-hidden" style={{ height: '450px' }}>
+      <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[60vh] bg-white dark:bg-gray-900 rounded-2xl shadow-soft overflow-hidden">
         <canvas
           ref={canvasRef}
           className="w-full h-full touch-none cursor-crosshair"
@@ -343,6 +382,8 @@ const NumberTracing = () => {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           style={{ touchAction: 'none' }}
+          role="img"
+          aria-label={`Drawing canvas for practicing number ${number?.number || numberId}. Use the practice button below for a keyboard-friendly option.`}
         />
 
         {/* Guide overlay */}
@@ -380,11 +421,13 @@ const NumberTracing = () => {
             <button
               key={c}
               onClick={() => changeColor(c)}
-              className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${
+              className={`w-8 h-8 min-w-[32px] min-h-[32px] rounded-full transition-transform hover:scale-110 ${
                 color === c ? 'ring-2 ring-primary ring-offset-2' : ''
               }`}
               style={{ backgroundColor: c }}
-              aria-label={`Select color ${c}`}
+              aria-label={`Select ${COLOR_NAMES[c] || c}`}
+              aria-pressed={color === c}
+              title={COLOR_NAMES[c] || c}
             />
           ))}
         </div>
@@ -452,11 +495,19 @@ const NumberTracing = () => {
       </div>
 
       {/* Instructions */}
-      <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+      <div className="text-center text-sm text-gray-500 dark:text-gray-400 space-y-3">
         {mode === 'guided' ? (
           <p>👆 Follow the blue dots and arrows to trace the number correctly</p>
         ) : (
-          <p>✏️ Practice writing the number freely. Try different colors!</p>
+          <>
+            <p>✏️ Practice writing the number freely. Try different colors!</p>
+            <button
+              onClick={handlePracticeComplete}
+              className="px-4 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+            >
+              ✓ I practiced writing this number
+            </button>
+          </>
         )}
       </div>
 
@@ -498,12 +549,12 @@ const NumberTracing = () => {
             >
               <div className="text-7xl mb-4 animate-bounce">🎉</div>
               <h2 className="font-baloo text-2xl font-bold text-gray-800 dark:text-white">
-                You traced Number {number?.number}!
+                Nice work on Number {number?.number}!
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mt-2">
-                {accuracy > 80
-                  ? 'Perfect tracing! You\'re a star! 🌟'
-                  : 'Great effort! Keep practicing! 💪'}
+                {mode === 'guided' && accuracy > 80
+                  ? 'Perfect tracing! Writing practice saved. 🌟'
+                  : 'Writing practice saved. Keep it up! 💪'}
               </p>
               <div className="flex justify-center gap-2 mt-4">
                 {[...Array(3)].map((_, i) => (
