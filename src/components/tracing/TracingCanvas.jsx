@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTracing } from '../../hooks/useTracing';
 import { useDrawing } from '../../hooks/useDrawing';
+import { useAccessibility } from '../../context/AccessibilityContext';
+import { announceToScreenReader } from '../../utils/accessibility';
 import StrokeGuide from './StrokeGuide';
 import StrokeAnimator from './StrokeAnimator';
 import TraceValidator from './TraceValidator';
@@ -21,6 +23,10 @@ const TracingCanvas = ({
   const [showCelebration, setShowCelebration] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
   const completedRef = useRef(false);
+  const keyboardStrokeRef = useRef(0);
+  const keyboardTimersRef = useRef([]);
+  const { settings: accessibilitySettings } = useAccessibility();
+
 
   const {
     startTrace,
@@ -148,6 +154,79 @@ const TracingCanvas = ({
     }
   }, [mode, redoLast, redo]);
 
+  const clearKeyboardTimers = useCallback(() => {
+    keyboardTimersRef.current.forEach(timer => window.clearTimeout(timer));
+    keyboardTimersRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    clearKeyboardTimers();
+    keyboardStrokeRef.current = 0;
+  }, [letter, caseType, clearKeyboardTimers]);
+
+  useEffect(() => clearKeyboardTimers, [clearKeyboardTimers]);
+
+  /**
+   * Keyboard/switch tracing: Enter or Space walks one guide stroke at a time.
+   * Strokes are appended so the final validation sees the whole letter.
+   */
+  const traceNextStroke = useCallback(() => {
+    if (mode !== 'trace' || !guideData?.length || !canvasRef.current) return;
+
+    clearKeyboardTimers();
+    const strokeIndex = keyboardStrokeRef.current % guideData.length;
+    const stroke = guideData[strokeIndex];
+    const points = stroke.points?.length
+      ? stroke.points
+      : [stroke.start, stroke.end].filter(Boolean);
+    if (points.length < 2) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const toPosition = point => ({
+      x: (point.x / 100) * rect.width,
+      y: (point.y / 100) * rect.height,
+      nx: point.x,
+      ny: point.y,
+    });
+
+    const first = toPosition(points[0]);
+    completedRef.current = false;
+    setShowCelebration(false);
+    startTrace(first.x, first.y, first.nx, first.ny, { append: strokeIndex > 0 });
+
+    points.slice(1).forEach((point, index) => {
+      const timer = window.setTimeout(() => {
+        const next = toPosition(point);
+        continueTrace(next.x, next.y, next.nx, next.ny);
+      }, 45 * (index + 1));
+      keyboardTimersRef.current.push(timer);
+    });
+
+    const finishTimer = window.setTimeout(() => {
+      endTrace();
+      keyboardStrokeRef.current += 1;
+      const total = guideData.length;
+      announceToScreenReader(keyboardStrokeRef.current >= total
+        ? `${letter} traced. Check your result.`
+        : `Stroke ${keyboardStrokeRef.current} of ${total} complete. Press Enter for the next stroke.`);
+    }, 45 * points.length + 90);
+    keyboardTimersRef.current.push(finishTimer);
+  }, [clearKeyboardTimers, continueTrace, endTrace, guideData, letter, mode, startTrace]);
+
+  const handleCanvasKeyDown = useCallback((event) => {
+    if (['Enter', ' '].includes(event.key)) {
+      event.preventDefault();
+      traceNextStroke();
+    } else if (event.key === 'Backspace') {
+      event.preventDefault();
+      clearKeyboardTimers();
+      handleUndo();
+    } else if (event.key === 'Escape') {
+      clearKeyboardTimers();
+      endTrace();
+    }
+  }, [clearKeyboardTimers, endTrace, handleUndo, traceNextStroke]);
+
   const handleCelebrationComplete = useCallback(() => {
     setShowCelebration(false);
   }, []);
@@ -246,13 +325,26 @@ const TracingCanvas = ({
       {/* Canvas */}
       <canvas
         ref={canvasRef}
-        className="w-full h-full rounded-2xl bg-white dark:bg-gray-900 touch-none cursor-crosshair"
+        tabIndex={0}
+        role="button"
+        aria-roledescription="Tracing canvas"
+        aria-label={`Trace ${letter}. Press Enter or Space to draw the next stroke, Backspace to undo, Escape to stop.`}
+        className={`w-full h-full rounded-2xl bg-white dark:bg-gray-900 touch-none cursor-crosshair focus:outline-none focus:ring-4 focus:ring-blue-400 ${
+          accessibilitySettings.switchControl ? 'adaptive-focus' : ''
+        }`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onKeyDown={handleCanvasKeyDown}
         style={{ touchAction: 'none' }}
       />
+
+      {mode === 'trace' && (
+        <p className="absolute top-16 left-4 right-4 text-center text-xs text-gray-600 dark:text-gray-300 pointer-events-none">
+          Keyboard: focus the canvas, then press Enter/Space for each stroke.
+        </p>
+      )}
 
       {/* Stroke Guide */}
       {showGuide && guideData && mode === 'trace' && (

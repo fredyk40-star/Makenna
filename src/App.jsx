@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 
 // Context Providers
 import { ThemeProvider } from './context/ThemeContext';
+import { AccessibilityProvider } from './context/AccessibilityContext';
 import { AppProvider } from './context/AppContext';
 import { VoiceGuideProvider } from './context/VoiceGuideContext';
 import { ChildAccountProvider, useChildAccount } from './context/ChildAccountContext';
@@ -18,6 +19,8 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import AIAssistant from './components/AIAssistant/AIAssistant';
 import UpdatePreviewBanner from './components/UpdatePreview/UpdatePreviewBanner';
+import CaptionDisplay from './components/accessibility/CaptionDisplay';
+import SessionTimeoutOverlay from './components/session/SessionTimeoutOverlay';
 import ArcadeGamePage from './pages/Games/ArcadeGamePage';
 import {
   ALPHABET_ARCADE_GAMES,
@@ -139,6 +142,8 @@ const AppContent = () => {
       v7_relativeSplatPath: true
     }}>
       <OfflineDetector />
+      <CaptionDisplay />
+      <SessionTimeoutOverlay />
       <InstallPrompt />
       <VoiceGuideProvider>
         <AIAssistant />
@@ -261,15 +266,17 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AppProvider>
-          <I18nProvider>
-            <ChildAccountProvider>
-              <ProfileProvider>
-                <AppContent />
-              </ProfileProvider>
-            </ChildAccountProvider>
-          </I18nProvider>
-        </AppProvider>
+        <AccessibilityProvider>
+          <AppProvider>
+            <I18nProvider>
+              <ChildAccountProvider>
+                <ProfileProvider>
+                  <AppContent />
+                </ProfileProvider>
+              </ChildAccountProvider>
+            </I18nProvider>
+          </AppProvider>
+        </AccessibilityProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

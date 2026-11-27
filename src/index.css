@@ -113,6 +113,25 @@
     font-size: calc(2.25rem * 1.2);
   }
   
+  /* Dyslexia-friendly reading option (offline system font stack) */
+  .dyslexia-font body,
+  .dyslexia-font button,
+  .dyslexia-font input,
+  .dyslexia-font select {
+    font-family: 'OpenDyslexic', 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+    letter-spacing: 0.04em;
+    word-spacing: 0.12em;
+    line-height: 1.65;
+  }
+
+  /* Switch scanning and keyboard focus must be unmistakable. */
+  .adaptive-focus,
+  .adaptive-focus:focus-visible {
+    outline: 4px solid #f59e0b !important;
+    outline-offset: 3px !important;
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.25) !important;
+  }
+
   /* Reduced Motion Class */
   .reduced-motion *,
   .reduced-motion *::before,

@@ -47,12 +47,12 @@ Legend: `[ ]` planned · `[~]` in progress · `[x]` done
 - [x] Supabase Row Level Security guidance/migration updates
 - [x] Offline export/import for schools
 
-## Phase 6 — Accessibility, safety & privacy `[ ]`
-- [ ] Full keyboard/switch-control operation for games and tracing
-- [ ] Dyslexia-friendly font option and sound-sensitivity/captions toggle
-- [ ] Parent gate for sensitive settings
-- [ ] Privacy disclosure and data-deletion flow
-- [ ] Session timeout wired to actual service
+## Phase 6 — Accessibility, safety & privacy `[x]`
+- [x] Full keyboard/switch-control operation for games and tracing
+- [x] Dyslexia-friendly font option and sound-sensitivity/captions toggle
+- [x] Parent gate for sensitive settings
+- [x] Privacy disclosure and data-deletion flow
+- [x] Session timeout wired to actual service
 
 ## Phase 7 — Portfolio, certificates & sticker book `[ ]`
 - [ ] Saved tracing/drawing portfolio with before/after view

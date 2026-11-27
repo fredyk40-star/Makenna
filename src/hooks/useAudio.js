@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import audioService from '../services/AudioService';
+import AccessibilityService from '../services/AccessibilityService';
 
 export const useAudio = (options = {}) => {
   const {
@@ -45,11 +46,14 @@ export const useAudio = (options = {}) => {
   const play = useCallback(async (source, options = {}) => {
     setIsLoading(true);
     setError(null);
+    const safeVolume = AccessibilityService.getSettings().soundSensitive
+      ? Math.min(volume, 0.25)
+      : volume;
 
     try {
       const audioBuffer = await audioService.loadAudio(source, options);
       const result = await audioService.play(audioBuffer, {
-        volume,
+        volume: safeVolume,
         playbackRate,
         onEnd: () => {
           setIsPlaying(false);
@@ -80,12 +84,16 @@ export const useAudio = (options = {}) => {
   const speak = useCallback(async (text, options = {}) => {
     setIsLoading(true);
     setError(null);
+    AccessibilityService.announceCaption(text);
+    const safeVolume = AccessibilityService.getSettings().soundSensitive
+      ? Math.min(volume, 0.25)
+      : volume;
 
     try {
       const result = await audioService.speak(text, {
         rate: options.rate || 0.9,
         pitch: options.pitch || 1.1,
-        volume,
+        volume: safeVolume,
         onEnd: () => {
           setIsPlaying(false);
           if (onEnd) onEnd();
@@ -138,7 +146,10 @@ export const useAudio = (options = {}) => {
   }, [isPlaying, isPaused, pause, resume]);
 
   const setVolume = useCallback((newVolume) => {
-    audioService.setVolume(newVolume);
+    const safeVolume = AccessibilityService.getSettings().soundSensitive
+      ? Math.min(newVolume, 0.25)
+      : newVolume;
+    audioService.setVolume(safeVolume);
   }, []);
 
   const toggleMute = useCallback(() => {

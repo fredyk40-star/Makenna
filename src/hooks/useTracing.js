@@ -15,6 +15,7 @@ export const useTracing = (letter, caseType = 'uppercase', canvasRef) => {
   const normalizedPointsRef = useRef([]);
   const rawPointsRef = useRef([]);
   const lastProgressUpdateRef = useRef(0);
+  const isTracingRef = useRef(false);
 
   useEffect(() => {
     normalizedPointsRef.current = [];
@@ -34,19 +35,25 @@ export const useTracing = (letter, caseType = 'uppercase', canvasRef) => {
     return undefined;
   }, [canvasRef, letter, caseType]);
 
-  const startTrace = useCallback((x, y, nx, ny) => {
+  const startTrace = useCallback((x, y, nx, ny, { append = false } = {}) => {
     if (!canvasEngine) return;
-    normalizedPointsRef.current = [{ x: nx, y: ny }];
-    rawPointsRef.current = [{ x, y }];
+    if (append) {
+      normalizedPointsRef.current.push({ x: nx, y: ny });
+      rawPointsRef.current.push({ x, y });
+    } else {
+      normalizedPointsRef.current = [{ x: nx, y: ny }];
+      rawPointsRef.current = [{ x, y }];
+    }
     lastProgressUpdateRef.current = 0;
     setTraceResult(null);
     setLiveProgress(0);
+    isTracingRef.current = true;
     setIsTracing(true);
     canvasEngine.startDraw(x, y);
   }, [canvasEngine]);
 
   const continueTrace = useCallback((x, y, nx, ny) => {
-    if (!canvasEngine || !isTracing) return;
+    if (!canvasEngine || !isTracingRef.current) return;
     canvasEngine.draw(x, y);
     rawPointsRef.current.push({ x, y });
     normalizedPointsRef.current.push({ x: nx, y: ny });
@@ -59,7 +66,7 @@ export const useTracing = (letter, caseType = 'uppercase', canvasRef) => {
         normalizedPointsRef.current, letter, caseType, settings.tolerance
       ));
     }
-  }, [canvasEngine, isTracing, letter, caseType, settings.tolerance]);
+  }, [canvasEngine, letter, caseType, settings.tolerance]);
 
   const validateCurrentTrace = useCallback(() => {
     const points = normalizedPointsRef.current;
@@ -74,11 +81,12 @@ export const useTracing = (letter, caseType = 'uppercase', canvasRef) => {
   }, [letter, caseType, settings.tolerance]);
 
   const endTrace = useCallback(() => {
-    if (!canvasEngine || !isTracing) return;
+    if (!canvasEngine || !isTracingRef.current) return;
     canvasEngine.endDraw();
+    isTracingRef.current = false;
     setIsTracing(false);
     validateCurrentTrace();
-  }, [canvasEngine, isTracing, validateCurrentTrace]);
+  }, [canvasEngine, validateCurrentTrace]);
 
   const changeDifficulty = useCallback((newDifficulty) => {
     const newSettings = tracingEngine.getDifficultySettings(newDifficulty);
@@ -110,6 +118,8 @@ export const useTracing = (letter, caseType = 'uppercase', canvasRef) => {
     if (canvasEngine) canvasEngine.clear();
     normalizedPointsRef.current = [];
     rawPointsRef.current = [];
+    isTracingRef.current = false;
+    setIsTracing(false);
     setTraceResult(null);
     setLiveProgress(0);
   }, [canvasEngine]);

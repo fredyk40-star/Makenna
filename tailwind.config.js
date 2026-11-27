@@ -25,6 +25,7 @@ export default {
       fontFamily: {
         'nunito': ['Nunito', 'sans-serif'],
         'baloo': ['Baloo 2', 'cursive'],
+        'dyslexia': ['OpenDyslexic', 'Comic Sans MS', 'Trebuchet MS', 'sans-serif'],
       },
       borderRadius: {
         'xl': '24px',

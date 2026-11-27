@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaArrowLeft, FaRedo, FaStar, FaVolumeUp } from 'react-icons/fa';
 import { useAudio } from '../../hooks/useAudio';
+import { useAdaptiveInput } from '../../hooks/useAdaptiveInput';
 import { announceToScreenReader } from '../../utils/accessibility';
 import gameProgressService from '../../services/GameProgressService';
 
@@ -423,7 +424,10 @@ const MECHANICS = {
 const ArcadeGame = ({ game }) => {
   const [session, setSession] = useState(0);
   const [result, setResult] = useState(null);
+  const gameAreaRef = useRef(null);
   const Mechanic = MECHANICS[game.mechanic] || ChoiceGame;
+
+  useAdaptiveInput(gameAreaRef);
 
   const handleFinish = useCallback((outcome) => {
     setResult(outcome);
@@ -474,7 +478,12 @@ const ArcadeGame = ({ game }) => {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-soft p-4 md:p-6 min-h-[360px]">
+      <div
+        ref={gameAreaRef}
+        role="group"
+        aria-label={`${game.title} answers. Use arrow keys to move and Enter to choose.`}
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-soft p-4 md:p-6 min-h-[360px]"
+      >
         <Mechanic key={session} data={game.data} onFinish={handleFinish} />
       </div>
 
