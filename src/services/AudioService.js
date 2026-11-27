@@ -51,13 +51,11 @@ class AudioService {
   }
 
   /**
-   * Load audio from URL or create from text-to-speech
+   * Load an audio file into an AudioBuffer.
    */
   async loadAudio(source, options = {}) {
-    const { useTTS = false, text = '', voice = null } = options;
-
-    if (useTTS) {
-      return this.createSpeechAudio(text, voice);
+    if (options.useTTS) {
+      throw new Error('Text-to-speech cannot be loaded as an audio buffer. Use the speak method instead.');
     }
 
     // Check cache first
@@ -67,6 +65,7 @@ class AudioService {
 
     try {
       const response = await fetch(source);
+      if (!response.ok) throw new Error(`Audio request failed (${response.status}).`);
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
@@ -75,41 +74,8 @@ class AudioService {
       return audioBuffer;
     } catch (error) {
       console.error('Failed to load audio:', error);
-      // Fallback to TTS if available
-      if (options.fallbackText) {
-        return this.createSpeechAudio(options.fallbackText, voice);
-      }
       throw error;
     }
-  }
-
-  /**
-   * Create speech audio using Web Speech API
-   */
-  createSpeechAudio(text, ___voice = null) {
-    return new Promise((resolve, reject) => {
-      if (!('speechSynthesis' in window)) {
-        reject(new Error('Speech synthesis not supported'));
-        return;
-      }
-
-      // For now, return a dummy audio buffer
-      // In production, this would use a TTS service
-      const dummyBuffer = this.createDummyAudioBuffer(1, 44100, 1);
-      resolve(dummyBuffer);
-    });
-  }
-
-  /**
-   * Create dummy audio buffer for fallback
-   */
-  createDummyAudioBuffer(channels, sampleRate, duration) {
-    const buffer = this.audioContext.createBuffer(channels, sampleRate * duration, sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) {
-      data[i] = Math.sin(i * 440 * 2 * Math.PI / sampleRate) * 0.5;
-    }
-    return buffer;
   }
 
   /**
@@ -199,7 +165,14 @@ class AudioService {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const Utterance = window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance;
+    if (!Utterance) {
+      const error = new Error('Speech synthesis is not supported');
+      if (onError) onError(error);
+      return false;
+    }
+
+    const utterance = new Utterance(text);
     utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.volume = this.muted ? 0 : volume;

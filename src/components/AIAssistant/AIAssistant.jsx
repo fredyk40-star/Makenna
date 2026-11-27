@@ -13,7 +13,6 @@ const AIAssistant = () => {
   const [showBubble, setShowBubble] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [tutorEnabled, setTutorEnabled] = useState(() => CurriculumTutorService.isEnabled(child?.childId));
@@ -30,6 +29,8 @@ const AIAssistant = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const recognitionRef = useRef(null);
+  const recognitionActiveRef = useRef(false);
+  const transcriptRef = useRef('');
   const messagesEndRef = useRef(null);
   const handleVoiceInputRef = useRef(null);
   const scrollTimeoutRef = useRef(null);
@@ -111,16 +112,32 @@ const AIAssistant = () => {
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event) => {
-        const transcript = Array.from(event.results[0])
-          .map(result => result.transcript)
+        const recognizedText = Array.from(event.results)
+          .map(result => result[0]?.transcript || '')
           .join('');
-        setTranscript(transcript);
+        transcriptRef.current = recognizedText.trim();
       };
 
       recognitionRef.current.onend = () => {
+        const shouldSubmit = recognitionActiveRef.current;
+        const recognizedText = transcriptRef.current.trim();
+        recognitionActiveRef.current = false;
+        transcriptRef.current = '';
+        if (!shouldSubmit) return;
         setIsListening(false);
-        if (transcript) {
-          handleVoiceInputRef.current?.(transcript);
+        if (recognizedText) {
+          handleVoiceInputRef.current?.(recognizedText);
+        }
+      };
+
+      recognitionRef.current.onerror = (error) => {
+        const wasActive = recognitionActiveRef.current;
+        recognitionActiveRef.current = false;
+        if (!wasActive) return;
+        transcriptRef.current = '';
+        setIsListening(false);
+        if (error.error !== 'aborted' && error.error !== 'no-speech') {
+          console.warn('Voice recognition failed:', error.error);
         }
       };
     }
@@ -138,11 +155,17 @@ const AIAssistant = () => {
 
     return () => {
       clearTimeout(timer);
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+      if (recognitionRef.current && recognitionActiveRef.current) {
+        recognitionActiveRef.current = false;
+        try {
+          recognitionRef.current.abort();
+        } catch (error) {
+          console.warn('Voice recognition could not be aborted:', error);
+        }
       }
+      recognitionRef.current = null;
     };
-  }, [child, transcript, tutorEnabled, allowVoice]);
+  }, [child, tutorEnabled, allowVoice]);
 
   // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
@@ -214,17 +237,29 @@ const AIAssistant = () => {
 
   const startListening = () => {
     if (tutorEnabled && allowVoice && recognitionRef.current && child?.childId) {
-      setTranscript('');
-      setIsListening(true);
-      recognitionRef.current.start();
+      transcriptRef.current = '';
+      try {
+        recognitionActiveRef.current = true;
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (error) {
+        recognitionActiveRef.current = false;
+        setIsListening(false);
+        console.warn('Voice recognition could not start:', error);
+      }
     }
   };
 
   const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (recognitionRef.current && recognitionActiveRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        recognitionActiveRef.current = false;
+        setIsListening(false);
+        console.warn('Voice recognition could not stop:', error);
+      }
     }
-    setIsListening(false);
   };
 
   const handleVoiceInput = async (transcript) => {
@@ -255,7 +290,7 @@ const AIAssistant = () => {
       response: response
     });
     
-    setTranscript('');
+    transcriptRef.current = '';
   };
 
   const handleTextSubmit = async (e) => {

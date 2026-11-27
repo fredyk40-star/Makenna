@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import audioService from '../services/AudioService';
 import AccessibilityService from '../services/AccessibilityService';
 
@@ -18,9 +18,6 @@ export const useAudio = (options = {}) => {
   const [duration, ] = useState(0);
   const [error, setError] = useState(null);
 
-  useRef(null);
-  const timerRef = useRef(null);
-
   useEffect(() => {
     // Update playing state from service
     const checkPlaying = () => {
@@ -37,49 +34,8 @@ export const useAudio = (options = {}) => {
       audioService.eventListeners.delete('play');
       audioService.eventListeners.delete('pause');
       audioService.eventListeners.delete('end');
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
     };
   }, []);
-
-  const play = useCallback(async (source, options = {}) => {
-    setIsLoading(true);
-    setError(null);
-    const safeVolume = AccessibilityService.getSettings().soundSensitive
-      ? Math.min(volume, 0.25)
-      : volume;
-
-    try {
-      const audioBuffer = await audioService.loadAudio(source, options);
-      const result = await audioService.play(audioBuffer, {
-        volume: safeVolume,
-        playbackRate,
-        onEnd: () => {
-          setIsPlaying(false);
-          if (onEnd) onEnd();
-        },
-        onStart: () => {
-          setIsPlaying(true);
-          setIsPaused(false);
-          if (onStart) onStart();
-        },
-        onError: (err) => {
-          setError(err);
-          setIsPlaying(false);
-          if (onError) onError(err);
-        }
-      });
-
-      setIsLoading(false);
-      return result;
-    } catch (err) {
-      setError(err);
-      setIsLoading(false);
-      if (onError) onError(err);
-      return false;
-    }
-  }, [volume, playbackRate, onEnd, onStart, onError]);
 
   const speak = useCallback(async (text, options = {}) => {
     setIsLoading(true);
@@ -118,6 +74,51 @@ export const useAudio = (options = {}) => {
       return false;
     }
   }, [volume, onEnd, onStart, onError]);
+
+  const play = useCallback(async (source, options = {}) => {
+    if (options.useTTS) {
+      return speak(options.text || source, options);
+    }
+
+    setIsLoading(true);
+    setError(null);
+    const safeVolume = AccessibilityService.getSettings().soundSensitive
+      ? Math.min(volume, 0.25)
+      : volume;
+
+    try {
+      const audioBuffer = await audioService.loadAudio(source, options);
+      const result = await audioService.play(audioBuffer, {
+        volume: safeVolume,
+        playbackRate,
+        onEnd: () => {
+          setIsPlaying(false);
+          if (onEnd) onEnd();
+        },
+        onStart: () => {
+          setIsPlaying(true);
+          setIsPaused(false);
+          if (onStart) onStart();
+        },
+        onError: (err) => {
+          setError(err);
+          setIsPlaying(false);
+          if (onError) onError(err);
+        }
+      });
+
+      setIsLoading(false);
+      return result;
+    } catch (err) {
+      if (options.fallbackText) {
+        return speak(options.fallbackText, options);
+      }
+      setError(err);
+      setIsLoading(false);
+      if (onError) onError(err);
+      return false;
+    }
+  }, [volume, playbackRate, onEnd, onStart, onError, speak]);
 
   const pause = useCallback(() => {
     audioService.pause();

@@ -21,19 +21,8 @@ export const useStory = (storyId = null) => {
 
   const utteranceRef = useRef(null);
   const wordMapRef = useRef([]);
-
-  useEffect(() => {
-    if (storyId) {
-      loadStory(storyId);
-    }
-    return () => {
-      // Cleanup speech on unmount
-      if (utteranceRef.current) {
-        window.speechSynthesis.cancel();
-        utteranceRef.current = null;
-      }
-    };
-  }, [storyId]);
+  const autoPlayRef = useRef(autoPlay);
+  autoPlayRef.current = autoPlay;
 
   const loadStory = useCallback((id) => {
     import('../data/stories').then(({ getStoryById }) => {
@@ -55,6 +44,19 @@ export const useStory = (storyId = null) => {
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (storyId) {
+      loadStory(storyId);
+    }
+    return () => {
+      // Cleanup speech on unmount
+      if (utteranceRef.current) {
+        utteranceRef.current = null;
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [storyId, loadStory]);
 
   const goToPage = useCallback((pageIndex) => {
     const page = storyEngine.goToPage(pageIndex);
@@ -95,27 +97,6 @@ export const useStory = (storyId = null) => {
     return false;
   }, []);
 
-  const togglePlayPause = useCallback(() => {
-    if (isPlaying) {
-      // Pause
-      window.speechSynthesis.pause();
-      setIsPlaying(false);
-      storyEngine.stopReading();
-      return { isPlaying: false };
-    } else {
-      // Resume or start
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-        setIsPlaying(true);
-        return { isPlaying: true };
-      } else {
-        // Start fresh
-        readPageSmooth();
-        return { isPlaying: true };
-      }
-    }
-  }, [isPlaying]);
-
   /**
    * Build word map from text for character-index-based highlighting
    */
@@ -141,6 +122,7 @@ export const useStory = (storyId = null) => {
     if (!currentPage) return;
 
     // Cancel any ongoing speech
+    utteranceRef.current = null;
     window.speechSynthesis.cancel();
 
     setIsPlaying(true);
@@ -175,13 +157,14 @@ export const useStory = (storyId = null) => {
     };
 
     utterance.onend = () => {
+      if (utteranceRef.current !== utterance) return;
       setHighlightedWord('');
       setIsPlaying(false);
       storyEngine.stopReading();
       utteranceRef.current = null;
 
       // Auto-play: advance to next page
-      if (autoPlay) {
+      if (autoPlayRef.current) {
         if (storyEngine.currentPage < storyEngine.getTotalPages() - 1) {
           const page = storyEngine.nextPage();
           if (page) {
@@ -189,8 +172,6 @@ export const useStory = (storyId = null) => {
             setPageNumber(storyEngine.currentPage);
             setProgress(storyEngine.progress);
             setIsComplete(storyEngine.isStoryComplete());
-            // Small delay before auto-reading next page
-            setTimeout(() => readPageSmooth(), 500);
           }
         } else {
           // Story complete via auto-play
@@ -209,6 +190,7 @@ export const useStory = (storyId = null) => {
     };
 
     utterance.onerror = (event) => {
+      if (utteranceRef.current !== utterance) return;
       reportSpeechError(event);
       setHighlightedWord('');
       setIsPlaying(false);
@@ -218,7 +200,25 @@ export const useStory = (storyId = null) => {
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  }, [currentPage, speed, autoPlay, story, buildWordMap]);
+  }, [currentPage, speed, story, buildWordMap]);
+
+  const togglePlayPause = useCallback(() => {
+    if (isPlaying) {
+      window.speechSynthesis.pause();
+      setIsPlaying(false);
+      storyEngine.stopReading();
+      return { isPlaying: false };
+    }
+
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+      setIsPlaying(true);
+      return { isPlaying: true };
+    }
+
+    readPageSmooth();
+    return { isPlaying: true };
+  }, [isPlaying, readPageSmooth]);
 
   const readPage = useCallback(async () => {
     if (!currentPage) return;
@@ -226,11 +226,11 @@ export const useStory = (storyId = null) => {
   }, [currentPage, readPageSmooth]);
 
   const stopReading = useCallback(() => {
+    utteranceRef.current = null;
     window.speechSynthesis.cancel();
     setIsPlaying(false);
     setHighlightedWord('');
     storyEngine.stopReading();
-    utteranceRef.current = null;
   }, []);
 
   const readWord = useCallback(async (word) => {
@@ -293,6 +293,7 @@ export const useStory = (storyId = null) => {
 
   const resetStory = useCallback(() => {
     storyEngine.resetStory();
+    utteranceRef.current = null;
     window.speechSynthesis.cancel();
     setPageNumber(0);
     setCurrentPage(story?.pages[0] || null);
@@ -301,7 +302,6 @@ export const useStory = (storyId = null) => {
     setHighlightedWord('');
     setAutoPlay(false);
     setIsPlaying(false);
-    utteranceRef.current = null;
     wordMapRef.current = [];
   }, [story]);
 
