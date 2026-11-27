@@ -41,8 +41,8 @@ const DeveloperResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-black p-4">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-gray-900 via-purple-900 to-black p-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md my-auto py-8">
         <div className="bg-gray-800 rounded-3xl shadow-xl p-8 border border-purple-500/20">
           <div className="text-center mb-8">
             <div className="text-5xl mb-4" aria-hidden="true">🔐</div>

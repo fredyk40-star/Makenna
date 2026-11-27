@@ -54,8 +54,8 @@ const ResetCredentialPage = () => {
 
   if (!requiresReset) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 max-w-md text-center">
+      <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 max-w-md text-center my-auto py-8">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">
             No reset is pending
           </h1>
@@ -71,8 +71,8 @@ const ResetCredentialPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900 p-4">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900 p-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md my-auto py-8">
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
           <div className="text-center mb-6">
             <div className="text-5xl mb-4" aria-hidden="true">🔑</div>

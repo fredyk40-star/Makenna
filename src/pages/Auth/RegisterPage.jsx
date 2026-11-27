@@ -82,11 +82,11 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-teal-50 to-blue-50 dark:from-gray-900 dark:via-teal-900 dark:to-gray-900 p-4">
+    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-green-50 via-teal-50 to-blue-50 dark:from-gray-900 dark:via-teal-900 dark:to-gray-900 p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md my-auto py-8"
       >
         {/* AI Guided Registration Help - Stylish AI Note */}
         <LoginGuidance pageType="register" autoPlay={false} />
