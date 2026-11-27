@@ -177,7 +177,15 @@ export class CloudSyncService {
       if (error) throw error;
       return { success: true, childId: payload.childId };
     } catch (error) {
-      console.error('Cloud upload failed:', error);
+      // Supabase/PostgREST errors are objects; log the useful fields so a 400
+      // caused by a missing column or missing UNIQUE(child_id) is actionable.
+      console.error('Cloud upload failed:', {
+        childId: payload.childId,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
       return { success: false, error: error.message };
     }
   }
@@ -328,9 +336,12 @@ export class CloudSyncService {
       return { success: false, error: `Unknown operation: ${operation.type}` };
     });
 
+    const firstFailure = SyncQueueService.getQueue().find(operation => operation.lastError)?.lastError;
     this.updateSyncStatus({
       lastResult: { direction: 'queue', ...result },
-      lastError: result.success ? null : `${result.failed} queued change(s) still pending`,
+      lastError: result.success
+        ? null
+        : `${result.failed} queued change(s) still pending${firstFailure ? `: ${firstFailure}` : ''}`,
     });
     return result;
   }
@@ -356,11 +367,15 @@ export class CloudSyncService {
       const pull = await this.syncFromCloud();
       const push = pull.success ? await this.syncToCloud() : { success: false, count: 0, failures: [] };
       const success = queue.success && pull.success && push.success;
+      const firstError = SyncQueueService.getQueue().find(operation => operation.lastError)?.lastError
+        || pull.error
+        || push.failures?.[0]?.error
+        || 'Sync finished with pending issues';
 
       this.updateSyncStatus({
         syncing: false,
         lastSync: success ? new Date().toISOString() : undefined,
-        lastError: success ? null : 'Sync finished with pending issues',
+        lastError: success ? null : firstError,
         lastResult: { direction: 'full', success, queue, pulled: pull.accounts?.length || 0, pushed: push.count || 0 },
       });
 
@@ -369,7 +384,7 @@ export class CloudSyncService {
         queued: queue.pending,
         pulled: pull.accounts?.length || 0,
         pushed: push.count || 0,
-        error: success ? null : 'Sync finished with pending issues',
+        error: success ? null : firstError,
       };
     } catch (error) {
       this.updateSyncStatus({ syncing: false, lastError: error.message });

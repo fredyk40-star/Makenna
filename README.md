@@ -35,7 +35,8 @@ For cross-device account sync, connect to Supabase:
 2. Create a new project
 3. Go to Settings → API to get your credentials
 4. Run the migration SQL in `src/data/supabase-migration.sql` in your Supabase SQL editor
-5. Copy `.env.example` to `.env` and add your Supabase credentials:
+5. For an existing project, also run `supabase-phase5-sync.sql`, `supabase-auth-recovery.sql`, and `supabase-cloud-sync-fix.sql`. The last one adds the recovery columns and the `UNIQUE(child_id)` constraint required by account upserts.
+6. Copy `.env.example` to `.env` and add your Supabase credentials:
 
 ```bash
 cp .env.example .env
@@ -69,6 +70,7 @@ Production setup in Vercel:
 4. Add `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Google App Password), `GMAIL_FROM`, and `APP_URL`. Gmail SMTP is handled by `api/mail.js`; browser code never sees these secrets.
 5. Add the client-side `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_DEVELOPER_EMAIL` values.
 6. If Gmail is not configured locally, the developer portal shows the one-time password on screen so the flow can still be tested.
+7. If sync logs show HTTP 400 on `child_accounts?on_conflict=child_id`, run `supabase-cloud-sync-fix.sql`. The browser console will now print the exact PostgREST message, details, hint, and code.
 
 ## 🎨 Branding Assets
 
