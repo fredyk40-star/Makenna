@@ -43,8 +43,8 @@ const CurriculumTutorSettings = () => {
             <FaRobot /> Curriculum tutor
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-            Answers come only from the Ghana curriculum already stored on this device. The tutor is
-            off until a parent enables it here.
+            The tutor is off until a parent enables it here. Gemini is a separate optional online
+            feature and is off by default.
           </p>
         </div>
         <button
@@ -57,6 +57,28 @@ const CurriculumTutorSettings = () => {
         >
           {draft.enabled ? 'Enabled' : 'Off'}
         </button>
+      </div>
+
+      <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            Allow online Gemini answers
+          </span>
+          <button
+            type="button"
+            onClick={() => update({ allowOnlineAI: !draft.allowOnlineAI })}
+            disabled={!draft.enabled}
+            aria-pressed={draft.allowOnlineAI}
+            className="shrink-0 px-4 py-2 rounded-full text-sm font-bold disabled:opacity-40 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+          >
+            {draft.allowOnlineAI ? 'Yes' : 'No'}
+          </button>
+        </div>
+        <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
+          When enabled and online, the child’s question and matching lesson are sent to Google.
+          The child’s name and account details are not sent. Local answers remain available when
+          Gemini is off or unavailable.
+        </p>
       </div>
 
       <div className="flex items-center justify-between">

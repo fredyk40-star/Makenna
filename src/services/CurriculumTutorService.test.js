@@ -4,6 +4,7 @@ import { CurriculumTutorService } from './CurriculumTutorService';
 describe('CurriculumTutorService', () => {
   it('is off until a parent enables it', () => {
     expect(CurriculumTutorService.isEnabled('child-1')).toBe(false);
+    expect(CurriculumTutorService.getSettings('child-1').allowOnlineAI).toBe(false);
     expect(CurriculumTutorService.getSuggestion('child-1', 'Ama')).toBeNull();
     expect(CurriculumTutorService.answer('child-1', 'vowels')).toBeNull();
 
@@ -11,6 +12,16 @@ describe('CurriculumTutorService', () => {
     expect(settings.enabled).toBe(true);
     expect(settings.level).toBe('KG1');
     expect(CurriculumTutorService.isEnabled('child-1')).toBe(true);
+  });
+
+  it('persists the parent opt-in for online Gemini answers', () => {
+    const settings = CurriculumTutorService.saveSettings('child-1', {
+      enabled: true,
+      allowOnlineAI: true,
+    });
+
+    expect(settings.allowOnlineAI).toBe(true);
+    expect(CurriculumTutorService.getSettings('child-1').allowOnlineAI).toBe(true);
   });
 
   it('suggests only allowed curriculum units at the chosen level', () => {
@@ -34,9 +45,17 @@ describe('CurriculumTutorService', () => {
     const response = CurriculumTutorService.answer('child-1', 'Tell me about vowels', 'Ama');
 
     expect(response.unit.id).toBe('en1');
+    expect(response.matched).toBe(true);
     expect(response.text).toContain('Vowels');
     expect(response.text).toContain('vowel sounds');
     expect(response.unit.path).toBe('/alphabet');
+  });
+
+  it('does not mark suggestion answers as curriculum matches', () => {
+    CurriculumTutorService.saveSettings('child-1', { enabled: true, level: 'KG1' });
+    const response = CurriculumTutorService.answer('child-1', 'Tell me a joke');
+
+    expect(response.matched).toBe(false);
   });
 
   it('notifies subscribers when parent settings change', () => {

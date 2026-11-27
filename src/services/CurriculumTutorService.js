@@ -33,6 +33,7 @@ const readAll = () => {
 const defaults = () => ({
   enabled: false,
   allowVoice: false,
+  allowOnlineAI: false,
   level: 'KG1',
   subjects: [],
   updatedAt: null,
@@ -79,6 +80,7 @@ export class CurriculumTutorService {
     const settings = {
       enabled: Boolean(patch.enabled ?? current.enabled),
       allowVoice: Boolean(patch.allowVoice ?? current.allowVoice),
+      allowOnlineAI: Boolean(patch.allowOnlineAI ?? current.allowOnlineAI),
       level: LEVELS.includes(patch.level) ? patch.level : current.level,
       subjects,
       updatedAt: new Date().toISOString(),
@@ -167,6 +169,7 @@ export class CurriculumTutorService {
         ? {
           text: `${suggestion.text} You can also ask me about ${suggestion.unit.subject.replace(/_/g, ' ')}.`,
           unit: suggestion.unit,
+          matched: false,
         }
         : null;
     }
@@ -180,6 +183,7 @@ export class CurriculumTutorService {
     return {
       unit,
       text: `${name}, in our ${unit.level} ${unit.subject.replace(/_/g, ' ')} work: ${unit.title}. ${cleanContent(unit.content)}${prompt}`,
+      matched: true,
     };
   }
 }

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaMicrophone, FaMicrophoneSlash, FaRobot, FaTimes, FaComment, FaPaperPlane, FaMinus, FaPlus } from 'react-icons/fa';
 import { AIAssistantService } from '../../services/AIAssistantService';
 import { CurriculumTutorService } from '../../services/CurriculumTutorService';
+import { GeminiTutorService } from '../../services/GeminiTutorService';
 import { useChildAccount } from '../../context/ChildAccountContext';
 
 const AIAssistant = () => {
@@ -17,6 +18,7 @@ const AIAssistant = () => {
   const [inputText, setInputText] = useState('');
   const [tutorEnabled, setTutorEnabled] = useState(() => CurriculumTutorService.isEnabled(child?.childId));
   const [allowVoice, setAllowVoice] = useState(() => CurriculumTutorService.getSettings(child?.childId).allowVoice);
+  const [allowOnlineAI, setAllowOnlineAI] = useState(() => CurriculumTutorService.getSettings(child?.childId).allowOnlineAI);
   const [isMinimized, setIsMinimized] = useState(() => {
     // Load user preference from localStorage
     try {
@@ -52,6 +54,7 @@ const AIAssistant = () => {
       const settings = CurriculumTutorService.getSettings(child?.childId);
       setTutorEnabled(settings.enabled);
       setAllowVoice(settings.allowVoice);
+      setAllowOnlineAI(settings.allowOnlineAI);
     };
     refresh();
     return CurriculumTutorService.subscribe(refresh);
@@ -224,13 +227,19 @@ const AIAssistant = () => {
     setIsListening(false);
   };
 
-  const handleVoiceInput = (transcript) => {
+  const handleVoiceInput = async (transcript) => {
     if (!tutorEnabled || !allowVoice) return;
     const userMessage = { id: Date.now(), text: transcript, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     
-    // Answer only from the parent-approved curriculum.
-    const result = CurriculumTutorService.answer(child?.childId, transcript, child?.fullName);
+    const localResult = CurriculumTutorService.answer(child?.childId, transcript, child?.fullName);
+    const result = await GeminiTutorService.answer(
+      child?.childId,
+      transcript,
+      localResult,
+      child?.fullName,
+      allowOnlineAI,
+    );
     const response = result?.text || 'I can only answer curriculum questions right now.';
     const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant' };
     setMessages(prev => [...prev, assistantMessage]);
@@ -249,14 +258,21 @@ const AIAssistant = () => {
     setTranscript('');
   };
 
-  const handleTextSubmit = (e) => {
+  const handleTextSubmit = async (e) => {
     e.preventDefault();
     if (!inputText.trim() || !child?.childId || !tutorEnabled) return;
     
     const userMessage = { id: Date.now(), text: inputText, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     
-    const result = CurriculumTutorService.answer(child.childId, inputText, child.fullName);
+    const localResult = CurriculumTutorService.answer(child.childId, inputText, child.fullName);
+    const result = await GeminiTutorService.answer(
+      child.childId,
+      inputText,
+      localResult,
+      child.fullName,
+      allowOnlineAI,
+    );
     const response = result?.text || 'I can only answer curriculum questions right now.';
     const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant' };
     setMessages(prev => [...prev, assistantMessage]);
