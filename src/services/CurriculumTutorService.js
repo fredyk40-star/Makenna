@@ -199,6 +199,34 @@ export class CurriculumTutorService {
       matched: true,
     };
   }
+
+  static recordQuestion(childId, unit) {
+    if (!childId || !unit?.title) return;
+    const key = 'makenna_tutor_question_log_v1';
+    const all = StorageService.get(key, {});
+    const childLog = all[childId] && typeof all[childId] === 'object' ? all[childId] : {};
+    const topic = `${unit.subject || 'general'}:${unit.title}`;
+    childLog[topic] = (childLog[topic] || 0) + 1;
+    childLog.__total = (childLog.__total || 0) + 1;
+    all[childId] = childLog;
+    StorageService.set(key, all);
+  }
+
+  static getQuestionLog(childId) {
+    const all = StorageService.get('makenna_tutor_question_log_v1', {});
+    const childLog = all[childId] && typeof all[childId] === 'object' ? all[childId] : {};
+    return Object.entries(childLog)
+      .filter(([topic]) => topic !== '__total')
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  static clearQuestionLog(childId) {
+    if (!childId) return;
+    const all = StorageService.get('makenna_tutor_question_log_v1', {});
+    delete all[childId];
+    StorageService.set('makenna_tutor_question_log_v1', all);
+  }
 }
 
 export default CurriculumTutorService;

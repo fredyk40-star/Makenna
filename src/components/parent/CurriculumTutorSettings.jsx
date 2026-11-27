@@ -10,10 +10,14 @@ const CurriculumTutorSettings = () => {
   const { childId } = useChildAccount();
   const [draft, setDraft] = useState(() => CurriculumTutorService.getSettings(childId));
   const [saved, setSaved] = useState(false);
+  const [questionLog, setQuestionLog] = useState(() => CurriculumTutorService.getQuestionLog(childId));
   const subjects = GhanaCurriculumService.getSubjects();
 
   useEffect(() => {
-    const refresh = () => setDraft(CurriculumTutorService.getSettings(childId));
+    const refresh = () => {
+      setDraft(CurriculumTutorService.getSettings(childId));
+      setQuestionLog(CurriculumTutorService.getQuestionLog(childId));
+    };
     refresh();
     return CurriculumTutorService.subscribe(refresh);
   }, [childId]);
@@ -130,6 +134,39 @@ const CurriculumTutorSettings = () => {
           ))}
         </div>
       </div>
+
+  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
+    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+      Topics your child asked about
+    </p>
+    <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+      Only topic counts are stored, not the full question text.
+    </p>
+    {questionLog.length === 0 ? (
+      <p className="text-xs text-gray-500 dark:text-gray-400">No tutor questions yet.</p>
+    ) : (
+      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-200">
+        {questionLog.slice(0, 8).map((item) => (
+          <li key={item.topic} className="flex justify-between gap-3">
+            <span className="truncate">{item.topic.replace(/_/g, ' ')}</span>
+            <span className="text-gray-500 dark:text-gray-400">{item.count}</span>
+          </li>
+        ))}
+      </ul>
+    )}
+    {questionLog.length > 0 && (
+      <button
+        type="button"
+        onClick={() => {
+          CurriculumTutorService.clearQuestionLog(childId);
+          setQuestionLog([]);
+        }}
+        className="mt-3 text-xs text-red-600 dark:text-red-400 hover:underline"
+      >
+        Clear question log
+      </button>
+    )}
+  </div>
 
       <button
         type="button"

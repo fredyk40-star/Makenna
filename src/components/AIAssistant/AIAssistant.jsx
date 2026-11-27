@@ -20,6 +20,8 @@ const AIAssistant = () => {
   const [tutorEnabled, setTutorEnabled] = useState(() => CurriculumTutorService.isEnabled(child?.childId));
   const [allowVoice, setAllowVoice] = useState(() => CurriculumTutorService.getSettings(child?.childId).allowVoice);
   const [allowOnlineAI, setAllowOnlineAI] = useState(() => CurriculumTutorService.getSettings(child?.childId).allowOnlineAI);
+  const [tutorLanguage, setTutorLanguage] = useState('english');
+  const [mood, setMood] = useState('happy');
   const [isMinimized, setIsMinimized] = useState(() => {
     // Load user preference from localStorage
     try {
@@ -278,7 +280,7 @@ const AIAssistant = () => {
     transcriptRef.current = '';
   };
 
-  const askTutor = async (question, task = 'answer') => {
+  const askTutor = async (question, task = 'answer', language = tutorLanguage) => {
     if (!question?.trim() || !child?.childId || !tutorEnabled) return;
 
     const userMessage = { id: Date.now(), text: question, sender: 'user' };
@@ -288,6 +290,7 @@ const AIAssistant = () => {
     const unit = suggestion?.unit || null;
     const localResult = unit ? { unit, matched: task === 'answer' } : null;
 
+    setMood('thinking');
     const result = await GeminiTutorService.answer(
       child.childId,
       question,
@@ -295,7 +298,7 @@ const AIAssistant = () => {
       child.fullName,
       allowOnlineAI,
       task,
-      'english',
+      language,
     );
 
     const response = result?.text || 'I can only help with your lessons right now.';
@@ -307,6 +310,8 @@ const AIAssistant = () => {
     };
     setMessages(prev => [...prev, assistantMessage]);
     speak(response);
+    setMood('happy');
+    CurriculumTutorService.recordQuestion(child.childId, result?.unit || unit);
 
     AIAssistantService.recordAIInteraction({
       childId: child.childId,
@@ -451,16 +456,30 @@ const AIAssistant = () => {
               )}
               {tutorEnabled && (
                 <div className="px-3 pb-2 flex flex-wrap gap-1 border-t border-gray-200 dark:border-gray-700">
+                  <select
+                    value={tutorLanguage}
+                    onChange={(event) => setTutorLanguage(event.target.value)}
+                    className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                    aria-label="Tutor language"
+                  >
+                    <option value="english">English</option>
+                    <option value="twi">Twi</option>
+                    <option value="ewe">Ewe</option>
+                    <option value="ga">Ga</option>
+                    <option value="fante">Fante</option>
+                  </select>
                   {[
                     { task: 'practice', label: 'Practice', question: 'Create three short practice questions from this lesson.' },
                     { task: 'story', label: 'Story', question: 'Tell a short story using words from this lesson.' },
                     { task: 'pronunciation', label: 'Sounds', question: 'Break the main words into syllables and sounds-like hints.' },
                     { task: 'math', label: 'Math', question: 'Create a Ghanaian-context counting or money word problem.' },
+                    { task: 'why', label: 'Why?', question: 'Why is this lesson important for a child?' },
+                    { task: 'translate', label: 'Translate', question: 'Explain this lesson simply.' },
                   ].map((item) => (
                     <button
                       key={item.task}
                       type="button"
-                      onClick={() => askTutor(item.question, item.task)}
+                      onClick={() => askTutor(item.question, item.task, tutorLanguage)}
                       className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-purple-100 dark:hover:bg-purple-900/40"
                     >
                       {item.label}
@@ -541,7 +560,7 @@ const AIAssistant = () => {
                 <div className={`w-2 h-2 bg-white rounded-full ${isListening ? 'animate-ping' : 'animate-pulse'}`} />
               </div>
               {/* Mouth */}
-              <div className={`w-4 h-2 border-b-2 border-white rounded-full mx-auto ${isListening ? 'w-6 h-3 bg-white rounded-full animate-bounce' : ''}`} />
+              <div className={`w-4 h-2 border-b-2 border-white rounded-full mx-auto ${isListening ? 'w-6 h-3 bg-white rounded-full animate-bounce' : mood === 'thinking' ? 'w-3 h-3 border-2 border-white rounded-full animate-pulse' : mood === 'confused' ? 'w-5 h-1 bg-white rounded-full' : ''}`} />
               {/* Cheeks */}
               <div className="absolute -left-1 top-2 w-1 h-1 bg-pink-200 rounded-full opacity-50" />
               <div className="absolute -right-1 top-2 w-1 h-1 bg-pink-200 rounded-full opacity-50" />
