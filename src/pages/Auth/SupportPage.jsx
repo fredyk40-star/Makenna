@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SupportService } from '../../services/SupportService';
 import { useVoiceGuide } from '../../context/VoiceGuideContext';
+import StudyLampBackdrop from '../../components/auth/StudyLampBackdrop';
 
 const SupportPage = () => {
   const { playError, playSuccess } = useVoiceGuide();
@@ -52,13 +53,14 @@ const SupportPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900 p-4">
+    <div className="min-h-screen flex flex-col items-center overflow-y-auto bg-gradient-to-br from-sky-50 via-cyan-50 to-teal-100 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950 p-4 relative">
+      <StudyLampBackdrop />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md my-auto py-8"
+        className="w-full max-w-md my-auto py-8 relative z-10"
       >
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8">
+        <div className="bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/70 dark:border-amber-200/30 rounded-3xl shadow-2xl shadow-cyan-900/10 dark:shadow-black/30 p-8">
           <div className="text-center mb-8">
             <img
               src="/brand-logo.png"
@@ -86,7 +88,7 @@ const SupportPage = () => {
               </div>
               <Link
                 to="/login"
-                className="inline-block px-6 py-2 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-xl font-semibold"
+                className="inline-block px-6 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white rounded-xl font-semibold transition-all shadow-lg shadow-teal-200 dark:shadow-teal-900"
               >
                 Back to Login 🔐
               </Link>
@@ -109,7 +111,7 @@ const SupportPage = () => {
                   value={childId}
                   onChange={(e) => setChildId(e.target.value.toLowerCase())}
                   placeholder="e.g., kid20345635"
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)]"
                   autoComplete="username"
                   autoCapitalize="none"
                   required
@@ -126,7 +128,7 @@ const SupportPage = () => {
                   value={parentEmail}
                   onChange={(e) => setParentEmail(e.target.value)}
                   placeholder="parent@example.com"
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)]"
                   autoComplete="email"
                   required
                 />
@@ -142,7 +144,7 @@ const SupportPage = () => {
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="I forgot my PIN and need help logging in."
                   rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)]"
                   required
                 />
               </div>
@@ -151,7 +153,7 @@ const SupportPage = () => {
                 <button
                   type="button"
                   onClick={handleSendCode}
-                  className="w-full py-2 rounded-xl border-2 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 font-semibold hover:bg-purple-50 dark:hover:bg-purple-900/30"
+                  className="w-full py-2 rounded-xl border-2 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 font-semibold hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-300"
                 >
                   {codeSent ? 'Send a new code' : 'Email me a verification code'}
                 </button>
@@ -176,7 +178,7 @@ const SupportPage = () => {
                     value={verificationCode}
                     onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="6-digit code"
-                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none tracking-widest"
+                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all focus:shadow-[0_0_20px_rgba(20,184,166,0.25)] tracking-widest"
                     required
                   />
                 </div>
@@ -185,7 +187,7 @@ const SupportPage = () => {
               <button
                 type="submit"
                 disabled={isSubmitting || !codeSent}
-                className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+                className="w-full py-3 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-teal-300 shadow-lg shadow-teal-200 dark:shadow-teal-900"
               >
                 {isSubmitting ? 'Sending request...' : 'Request PIN Help 🚀'}
               </button>
@@ -195,7 +197,7 @@ const SupportPage = () => {
           <div className="mt-6 text-center">
             <Link
               to="/login"
-              className="text-sm text-purple-600 dark:text-purple-400 hover:underline"
+              className="text-sm text-teal-700 dark:text-teal-300 hover:underline"
             >
               ← Back to Login
             </Link>

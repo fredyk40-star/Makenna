@@ -5,13 +5,14 @@ import { UpdateService } from '../../services/UpdateService';
 import { ChildAccountService } from '../../services/ChildAccountService';
 import { SupportService } from '../../services/SupportService';
 import { FaUser, FaTrash, FaUndo, FaDownload, FaStar, FaChartBar, FaDatabase, FaCog, FaSignOutAlt, FaSync, FaRocket, FaRobot, FaPlus, FaEnvelope, FaKey, FaCheck } from 'react-icons/fa';
+import appMetadata from '../../../package.json';
 
 const DeveloperDashboard = () => {
   const [children, setChildren] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChildren, setSelectedChildren] = useState([]);
   const [selectedPreviewChildren, setSelectedPreviewChildren] = useState([]);
-  const [activeTab, setActiveTab] = useState('children');
+  const [activeTab, setActiveTab] = useState('overview');
   const [backups, setBackups] = useState([]);
   const [featureFlags, setFeatureFlags] = useState({});
   const [updates, setUpdates] = useState([]);
@@ -44,6 +45,10 @@ const DeveloperDashboard = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
   const [lastSync, setLastSync] = useState(DeveloperService.getLastSyncTime());
+  const [cloudHealth, setCloudHealth] = useState({ status: 'checking', checkedAt: null });
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
+  const [overviewAIInteractions, setOverviewAIInteractions] = useState(0);
+  const [backupPreview, setBackupPreview] = useState(null);
 
   // Support inbox state
   const [supportRequests, setSupportRequests] = useState([]);
@@ -63,6 +68,22 @@ const DeveloperDashboard = () => {
     syncUpdates();
   }, []);
 
+  useEffect(() => {
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      setOverviewAIInteractions(DeveloperService.getAIStatistics().totalInteractions || 0);
+    }
+  }, [activeTab, aiStatistics]);
+
   const syncFeatures = async () => {
     const result = await DeveloperService.syncFeaturesFromCloud();
     if (result.success) setFeatureFlags(result.flags);
@@ -76,17 +97,23 @@ const DeveloperDashboard = () => {
   const handleCloudSync = async (silent = false) => {
     if (syncing) return;
     setSyncing(true);
+    setCloudHealth({ status: 'checking', checkedAt: null });
     if (!silent) setSyncMessage('Syncing from cloud...');
     try {
       const result = await DeveloperService.syncChildrenFromCloud();
       if (result.success) {
+        const checkedAt = new Date().toISOString();
+        setCloudHealth({ status: 'healthy', checkedAt });
         setSyncMessage(`Synced ${result.count} accounts`);
-        setLastSync(DeveloperService.getLastSyncTime());
+        DeveloperService.setLastSyncTime(checkedAt);
+        setLastSync(checkedAt);
         loadChildren();
       } else {
+        setCloudHealth({ status: 'error', checkedAt: new Date().toISOString() });
         setSyncMessage(result.error || 'Sync failed');
       }
     } catch (err) {
+      setCloudHealth({ status: 'error', checkedAt: new Date().toISOString() });
       setSyncMessage('Sync error: ' + err.message);
     } finally {
       setSyncing(false);
@@ -317,11 +344,35 @@ const DeveloperDashboard = () => {
     loadBackups();
   };
 
-  const handleRestoreBackup = (timestamp) => {
-    if (window.confirm('Restore from this backup? Current data will be overwritten.')) {
-      DeveloperService.restoreBackup(timestamp);
-      DeveloperService.logAction('RESTORE_BACKUP', { timestamp });
+  const handleRestoreBackup = () => {
+    if (!backupPreview) return;
+    const childCount = Array.isArray(backupPreview.data?.childAccounts)
+      ? backupPreview.data.childAccounts.length
+      : 0;
+    const trashCount = Array.isArray(backupPreview.data?.trashBin)
+      ? backupPreview.data.trashBin.length
+      : 0;
+    const currentChildCount = ChildAccountService.getAllAccounts().length;
+    if (!window.confirm(
+      `Restore this backup from ${new Date(backupPreview.timestamp).toLocaleString()}? ` +
+      `It will replace ${currentChildCount} current child accounts with ${childCount} child accounts and ${trashCount} deleted accounts.`,
+    )) return;
+
+    try {
+      const restored = DeveloperService.restoreBackup(backupPreview.timestamp);
+      if (!restored) {
+        throw new Error('This backup is invalid, missing, or could not be saved. Current data was kept when possible.');
+      }
+      DeveloperService.logAction('RESTORE_BACKUP', {
+        timestamp: backupPreview.timestamp,
+        childCount,
+        trashCount,
+      });
+      setBackupPreview(null);
       loadChildren();
+      loadTrashBin();
+    } catch (err) {
+      setError(err.message || 'The backup could not be restored.');
     }
   };
 
@@ -517,6 +568,35 @@ const DeveloperDashboard = () => {
     </motion.tr>
   );
 
+  const cloudStatus = isOnline ? cloudHealth.status : 'offline';
+  const cloudStatusLabel = {
+    checking: 'Checking',
+    healthy: 'Connected',
+    error: 'Unavailable',
+    offline: 'Offline',
+  }[cloudStatus] || 'Unknown';
+  const cloudStatusColor = {
+    checking: 'text-yellow-400',
+    healthy: 'text-green-400',
+    error: 'text-red-400',
+    offline: 'text-red-400',
+  }[cloudStatus] || 'text-gray-400';
+  const activeReleaseCount = updates.filter(update => update.status === 'active').length;
+  const pendingReleaseCount = updates.filter(update => update.status === 'pending').length;
+  const openSupportCount = SupportService.getOpenCount();
+  const enabledFeatureCount = Object.values(featureFlags).filter(Boolean).length;
+  const previewBackupChildCount = Array.isArray(backupPreview?.data?.childAccounts)
+    ? backupPreview.data.childAccounts.length
+    : null;
+  const previewBackupTrashCount = Array.isArray(backupPreview?.data?.trashBin)
+    ? backupPreview.data.trashBin.length
+    : null;
+  const previewBackupDate = backupPreview ? new Date(backupPreview.timestamp) : null;
+  const previewBackupIsValid = previewBackupChildCount !== null &&
+    previewBackupTrashCount !== null &&
+    Number.isFinite(previewBackupDate?.getTime());
+  const currentChildAccountCount = ChildAccountService.getAllAccounts().length;
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4">
       {/* Header */}
@@ -537,6 +617,7 @@ const DeveloperDashboard = () => {
       {/* Tab Navigation */}
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {[
+          { id: 'overview', label: 'Overview', icon: FaChartBar },
           { id: 'children', label: 'Children', icon: FaUser },
           { id: 'support', label: 'Support', icon: FaEnvelope },
           { id: 'trash', label: 'Trash', icon: FaTrash },
@@ -560,6 +641,104 @@ const DeveloperDashboard = () => {
           </button>
         ))}
       </div>
+
+      {/* Overview */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <section aria-label="Privacy-safe usage summary">
+            <h2 className="font-bold text-lg mb-3">Usage Summary</h2>
+            <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
+              {[
+                { label: 'Child accounts', value: children.length, color: 'text-cyan-300' },
+                { label: 'Cached open support requests', value: openSupportCount, color: 'text-yellow-300' },
+                { label: 'Local backups', value: backups.length, color: 'text-blue-300' },
+                { label: 'Enabled features', value: enabledFeatureCount, color: 'text-green-300' },
+                { label: 'AI interactions', value: overviewAIInteractions, color: 'text-purple-300' },
+              ].map(metric => (
+                <div key={metric.label} className="bg-gray-800 rounded-xl p-4">
+                  <p className={`text-2xl font-bold ${metric.color}`}>{metric.value}</p>
+                  <p className="text-sm text-gray-400">{metric.label}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Counts only; no child names, identifiers, or individual learning details are shown here.
+              Support count reflects requests cached on this device.
+            </p>
+          </section>
+
+          <div className="grid lg:grid-cols-2 gap-4">
+            <section className="bg-gray-800 rounded-xl p-5" aria-label="System health">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="font-bold text-lg">System Health</h2>
+                <span className="text-xs text-gray-500">Live network + last sync</span>
+              </div>
+              <dl className="space-y-3">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-gray-400">Network</dt>
+                  <dd className={isOnline ? 'text-green-400' : 'text-red-400'}>
+                    {isOnline ? 'Online' : 'Offline'}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-gray-400">Cloud sync API</dt>
+                  <dd className={cloudStatusColor}>{cloudStatusLabel}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-gray-400">Last successful sync</dt>
+                  <dd className="text-right text-gray-200">
+                    {lastSync ? new Date(lastSync).toLocaleString() : 'Not recorded'}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-gray-400">Last health check</dt>
+                  <dd className="text-right text-gray-200">
+                    {cloudHealth.checkedAt ? new Date(cloudHealth.checkedAt).toLocaleString() : 'Checking...'}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-xs text-gray-500 mt-4">
+                Cloud status updates from the dashboard's existing authenticated sync. No extra health or third-party API calls are made; database credentials and connection details are not exposed.
+              </p>
+            </section>
+
+            <section className="bg-gray-800 rounded-xl p-5" aria-label="Release status">
+              <h2 className="font-bold text-lg mb-4">Release Status</h2>
+              <p className="text-gray-400">Current app build</p>
+              <p className="text-2xl font-bold text-cyan-300">v{appMetadata.version}</p>
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="bg-gray-700 rounded-lg p-3">
+                  <p className="text-xl font-bold text-green-300">{activeReleaseCount}</p>
+                  <p className="text-sm text-gray-400">Active rollouts</p>
+                </div>
+                <div className="bg-gray-700 rounded-lg p-3">
+                  <p className="text-xl font-bold text-yellow-300">{pendingReleaseCount}</p>
+                  <p className="text-sm text-gray-400">Pending releases</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('updates')}
+                className="mt-4 px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700"
+              >
+                Manage Releases
+              </button>
+            </section>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setActiveTab('children')} className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">
+              Manage Children
+            </button>
+            <button type="button" onClick={() => setActiveTab('support')} className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">
+              Open Support Inbox
+            </button>
+            <button type="button" onClick={() => setActiveTab('backup')} className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">
+              Review Backups
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Support Tab */}
       {activeTab === 'support' && (
@@ -939,6 +1118,48 @@ const DeveloperDashboard = () => {
               <FaPlus /> Create Backup
             </button>
           </div>
+          {error && <p className="text-red-400 text-sm" role="alert">{error}</p>}
+          {backupPreview && (
+            <section className="bg-blue-950/60 border border-blue-700 rounded-xl p-4" aria-label="Backup restore preview">
+              <h4 className="font-bold text-lg">Restore Preview</h4>
+              <p className="text-sm text-gray-300 mt-1">
+                Backup from {previewBackupDate && Number.isFinite(previewBackupDate.getTime())
+                  ? previewBackupDate.toLocaleString()
+                  : 'an unknown date'}
+              </p>
+              {previewBackupIsValid ? (
+                <ul className="text-sm text-gray-300 mt-3 space-y-1">
+                  <li>Child accounts to restore: {previewBackupChildCount}</li>
+                  <li>Deleted accounts in backup: {previewBackupTrashCount}</li>
+                  <li>Current child accounts to be replaced: {currentChildAccountCount}</li>
+                </ul>
+              ) : (
+                <p className="text-red-300 text-sm mt-3">
+                  This backup is incomplete and cannot be restored.
+                </p>
+              )}
+              <div className="flex gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={handleRestoreBackup}
+                  disabled={!previewBackupIsValid}
+                  className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Restore This Backup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBackupPreview(null)}
+                  className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p className="text-xs text-yellow-300 mt-3">
+                Restoring replaces the current local child-account and trash data. You’ll be asked to confirm before anything changes.
+              </p>
+            </section>
+          )}
           {backups.length === 0 ? (
             <p className="text-gray-400 p-4">No backups yet. Create one to protect your data.</p>
           ) : (
@@ -952,10 +1173,10 @@ const DeveloperDashboard = () => {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleRestoreBackup(backup.timestamp)}
+                    onClick={() => { setError(''); setBackupPreview(backup); }}
                     className="px-3 py-1 bg-blue-600 rounded text-sm hover:bg-blue-700"
                   >
-                    <FaUndo className="inline mr-1" /> Restore
+                    <FaUndo className="inline mr-1" /> Preview Restore
                   </button>
                 </div>
               ))}

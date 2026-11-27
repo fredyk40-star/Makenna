@@ -325,6 +325,11 @@ export class DeveloperService {
     return StorageService.get('makenna_sync_status_v1')?.lastSync || null;
   }
 
+  static setLastSyncTime(lastSync) {
+    const currentStatus = StorageService.get('makenna_sync_status_v1', {});
+    StorageService.set('makenna_sync_status_v1', { ...currentStatus, lastSync });
+  }
+
   // =====================
   // Supabase Cloud Sync for Features & Updates
   // =====================
@@ -692,11 +697,24 @@ export class DeveloperService {
     const backups = this.getBackups();
     const backup = backups.find(b => b.timestamp === timestamp);
     
-    if (!backup) return false;
-    
-    ChildAccountService.saveAllAccounts(backup.data.childAccounts);
-    StorageService.set('makenna_trash_bin', backup.data.trashBin);
-    
+    if (
+      !backup ||
+      !Array.isArray(backup.data?.childAccounts) ||
+      !Array.isArray(backup.data?.trashBin)
+    ) return false;
+
+    const currentAccounts = ChildAccountService.getAllAccounts();
+    const currentTrashBin = this.getTrashBin();
+    if (!ChildAccountService.saveAllAccounts(backup.data.childAccounts)) return false;
+    if (!StorageService.set('makenna_trash_bin', backup.data.trashBin)) {
+      const accountsRestored = ChildAccountService.saveAllAccounts(currentAccounts);
+      const trashRestored = StorageService.set('makenna_trash_bin', currentTrashBin);
+      if (!accountsRestored || !trashRestored) {
+        console.error('Backup restore failed and current data could not be fully recovered.');
+      }
+      return false;
+    }
+
     return true;
   }
 
