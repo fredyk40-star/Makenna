@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { UpdateService } from '../../services/UpdateService';
 import { useChildAccount } from '../../context/ChildAccountContext';
+import { ROUTES } from '../../routes';
 
 const UpdatePreviewBanner = () => {
   const { childId } = useChildAccount();
+  const { pathname } = useLocation();
   const [previewUpdateId, setPreviewUpdateId] = useState(null);
   const [previewUpdate, setPreviewUpdate] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -39,7 +42,7 @@ const UpdatePreviewBanner = () => {
     setPreviewUpdate(null);
   };
 
-  if (!previewUpdate) return null;
+  if (pathname === ROUTES.TUTOR || !previewUpdate) return null;
 
   return (
     <motion.div

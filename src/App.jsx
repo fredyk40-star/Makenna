@@ -18,6 +18,7 @@ import InstallPrompt from './components/common/InstallPrompt';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import AIAssistant from './components/AIAssistant/AIAssistant';
+import { ROUTES } from './routes';
 import UpdatePreviewBanner from './components/UpdatePreview/UpdatePreviewBanner';
 import CaptionDisplay from './components/accessibility/CaptionDisplay';
 import SessionTimeoutOverlay from './components/session/SessionTimeoutOverlay';
@@ -67,6 +68,7 @@ const ColoursHome = lazyWithErrorHandler(() => import('./pages/Colours/ColoursHo
 const ColourLesson = lazyWithErrorHandler(() => import('./pages/Colours/ColourLesson'));
 const Profile = lazyWithErrorHandler(() => import('./pages/Profile/Profile'));
 const Settings = lazyWithErrorHandler(() => import('./pages/Settings/Settings'));
+const TutorPage = lazyWithErrorHandler(() => import('./pages/Tutor/TutorPage'));
 const ParentZone = lazyWithErrorHandler(() => import('./pages/ParentZone/ParentZone'));
 const TeacherDashboard = lazyWithErrorHandler(() => import('./pages/Teacher/TeacherDashboard'));
 
@@ -134,8 +136,9 @@ const DeveloperProtectedRoute = ({ children }) => {
 const AssistantGate = () => {
   const location = useLocation();
   if (
-    location.pathname === '/login'
-    || location.pathname === '/register'
+    location.pathname === ROUTES.LOGIN
+    || location.pathname === ROUTES.REGISTER
+    || location.pathname === ROUTES.TUTOR
     || location.pathname.startsWith('/music/karaoke/')
   ) return null;
   return <AIAssistant />;
@@ -210,8 +213,10 @@ const AppContent = () => {
               />
               
               {isAuthenticated ? (
-                <Route path="/" element={<Layout />}>
-                  <Route index element={<Home />} />
+                <>
+                  <Route path={ROUTES.TUTOR} element={<TutorPage />} />
+                  <Route path="/" element={<Layout />}>
+                    <Route index element={<Home />} />
                   <Route path="mission" element={<MissionPage />} />
                   <Route path="welcome" element={<Welcome />} />
                   <Route path="learn" element={<Learn />} />
@@ -305,7 +310,8 @@ const AppContent = () => {
                   <Route path="maths/counting" element={<Counting />} />
                   <Route path="maths/compare" element={<CompareNumbers />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
+                  </Route>
+                </>
               ) : (
                 <Route path="*" element={<LoginPage />} />
               )}

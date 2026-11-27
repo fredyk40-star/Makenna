@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { usePWADetection } from '../../hooks/usePWADetection';
+import { ROUTES } from '../../routes';
 import { FaDownload, FaTimes, FaShareAlt } from 'react-icons/fa';
 
 const InstallPrompt = () => {
@@ -12,16 +13,21 @@ const InstallPrompt = () => {
   const [dismissed, setDismissed] = useState(false);
   const [showIOSHint, setShowIOSHint] = useState(false);
 
+  const isTutor = pathname === ROUTES.TUTOR;
+
   useEffect(() => {
-    const visible = !isInstalled && !dismissed && !pathname.startsWith('/music/karaoke/');
+    const visible = !isInstalled
+      && !dismissed
+      && !isTutor
+      && !pathname.startsWith('/music/karaoke/');
     document.body.dataset.installPrompt = String(visible);
     return () => {
       delete document.body.dataset.installPrompt;
     };
-  }, [isInstalled, dismissed, pathname]);
+  }, [isInstalled, dismissed, isTutor, pathname]);
 
-  // Karaoke owns the bottom of the screen with its own fixed control panel.
-  if (pathname.startsWith('/music/karaoke/')) return null;
+  // Karaoke and the full-screen tutor own the bottom of the screen.
+  if (isTutor || pathname.startsWith('/music/karaoke/')) return null;
   if (isInstalled || dismissed) return null;
 
   const handleInstall = async () => {

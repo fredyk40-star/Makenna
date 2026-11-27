@@ -23,8 +23,16 @@ body[data-notification-open='true'] .update-preview-banner {
   display: none;
 }
 
+/* The full-screen tutor owns the viewport; no fixed app chrome may overlap it. */
+body[data-tutor-open='true'] .assistant-root,
+body[data-tutor-open='true'] .install-prompt,
+body[data-tutor-open='true'] .update-preview-banner {
+  display: none;
+}
+
 /* The fixed offline/sync banner reserves a slot above the sticky header. */
-body[data-top-banner='true'] .app-header {
+body[data-top-banner='true'] .app-header,
+body[data-top-banner='true'] .tutor-header {
   margin-top: 3.5rem;
 }
 

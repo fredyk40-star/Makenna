@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAccessibility } from '../../context/AccessibilityContext';
 import AccessibilityService from '../../services/AccessibilityService';
+import { ROUTES } from '../../routes';
 
 // Captions belong to the screen that produced them. Auth screens must never
 // inherit a stale caption (for example a single letter from an alphabet game).
@@ -63,6 +64,7 @@ const CaptionDisplay = () => {
   }
 
   const isKaraoke = pathname.startsWith('/music/karaoke/');
+  const isTutor = pathname === ROUTES.TUTOR;
 
   return (
     <AnimatePresence>
@@ -76,8 +78,11 @@ const CaptionDisplay = () => {
           role="status"
           aria-live="polite"
           className={`fixed left-4 right-4 z-[90] mx-auto w-auto max-w-xl px-5 py-3 rounded-2xl bg-gray-900/90 text-white text-center font-semibold shadow-xl pointer-events-none backdrop-blur-sm ${
-            isKaraoke ? 'bottom-[19rem]' : 'bottom-24'
+            isTutor ? '' : (isKaraoke ? 'bottom-[19rem]' : 'bottom-24')
           }`}
+          style={isTutor
+            ? { bottom: 'calc(7rem + env(safe-area-inset-bottom))' }
+            : undefined}
         >
           {caption}
         </motion.div>

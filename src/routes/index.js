@@ -15,6 +15,7 @@ export const ROUTES = {
   PROFILE: '/profile',
   SETTINGS: '/settings',
   PARENT_ZONE: '/parent-zone',
+  TUTOR: '/tutor',
   LOGIN: '/login',
   REGISTER: '/register',
   SUPPORT: '/support',
