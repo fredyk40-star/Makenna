@@ -9,6 +9,17 @@ import { LearningAnalytics } from './LearningAnalytics';
 
 const FEEDBACK_KEY = 'makenna_recommendation_feedback';
 
+// Every recommendation must point at a real route in App.jsx.
+const NEXT_ACTIVITY = {
+  Alphabet: { title: 'Letter Adventure', description: 'Meet a new letter and practise tracing it.', path: '/alphabet', icon: '🔤' },
+  Numbers: { title: 'Number Kingdom', description: 'Count, trace and recognise numbers.', path: '/numbers', icon: '🔢' },
+  Maths: { title: 'Maths Mission', description: 'Practise counting and comparing.', path: '/maths', icon: '➕' },
+  Reading: { title: 'Sight Words', description: 'Read words together out loud.', path: '/reading/sight-words', icon: '📖' },
+  Science: { title: 'Science Lab', description: 'Explore how the world works.', path: '/science-lab', icon: '🔬' },
+  Stories: { title: 'Story Time', description: 'Listen to a new story.', path: '/stories', icon: '📚' },
+  Shapes: { title: 'Shape Detectives', description: 'Find shapes all around you.', path: '/shapes', icon: '🔷' },
+};
+
 export class RecommendationService {
   /**
    * Get personalized lesson recommendations
@@ -72,6 +83,50 @@ export class RecommendationService {
     // }
 
     return recommendations.slice(0, 3);
+  }
+
+  /**
+   * One concrete, tappable next activity for the Home page.
+   * Prefers weaker subjects, then falls back to the child's progress.
+   */
+  static getNextRecommendation(childId, childData = null) {
+    const stats = LearningAnalytics.getStats(childId);
+    const disliked = this.getRecommendationFeedback(childId)
+      .filter(item => item.feedback === 'dislike')
+      .map(item => item.itemId);
+
+    const mastery = Object.entries(stats.mastery || {})
+      .filter(([subject]) => NEXT_ACTIVITY[subject] && !disliked.includes(subject))
+      .sort((a, b) => a[1] - b[1]);
+
+    let subject;
+    if (mastery.length > 0 && mastery[0][1] < 80) {
+      subject = mastery[0][0];
+    } else if (stats.lessonsCompleted < 5) {
+      subject = 'Alphabet';
+    } else {
+      const progress = childData?.progress || {};
+      const nextUnmastered = ['alphabet', 'numbers', 'reading', 'maths']
+        .find(key => (progress[key] || 0) < 80);
+      subject = {
+        alphabet: 'Alphabet', numbers: 'Numbers', reading: 'Reading', maths: 'Maths',
+      }[nextUnmastered] || 'Stories';
+    }
+
+    if (disliked.includes(subject)) subject = 'Stories';
+    const activity = NEXT_ACTIVITY[subject] || NEXT_ACTIVITY.Alphabet;
+
+    return {
+      type: 'next',
+      subject,
+      icon: activity.icon,
+      title: activity.title,
+      description: activity.description,
+      path: activity.path,
+      reason: mastery.length > 0 && mastery[0][0] === subject
+        ? 'A little more practice will help'
+        : 'A great next step for you',
+    };
   }
 
   /**

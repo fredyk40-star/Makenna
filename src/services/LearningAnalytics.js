@@ -3,6 +3,7 @@
  * Extends AnalyticsService with graphs, trends, and metrics
  */
 import { StorageService } from './StorageService';
+import { GamificationService } from './GamificationService';
 
 const ANALYTICS_KEY = 'makenna_analytics_events';
 
@@ -226,5 +227,88 @@ export class LearningAnalytics {
       trend: recentAvg > earlierAvg ? 'increasing' : recentAvg < earlierAvg ? 'decreasing' : 'stable',
       daily: trends
     };
+  }
+
+  /**
+   * Aggregate headline numbers used by the parent dashboard and recommendations.
+   * Reads real events plus gamification state instead of returning fake data.
+   */
+  static getStats(childId) {
+    const events = this.getChildEvents(childId);
+    const gamification = GamificationService.getState(childId);
+    const answers = events.filter(event => event.type === 'answer');
+    const lessons = events.filter(event => event.type === 'lesson_complete');
+    const games = events.filter(event => event.type === 'game_complete' || event.type === 'game_played');
+    const activeDays = new Set(events.map(event => String(event.timestamp || '').slice(0, 10)));
+
+    return {
+      childId,
+      starsEarned: gamification.stars || 0,
+      xp: gamification.xp || 0,
+      level: gamification.level || 1,
+      lessonsCompleted: lessons.length || gamification.lessonsCompleted || 0,
+      gamesPlayed: games.length || gamification.gamesPlayed || 0,
+      storiesRead: events.filter(event => event.type === 'story_complete').length,
+      daysActive: activeDays.size,
+      currentStreak: gamification.currentStreak || 0,
+      totalAnswers: answers.length,
+      averageScore: answers.length > 0
+        ? Math.round(answers.filter(event => event.data?.correct).length / answers.length * 100)
+        : (lessons.length > 0
+          ? Math.round(lessons.reduce((sum, event) => sum + (event.data?.score || 0), 0) / lessons.length)
+          : 0),
+      mastery: this.getMasteryBySubject(childId),
+    };
+  }
+
+  static getChildEvents(childId) {
+    const events = StorageService.get(ANALYTICS_KEY, []);
+    return Array.isArray(events)
+      ? events.filter(event => event.childId === childId)
+      : [];
+  }
+
+  static getMasteryBySubject(childId) {
+    const lessons = this.getChildEvents(childId)
+      .filter(event => event.type === 'lesson_complete' && event.data?.subject);
+    const totals = {};
+
+    lessons.forEach(event => {
+      const subject = event.data.subject;
+      if (!totals[subject]) totals[subject] = { score: 0, count: 0 };
+      totals[subject].score += event.data.score || 0;
+      totals[subject].count += 1;
+    });
+
+    return Object.fromEntries(Object.entries(totals).map(([subject, value]) => (
+      [subject, Math.round(value.score / value.count)]
+    )));
+  }
+
+  /** Progress and minutes-per-day series consumed by the analytics charts. */
+  static getProgressTrends(childId, days = 14) {
+    const events = this.getChildEvents(childId);
+    const trend = [];
+
+    for (let index = days - 1; index >= 0; index -= 1) {
+      const date = new Date();
+      date.setDate(date.getDate() - index);
+      const dateStr = date.toISOString().slice(0, 10);
+      const dayEvents = events.filter(event => String(event.timestamp || '').startsWith(dateStr));
+      const answers = dayEvents.filter(event => event.type === 'answer');
+      const lessons = dayEvents.filter(event => event.type === 'lesson_complete');
+
+      trend.push({
+        date: dateStr,
+        progress: lessons.length > 0
+          ? Math.round(lessons.reduce((sum, event) => sum + (event.data?.score || 0), 0) / lessons.length)
+          : 0,
+        timeSpent: Math.round(dayEvents.reduce((sum, event) => sum + (event.data?.duration || 0), 0) / 60),
+        lessons: lessons.length,
+        answers: answers.length,
+      });
+    }
+
+    return { progressTrend: trend, timeSpentTrend: trend, daily: trend };
   }
 }

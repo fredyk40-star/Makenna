@@ -48,7 +48,7 @@ window.MakennaDebug = {
   syncFromCloud: () => CloudSyncService.syncFromCloud(),
 
   // Add test account
-  addTestAccount: (name = 'Test Child') => ChildAccountService.createAccount(name, '1234'),
+  addTestAccount: (name = 'Test Child') => ChildAccountService.registerChild(name, '1234'),
 
   // Show storage keys
   storageKeys: () => Object.keys(localStorage),

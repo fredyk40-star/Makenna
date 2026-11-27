@@ -57,19 +57,24 @@ export class StorageService {
     }
   }
 
+  /**
+   * Drop only disposable caches. Never delete child progress, accounts,
+   * gamification, rewards or settings to make room for a single write.
+   */
   static cleanupStorage() {
-    // Remove old or unnecessary items
-    const keys = Object.keys(localStorage);
-    const sortedKeys = keys
-      .map(key => ({ key, size: localStorage[key].length }))
-      .sort((a, b) => b.size - a.size);
-    
-    // Remove largest items first until under limit
-    for (const item of sortedKeys) {
-      if (localStorage.length > 10) {
-        localStorage.removeItem(item.key);
-      }
-    }
+    const disposablePrefixes = [
+      'makenna_offline_cache',
+      'makenna_story_cache',
+      'makenna_update_',
+      'makenna_analytics_events',
+    ];
+
+    const removed = Object.keys(localStorage)
+      .filter(key => disposablePrefixes.some(prefix => key.startsWith(prefix)))
+      .sort((a, b) => (localStorage[b]?.length || 0) - (localStorage[a]?.length || 0));
+
+    removed.forEach(key => localStorage.removeItem(key));
+    return removed.length;
   }
 
   static getSize() {

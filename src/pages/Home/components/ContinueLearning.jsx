@@ -8,16 +8,17 @@ import { ChildAccountService } from '../../../services/ChildAccountService';
 
 const ContinueLearning = () => {
   const navigate = useNavigate();
-  const { child } = useChildAccount();
+  const { activeChild } = useChildAccount();
   const [recommendation, setRecommendation] = useState(null);
 
   useEffect(() => {
-    if (child?.childId) {
+    if (activeChild?.childId) {
       const childData = ChildAccountService.getActiveChild();
-      const rec = RecommendationService.getNextRecommendation(child.childId, childData);
-      setRecommendation(rec);
+      setRecommendation(RecommendationService.getNextRecommendation(activeChild.childId, childData));
+    } else {
+      setRecommendation(null);
     }
-  }, [child]);
+  }, [activeChild]);
 
   const getSubjectIcon = (subject) => {
     switch (subject?.toLowerCase()) {
@@ -51,7 +52,7 @@ const ContinueLearning = () => {
   };
 
   // If no child is logged in, show the placeholder
-  if (!child) {
+  if (!activeChild) {
     return (
       <section>
         <div className="flex items-center justify-between mb-4">
