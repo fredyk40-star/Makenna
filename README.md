@@ -35,7 +35,13 @@ For cross-device account sync, connect to Supabase:
 2. Create a new project
 3. Go to Settings → API to get your credentials
 4. Run the migration SQL in `src/data/supabase-migration.sql` in your Supabase SQL editor
-5. For an existing project, also run `supabase-phase5-sync.sql`, `supabase-auth-recovery.sql`, and `supabase-cloud-sync-fix.sql`. The last one adds the recovery columns and the `UNIQUE(child_id)` constraint required by account upserts.
+5. Run these migrations in order in the Supabase SQL editor:
+   - `src/data/supabase-migration.sql`
+   - `supabase-phase5-sync.sql`
+   - `supabase-auth-recovery.sql`
+   - `supabase-cloud-sync-fix.sql`
+
+   The last one adds the recovery columns and the `UNIQUE(child_id)` constraint required by account upserts.
 6. Copy `.env.example` to `.env` and add your Supabase credentials:
 
 ```bash

@@ -7,8 +7,12 @@
 --   2. missing UNIQUE constraint on child_id, which PostgREST requires for
 --      on_conflict=child_id
 --
--- Safe to re-run. If you have not run supabase-auth-recovery.sql yet, run that
--- as well so support_requests and developer password storage exist.
+-- Safe to re-run. This is a safety net for existing or partially migrated
+-- projects; it is not a replacement for the migrations. On a fresh project run:
+--   1. src/data/supabase-migration.sql
+--   2. supabase-phase5-sync.sql
+--   3. supabase-auth-recovery.sql
+--   4. supabase-cloud-sync-fix.sql
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

@@ -13,9 +13,11 @@
 --   GRANT SELECT, INSERT, UPDATE, DELETE ON public.parent_profiles TO anon;
 -- ==============================================================
 
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- STEP 1: Create child_accounts table
 CREATE TABLE child_accounts (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     child_id TEXT UNIQUE NOT NULL,
     full_name TEXT NOT NULL,
     pin_hash TEXT,
