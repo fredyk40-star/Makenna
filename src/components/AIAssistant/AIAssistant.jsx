@@ -274,64 +274,54 @@ const AIAssistant = () => {
 
   const handleVoiceInput = async (transcript) => {
     if (!tutorEnabled || !allowVoice) return;
-    const userMessage = { id: Date.now(), text: transcript, sender: 'user' };
-    setMessages(prev => [...prev, userMessage]);
-    
-    const localResult = CurriculumTutorService.answer(child?.childId, transcript, child?.fullName);
-    const result = await GeminiTutorService.answer(
-      child?.childId,
-      transcript,
-      localResult,
-      child?.fullName,
-      allowOnlineAI,
-    );
-    const response = result?.text || 'I can only answer curriculum questions right now.';
-    const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant', unit: result?.unit || null };
-    setMessages(prev => [...prev, assistantMessage]);
-    
-    // Speak the response
-    speak(response);
-    
-    // Record interaction
-    AIAssistantService.recordAIInteraction({
-      childId: child?.childId,
-      type: 'voice_query',
-      query: transcript,
-      response: response
-    });
-    
+    await askTutor(transcript, 'answer');
     transcriptRef.current = '';
+  };
+
+  const askTutor = async (question, task = 'answer') => {
+    if (!question?.trim() || !child?.childId || !tutorEnabled) return;
+
+    const userMessage = { id: Date.now(), text: question, sender: 'user' };
+    setMessages(prev => [...prev, userMessage]);
+
+    const suggestion = CurriculumTutorService.getSuggestion(child.childId, child.fullName);
+    const unit = suggestion?.unit || null;
+    const localResult = unit ? { unit, matched: task === 'answer' } : null;
+
+    const result = await GeminiTutorService.answer(
+      child.childId,
+      question,
+      localResult,
+      child.fullName,
+      allowOnlineAI,
+      task,
+      'english',
+    );
+
+    const response = result?.text || 'I can only help with your lessons right now.';
+    const assistantMessage = {
+      id: Date.now() + 1,
+      text: response,
+      sender: 'assistant',
+      unit: result?.unit || unit,
+    };
+    setMessages(prev => [...prev, assistantMessage]);
+    speak(response);
+
+    AIAssistantService.recordAIInteraction({
+      childId: child.childId,
+      type: `${task}_query`,
+      query: question,
+      response,
+    });
   };
 
   const handleTextSubmit = async (e) => {
     e.preventDefault();
     if (!inputText.trim() || !child?.childId || !tutorEnabled) return;
-    
-    const userMessage = { id: Date.now(), text: inputText, sender: 'user' };
-    setMessages(prev => [...prev, userMessage]);
-    
-    const localResult = CurriculumTutorService.answer(child.childId, inputText, child.fullName);
-    const result = await GeminiTutorService.answer(
-      child.childId,
-      inputText,
-      localResult,
-      child.fullName,
-      allowOnlineAI,
-    );
-    const response = result?.text || 'I can only answer curriculum questions right now.';
-    const assistantMessage = { id: Date.now() + 1, text: response, sender: 'assistant', unit: result?.unit || null };
-    setMessages(prev => [...prev, assistantMessage]);
-    
-    speak(response);
-    
-    AIAssistantService.recordAIInteraction({
-      childId: child.childId,
-      type: 'text_query',
-      query: inputText,
-      response: response
-    });
-    
+    const question = inputText.trim();
     setInputText('');
+    await askTutor(question, 'answer');
   };
 
   // Check if speech recognition is supported
@@ -458,6 +448,25 @@ const AIAssistant = () => {
                 >
                   {isListening ? <FaMicrophoneSlash /> : <FaMicrophone />}
                 </button>
+              )}
+              {tutorEnabled && (
+                <div className="px-3 pb-2 flex flex-wrap gap-1 border-t border-gray-200 dark:border-gray-700">
+                  {[
+                    { task: 'practice', label: 'Practice', question: 'Create three short practice questions from this lesson.' },
+                    { task: 'story', label: 'Story', question: 'Tell a short story using words from this lesson.' },
+                    { task: 'pronunciation', label: 'Sounds', question: 'Break the main words into syllables and sounds-like hints.' },
+                    { task: 'math', label: 'Math', question: 'Create a Ghanaian-context counting or money word problem.' },
+                  ].map((item) => (
+                    <button
+                      key={item.task}
+                      type="button"
+                      onClick={() => askTutor(item.question, item.task)}
+                      className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-purple-100 dark:hover:bg-purple-900/40"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               )}
             </form>
           </motion.div>

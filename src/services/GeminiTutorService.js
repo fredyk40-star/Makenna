@@ -11,9 +11,14 @@ const removePersonalDetails = (question, fullName) => {
 };
 
 export class GeminiTutorService {
-  static async answer(childId, question, localResult, fullName = '', allowOnlineAI = false) {
-    if (!allowOnlineAI) return localResult;
-    if (!localResult?.matched || !localResult.unit) return localResult;
+  static async answer(childId, question, localResult, fullName = '', allowOnlineAI = false, task = 'answer', language = 'english') {
+    if (!allowOnlineAI) {
+      return localResult || { text: 'Ask a grown-up to turn on online AI for this activity.', unit: localResult?.unit || null };
+    }
+    if (task === 'answer' && (!localResult?.matched || !localResult.unit)) return localResult;
+    if (!localResult?.unit) {
+      return localResult || { text: 'Choose a lesson first, then try this activity.', unit: null };
+    }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return localResult;
 
     const safeQuestion = removePersonalDetails(question, fullName);
@@ -30,6 +35,8 @@ export class GeminiTutorService {
           childId,
           token,
           question: safeQuestion,
+          task,
+          language,
           unit: {
             id: localResult.unit.id,
             source: localResult.unit.source,
